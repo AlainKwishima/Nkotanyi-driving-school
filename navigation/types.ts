@@ -1,0 +1,35 @@
+import { ReferenceScreenKey } from '../assets/referenceScreens';
+
+export type RootStackParamList = {
+  Splash: undefined;
+  LanguageSelection: undefined;
+  Login: undefined;
+  CreateAccount: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
+  HomeNative: undefined;
+  ExamNative: undefined;
+  ExamInstructionsNative: undefined;
+  StartExamNative: { gateFor?: 'exam' | 'read' | 'watch' } | undefined;
+  PracticeNoSelectedNative: undefined;
+  PracticeSelectedNative: undefined;
+  TestFailedNative: undefined;
+  TestPassedNative: undefined;
+  PerformanceNative: undefined;
+  PerformanceDetailNative: undefined;
+  PerformanceReviewNative: undefined;
+  ReadingNative: undefined;
+  RoadSignsListNative: undefined;
+  RoadSignsDetailNative: undefined;
+  HelpCenterNative: undefined;
+  SubscriptionNative: undefined;
+  PaymentNative: undefined;
+  PaymentConfirmationNative: undefined;
+  ProfileNative: undefined;
+  ScreensHub: undefined;
+  ReferenceImage: { key: ReferenceScreenKey };
+  VideoCourseList: undefined;
+  VideoCoursePlayer: undefined;
+  RoadSignsCategories: undefined;
+  HelpCenter: undefined;
+};
