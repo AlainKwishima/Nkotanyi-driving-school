@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,7 +6,12 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
+import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileNative'>;
 
@@ -37,94 +42,103 @@ function AccountRow({
 }
 
 export function ProfileNativeScreen({ navigation }: Props) {
-  const { setSignedIn } = useAppFlow();
+  const { hasSubscription, contentLanguage } = useAppFlow();
+  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const { t } = useI18n();
+  const langLabel = t(`profile.lang.${contentLanguage}`);
+  const { name, phone, logout } = useAuth();
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.header}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={72} rightOffset={14} />
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
       </View>
 
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>My Account</Text>
+            <Text style={styles.sectionTitle}>{t('profile.myAccount')}</Text>
             <TouchableOpacity>
-              <Text style={styles.sectionLink}>Edit Profile</Text>
+              <Text style={styles.sectionLink}>{t('profile.edit')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.accountCard}>
-            <AccountRow icon="person-outline" label="FULL NAME" value="Alain Kwishima" />
-            <AccountRow icon="globe-outline" label="SELECTED LANGUAGE" value="English" />
-            <AccountRow icon="call-outline" label="PHONE" value="0795437012" />
+            <AccountRow icon="person-outline" label={t('profile.fullName').toUpperCase()} value={name ?? '—'} />
+            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}>
+              <AccountRow icon="globe-outline" label={t('profile.language').toUpperCase()} value={langLabel} />
+            </TouchableOpacity>
+            <AccountRow icon="call-outline" label={t('profile.phone').toUpperCase()} value={phone ?? '—'} />
           </View>
 
           <View style={[styles.sectionHead, styles.paymentHead]}>
-            <Text style={styles.sectionTitle}>Payment Information</Text>
+            <Text style={styles.sectionTitle}>{t('profile.paymentInfo')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('SubscriptionNative')}>
-              <Text style={styles.sectionLink}>Update</Text>
+              <Text style={styles.sectionLink}>{t('profile.update')}</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.paymentCard}>
+          <TouchableOpacity
+            style={styles.paymentCard}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('SubscriptionNative')}
+          >
             <View style={styles.paymentTop}>
               <View>
-                <Text style={styles.paymentLabel}>SUBSCRIPTION PLAN</Text>
-                <Text style={styles.paymentPlan}>Five Exams</Text>
+                <Text style={styles.paymentLabel}>{t('profile.subscriptionPlan').toUpperCase()}</Text>
+                <Text style={styles.paymentPlan}>{hasSubscription ? t('profile.planActive') : t('profile.noPlan')}</Text>
               </View>
               <Ionicons name="calendar-outline" size={24} color="#93A2D5" />
             </View>
 
             <View style={styles.paymentBottom}>
               <View>
-                <Text style={styles.paymentLabel}>END DATE</Text>
+                <Text style={styles.paymentLabel}>{t('profile.endDate').toUpperCase()}</Text>
                 <Text style={styles.paymentValue}>N/A</Text>
               </View>
               <View>
-                <Text style={styles.paymentLabel}>PAYMENT STATUS</Text>
+                <Text style={styles.paymentLabel}>{t('profile.paymentStatus').toUpperCase()}</Text>
                 <View style={styles.paidRow}>
                   <Ionicons name="checkmark-circle" size={16} color="#31D17B" />
-                  <Text style={styles.paidText}>Paid</Text>
+                  <Text style={styles.paidText}>{hasSubscription ? t('profile.paid') : t('profile.noPlan')}</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.signOutBtn}
             onPress={async () => {
-              await setSignedIn(false);
+              await logout();
               navigation.replace('Login');
             }}
           >
             <MaterialCommunityIcons name="logout-variant" size={18} color="#D43737" />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
       <BottomTabs navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: '#4A78D0' },
   header: {
-    height: 78,
+    minHeight: 78,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   headerBtn: {
-    width: 24,
-    height: 24,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -143,7 +157,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 110,
   },
   sectionHead: {
     flexDirection: 'row',

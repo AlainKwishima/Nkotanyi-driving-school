@@ -3,19 +3,25 @@
     "name": "Nkotanyi",
     "slug": "nkotanyi",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "nkotanyi",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#fbf8fd"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nkotanyi.app",
+      "infoPlist": {
+        "UIRequiresFullScreen": false
+      }
     },
     "android": {
+      "package": "com.nkotanyi.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fbf8fd"
@@ -24,11 +30,17 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "Nkotanyi",
+      "shortName": "Nkotanyi",
+      "lang": "en",
+      "description": "Road safety learning and driving exam preparation.",
+      "themeColor": "#4A78D0",
+      "backgroundColor": "#fbf8fd",
+      "display": "standalone",
+      "orientation": "any"
     },
-    "plugins": [
-      "expo-font"
-    ]
+    "plugins": ["expo-font"]
   }
 }
-

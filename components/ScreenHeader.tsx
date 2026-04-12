@@ -1,5 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 
 type ScreenHeaderProps = {
   title: string;
@@ -7,13 +10,14 @@ type ScreenHeaderProps = {
 };
 
 export function ScreenHeader({ title, onBack }: ScreenHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
-      <Pressable onPress={onBack} style={styles.back} disabled={!onBack}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
+      <Pressable onPress={onBack} style={styles.back} disabled={!onBack} hitSlop={8}>
         <Text style={styles.backText}>{onBack ? '<' : ' '}</Text>
       </Pressable>
       <Text style={styles.title}>{title}</Text>
-      <View style={styles.back} />
+      <View style={styles.backSpacer} />
     </View>
   );
 }
@@ -21,19 +25,23 @@ export function ScreenHeader({ title, onBack }: ScreenHeaderProps) {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 84,
-    paddingTop: 30,
+    minHeight: 52,
     paddingHorizontal: 16,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FBF8FD',
   },
   back: {
-    width: 24,
-    height: 24,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  backSpacer: {
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
   },
   backText: {
     fontFamily: 'PlusJakartaSans-Bold',

@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { HeaderMenu } from '../components/HeaderMenu';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { useI18n } from '../i18n/useI18n';
 
 type NoSelectedProps = NativeStackScreenProps<RootStackParamList, 'PracticeNoSelectedNative'>;
 type SelectedProps = NativeStackScreenProps<RootStackParamList, 'PracticeSelectedNative'>;
+
+const OPTION_KEYS = ['performance.mock.opt1', 'performance.mock.opt2', 'performance.mock.opt3'] as const;
 
 function PracticeLayout({
   selected,
@@ -22,46 +28,42 @@ function PracticeLayout({
   onBack: () => void;
   navigation: NoSelectedProps['navigation'] | SelectedProps['navigation'];
 }) {
-  const options = [
-    'Slowly and safely accelerate while steering in the direction of the skid',
-    'Turn your front wheels in the same direction that the rear of the vehicle is sliding',
-    'If your car does start to skid, take your foot off the gas, keep both hands on the wheel',
-  ];
+  const { t } = useI18n();
+  const { insets } = useResponsiveLayout();
+  const options = useMemo(() => OPTION_KEYS.map((k) => t(k)), [t]);
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.header}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={34} color="#F5F7FC" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Exam</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={80} rightOffset={20} />
+        <Text style={styles.headerTitle}>{t('exam.title')}</Text>
+        <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={56} rightOffset={14} />
       </View>
 
       <View style={styles.body}>
         <View style={styles.qCard}>
-          <Text style={styles.question}>
-            When skidding, if the rear end of the car is skidding to the right, turn your wheel to the:
-          </Text>
+          <Text style={styles.question}>{t('performance.mock.question')}</Text>
           <Image source={require('../assets/practice-road-diagram.png')} style={styles.road} resizeMode="contain" />
         </View>
 
         {options.map((opt, i) => (
-          <View key={opt} style={[styles.option, selected && i === 0 && styles.optionSelected]}>
+          <View key={OPTION_KEYS[i]} style={[styles.option, selected && i === 0 && styles.optionSelected]}>
             <Text style={[styles.optionText, selected && i === 0 && styles.optionTextSelected]}>{opt}</Text>
           </View>
         ))}
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.answerBtn} onPress={onAnswer}>
-            <Text style={styles.answerText}>Answer</Text>
+            <Text style={styles.answerText}>{t('practice.answer')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.nextBtn} onPress={onNext}>
-            <Text style={styles.nextText}>Next</Text>
+            <Text style={styles.nextText}>{t('practice.next')}</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScreenColumn>
   );
 }
 
@@ -90,19 +92,18 @@ export function PracticeSelectedNativeScreen({ navigation }: SelectedProps) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: '#4A78D0' },
   header: {
-    height: 86,
-    paddingHorizontal: 20,
+    minHeight: 78,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
   headerTitle: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: 18,
+    lineHeight: 24,
     color: '#F4F7FF',
   },
   body: {
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   },
   question: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 15 / 2,
+    fontSize: 15,
     lineHeight: 22,
     color: '#40434F',
   },
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13 / 2,
+    fontSize: 13,
     lineHeight: 18,
     color: '#282B67',
     textAlign: 'center',
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
   },
   answerText: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15 / 2,
+    fontSize: 15,
     lineHeight: 22,
     color: '#4A78D0',
   },
@@ -181,9 +182,8 @@ const styles = StyleSheet.create({
   },
   nextText: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15 / 2,
+    fontSize: 15,
     lineHeight: 22,
     color: '#F4F7FF',
   },
 });
-

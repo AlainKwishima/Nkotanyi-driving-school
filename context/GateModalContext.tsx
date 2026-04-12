@@ -1,5 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useI18n } from '../i18n/useI18n';
 
 export type GateModalKind = 'exam_ready' | 'subscription_exam' | 'subscription_read' | 'subscription_watch';
 
@@ -11,6 +15,8 @@ type GateModalContextValue = {
 const GateModalContext = createContext<GateModalContextValue | null>(null);
 
 export function GateModalProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [kind, setKind] = useState<GateModalKind>('exam_ready');
   const confirmRef = useRef<(() => void) | null>(null);
@@ -72,35 +78,35 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
   const config = useMemo(() => {
     if (kind === 'exam_ready') {
       return {
-        title: 'Ready to start?',
-        message: 'Try our driving exam course and study all the stuff you need to pass the exam.',
-        confirmLabel: 'OK',
+        title: t('gate.examReady.title'),
+        message: t('gate.examReady.message'),
+        confirmLabel: t('gate.examReady.confirm'),
         isSubscription: false,
       };
     }
     if (kind === 'subscription_read') {
       return {
-        title: 'Subscription needed!',
-        message: 'You can access reading materials after paying the required subscription.',
-        confirmLabel: 'PAY NOW',
+        title: t('gate.subscription.title'),
+        message: t('gate.subscription.read'),
+        confirmLabel: t('gate.payNow'),
         isSubscription: true,
       };
     }
     if (kind === 'subscription_watch') {
       return {
-        title: 'Subscription needed!',
-        message: 'You can watch video lessons after paying the required subscription.',
-        confirmLabel: 'PAY NOW',
+        title: t('gate.subscription.title'),
+        message: t('gate.subscription.watch'),
+        confirmLabel: t('gate.payNow'),
         isSubscription: true,
       };
     }
     return {
-      title: 'Subscription needed!',
-      message: 'You can continue exams after paying the required subscription.',
-      confirmLabel: 'PAY NOW',
+      title: t('gate.subscription.title'),
+      message: t('gate.subscription.exam'),
+      confirmLabel: t('gate.payNow'),
       isSubscription: true,
     };
-  }, [kind]);
+  }, [kind, t]);
 
   const value = useMemo(() => ({ openGateModal, closeGateModal }), [closeGateModal, openGateModal]);
 
@@ -129,7 +135,7 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={closeGateModal}>
-                  <Text style={styles.secondaryText}>NOT NOW</Text>
+                  <Text style={styles.secondaryText}>{t('gate.notNow')}</Text>
                 </TouchableOpacity>
               </Animated.View>
             </TouchableWithoutFeedback>
@@ -154,7 +160,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(68,75,92,0.58)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
   },
   card: {
     width: '100%',
@@ -188,7 +193,7 @@ const styles = StyleSheet.create({
   primaryBtn: {
     marginTop: 22,
     width: '100%',
-    height: 45,
+    minHeight: MIN_TOUCH_TARGET,
     borderRadius: 6,
     backgroundColor: '#4A78D0',
     alignItems: 'center',

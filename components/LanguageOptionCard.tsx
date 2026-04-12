@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   indicator: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,51 +1,49 @@
 import React, { useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { RootStackParamList } from '../navigation/types';
 import { useAppFlow } from '../context/AppFlowContext';
+import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export function SplashScreen({ navigation }: Props) {
   const { hydrated, hasChosenLanguage, isSignedIn } = useAppFlow();
+  const { authReady, accessToken } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
-    if (!hydrated) {
+    if (!hydrated || !authReady) {
       return;
     }
     const timer = setTimeout(() => {
       if (!hasChosenLanguage) {
         navigation.replace('LanguageSelection');
-      } else if (!isSignedIn) {
+      } else if (!isSignedIn || !accessToken) {
         navigation.replace('Login');
       } else {
         navigation.replace('HomeNative');
       }
     }, 1200);
     return () => clearTimeout(timer);
-  }, [hasChosenLanguage, hydrated, isSignedIn, navigation]);
+  }, [hasChosenLanguage, hydrated, isSignedIn, navigation, authReady, accessToken]);
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.centerArea}>
         <Image source={FIGMA_ASSETS.brandingLogo} style={styles.logo} resizeMode="contain" />
         <ActivityIndicator size="large" color="#2E67CC" style={styles.spinner} />
-        <Text style={styles.waitText}>Wait a second...</Text>
+        <Text style={styles.waitText}>{t('splash.wait')}</Text>
       </View>
 
       <View style={styles.cityWrap}>
-        <View style={[styles.building, styles.b1]} />
-        <View style={[styles.building, styles.b2]} />
-        <View style={[styles.building, styles.b3]} />
-        <View style={[styles.building, styles.b4]} />
-        <View style={styles.road} />
-        <View style={styles.carBody} />
-        <View style={[styles.wheel, styles.wheelLeft]} />
-        <View style={[styles.wheel, styles.wheelRight]} />
+        <Image source={require('../assets/Group 5201.png')} style={styles.cityImage} resizeMode="contain" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -76,68 +74,12 @@ const styles = StyleSheet.create({
     color: '#3F434D',
   },
   cityWrap: {
-    height: 220,
+    width: '100%',
+    height: 244,
     justifyContent: 'flex-end',
-    paddingHorizontal: 14,
-    paddingBottom: 14,
   },
-  building: {
-    position: 'absolute',
-    bottom: 46,
-    backgroundColor: '#D0D4DD',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  b1: {
-    left: 10,
-    width: 96,
-    height: 82,
-  },
-  b2: {
-    left: 96,
-    width: 86,
-    height: 120,
-    backgroundColor: '#C5CBD6',
-  },
-  b3: {
-    left: 178,
-    width: 72,
-    height: 100,
-  },
-  b4: {
-    right: 18,
-    width: 106,
-    height: 130,
-    backgroundColor: '#BCC2CD',
-  },
-  road: {
-    height: 4,
-    backgroundColor: '#D4D7DE',
-    borderRadius: 2,
-    marginBottom: 20,
-  },
-  carBody: {
-    alignSelf: 'flex-end',
-    width: 180,
-    height: 48,
-    borderRadius: 20,
-    backgroundColor: '#D3D3D3',
-    marginRight: 20,
-  },
-  wheel: {
-    position: 'absolute',
-    bottom: 14,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 4,
-    borderColor: '#E4E4E4',
-    backgroundColor: '#D8D8D8',
-  },
-  wheelLeft: {
-    right: 132,
-  },
-  wheelRight: {
-    right: 36,
+  cityImage: {
+    width: '100%',
+    height: 244,
   },
 });

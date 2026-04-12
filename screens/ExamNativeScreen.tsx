@@ -1,71 +1,84 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
+import { ScreenColumn } from '../components/ScreenColumn';
 import { useAppFlow } from '../context/AppFlowContext';
+import { useAuth } from '../context/AuthContext';
 import { HeaderMenu } from '../components/HeaderMenu';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { getExamQuestions, getSignQuestions, type TrafficQuestion } from '../services/trafficApi';
+import { appendLocalExamRecord } from '../services/examHistoryStorage';
+import { getMessageFromUnknownError } from '../services/api/client';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
 
-type ExamQuestion = {
-  id: number;
-  prompt: string;
-  options: string[];
-};
+const EXAM_DURATION_SEC = 30 * 60;
+const PASS_PERCENT = 60;
 
-const TOTAL_QUESTIONS = 25;
-const START_QUESTION_NO = 19;
+function formatTime(totalSec: number): string {
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
-const EXAM_QUESTIONS: ExamQuestion[] = [
-  {
-    id: 19,
-    prompt: 'What should you do if fog closes in completely while you are driving, and visibility is reduced to near zero?',
-    options: ['Slow down and take a detour', 'Use your low beams', 'Carefully pull as far off the road'],
-  },
-  {
-    id: 20,
-    prompt: 'When approaching a pedestrian crossing with people waiting, what is the safest action?',
-    options: ['Increase speed to pass before they step in', 'Slow down and prepare to stop completely', 'Use horn continuously and proceed'],
-  },
-  {
-    id: 21,
-    prompt: 'If your vehicle starts to skid on a wet road, what should you do first?',
-    options: ['Brake hard immediately', 'Ease off the accelerator and steer smoothly', 'Turn sharply in the opposite direction'],
-  },
-  {
-    id: 22,
-    prompt: 'At an unmarked intersection, who has right of way?',
-    options: ['The vehicle from the right', 'The faster vehicle', 'The larger vehicle'],
-  },
-  {
-    id: 23,
-    prompt: 'Which lights should you use when driving at night on an unlit road with no oncoming traffic?',
-    options: ['Hazard lights', 'High beams', 'Parking lights only'],
-  },
-  {
-    id: 24,
-    prompt: 'What is the main purpose of keeping a safe following distance?',
-    options: ['To save fuel', 'To reduce braking time and avoid collisions', 'To allow faster overtaking'],
-  },
-  {
-    id: 25,
-    prompt: 'Before changing lanes, which sequence is correct?',
-    options: ['Signal, mirror check, shoulder check, move', 'Shoulder check, move, signal', 'Mirror check, brake hard, move'],
-  },
-];
-
-export function ExamNativeScreen({ navigation }: Props) {
+export function ExamNativeScreen({ navigation, route }: Props) {
   const { hasSubscription, hasUsedFreeTrial, setHasUsedFreeTrial } = useAppFlow();
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(3 * 60 + 48);
+  const { accessToken } = useAuth();
+  const { insets } = useResponsiveLayout();
+  const { t } = useI18n();
+  const mode = route.params?.mode ?? 'traffic';
 
-  const currentQuestion = EXAM_QUESTIONS[questionIndex];
-  const currentQuestionNo = START_QUESTION_NO + questionIndex;
-  const progress = useMemo(() => Math.max(0, Math.min(1, currentQuestionNo / TOTAL_QUESTIONS)), [currentQuestionNo]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<TrafficQuestion[]>([]);
+
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(EXAM_DURATION_SEC);
+  const [selectedByQuestion, setSelectedByQuestion] = useState<Record<number, string>>({});
+
+  const totalQuestions = questions.length;
+  const current = questions[questionIndex];
+  const currentQuestionNo = questionIndex + 1;
+  const progress = useMemo(
+    () => (totalQuestions > 0 ? Math.max(0, Math.min(1, currentQuestionNo / totalQuestions)) : 0),
+    [currentQuestionNo, totalQuestions],
+  );
   const canGoPrev = questionIndex > 0;
-  const canGoNext = questionIndex < EXAM_QUESTIONS.length - 1;
+  const canGoNext = questionIndex < totalQuestions - 1;
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!accessToken) {
+        setLoadError(t('exam.needSignIn'));
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = mode === 'signs' ? await getSignQuestions(accessToken) : await getExamQuestions(accessToken);
+        if (!cancelled) {
+          setQuestions(data);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(getMessageFromUnknownError(e));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, mode, t]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -74,48 +87,138 @@ export function ExamNativeScreen({ navigation }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
-  const timerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const elapsedSec = EXAM_DURATION_SEC - secondsLeft;
+  const timerText = formatTime(secondsLeft);
+
+  const selectOption = useCallback((optionId: string) => {
+    setSelectedByQuestion((prev) => ({ ...prev, [questionIndex]: optionId }));
+  }, [questionIndex]);
+
+  const performExamSubmit = useCallback(async () => {
+    if (!hasSubscription && !hasUsedFreeTrial) {
+      await setHasUsedFreeTrial(true);
+    }
+
+    let correct = 0;
+    questions.forEach((q, idx) => {
+      const picked = selectedByQuestion[idx];
+      if (!picked) return;
+      const opt = q.options.find((o) => o._id === picked);
+      if (opt?.is_correct) correct += 1;
+    });
+
+    const total = totalQuestions || 1;
+    const percent = Math.round((correct / total) * 100);
+    const passed = percent >= PASS_PERCENT;
+    const timeLabel = formatTime(elapsedSec);
+
+    await appendLocalExamRecord({ correct, total, percent, timeLabel, mode });
+
+    const payload = { correct, total, timeLabel, percent };
+    if (passed) {
+      navigation.navigate('TestPassedNative', payload);
+    } else {
+      navigation.navigate('TestFailedNative', payload);
+    }
+  }, [
+    elapsedSec,
+    hasSubscription,
+    hasUsedFreeTrial,
+    mode,
+    navigation,
+    questions,
+    selectedByQuestion,
+    setHasUsedFreeTrial,
+    totalQuestions,
+  ]);
+
+  const onPressFinishExam = useCallback(() => {
+    const unanswered = questions.reduce((n, _, idx) => (selectedByQuestion[idx] ? n : n + 1), 0);
+    if (unanswered > 0) {
+      Alert.alert(t('exam.unansweredTitle'), t('exam.unansweredBody', { count: unanswered }), [
+        { text: t('exam.keepWorking'), style: 'cancel' },
+        { text: t('exam.finishAnyway'), style: 'destructive', onPress: () => void performExamSubmit() },
+      ]);
+      return;
+    }
+    void performExamSubmit();
+  }, [performExamSubmit, questions, selectedByQuestion, t]);
+
+  if (loading) {
+    return (
+      <ScreenColumn backgroundColor="#4A78D0">
+        <View style={[styles.centered, { paddingTop: insets.top, flex: 1 }]}>
+          <ActivityIndicator size="large" color="#F5F7FC" />
+          <Text style={styles.loadingText}>{t('exam.loading')}</Text>
+        </View>
+      </ScreenColumn>
+    );
+  }
+
+  if (loadError || !current) {
+    return (
+      <ScreenColumn backgroundColor="#4A78D0">
+        <View style={[styles.centered, { paddingHorizontal: 24, paddingTop: insets.top, flex: 1 }]}>
+          <Text style={styles.loadingText}>{loadError ?? t('exam.noQuestions')}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.retryBtnText}>{t('exam.goBack')}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenColumn>
+    );
+  }
+
+  const imageUri = current.question.imageURLs?.[0];
+  const selectedId = selectedByQuestion[questionIndex];
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.headerBlue}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backTap}>
             <Ionicons name="chevron-back" size={24} color="#F5F7FC" />
           </TouchableOpacity>
-          <Text style={styles.title}>Exam</Text>
+          <Text style={styles.title}>{t('exam.title')}</Text>
           <View style={styles.rightCluster}>
             <Ionicons name="timer-outline" size={20} color="#2F3C56" />
             <Text style={styles.timerText}>{timerText}</Text>
-            <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={74} rightOffset={14} />
+            <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={56} rightOffset={14} />
           </View>
         </View>
       </View>
 
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <Text style={styles.sectionTitle}>Question</Text>
+          <Text style={styles.sectionTitle}>{t('exam.question')}</Text>
           <View style={styles.progressRow}>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
             </View>
             <Text style={styles.progressText}>
-              {currentQuestionNo}/{TOTAL_QUESTIONS}
+              {currentQuestionNo}/{totalQuestions}
             </Text>
           </View>
 
           <View style={styles.questionCard}>
-            <Image source={require('../assets/exam-fog-question.jpg')} style={styles.questionImage} resizeMode="cover" />
-            <Text style={styles.questionText}>{currentQuestion.prompt}</Text>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.questionImage} resizeMode="cover" />
+            ) : null}
+            <Text style={styles.questionText}>{current.question.description}</Text>
           </View>
 
-          {currentQuestion.options.map((opt) => (
-            <View key={opt} style={styles.optionCard}>
-              <Text style={styles.optionText}>{opt}</Text>
-            </View>
-          ))}
+          {current.options.map((opt) => {
+            const active = selectedId === opt._id;
+            return (
+              <TouchableOpacity
+                key={opt._id}
+                style={[styles.optionCard, active && styles.optionCardSelected]}
+                onPress={() => selectOption(opt._id)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.optionText}>{opt.optionText}</Text>
+              </TouchableOpacity>
+            );
+          })}
 
           <View style={styles.navButtonsRow}>
             <TouchableOpacity
@@ -125,7 +228,7 @@ export function ExamNativeScreen({ navigation }: Props) {
             >
               <View style={styles.btnInner}>
                 <Ionicons name="arrow-back" size={24} color="#434854" />
-                <Text style={styles.prevText}>Previous</Text>
+                <Text style={styles.prevText}>{t('exam.previous')}</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -134,51 +237,59 @@ export function ExamNativeScreen({ navigation }: Props) {
               disabled={!canGoNext}
             >
               <View style={styles.btnInner}>
-                <Text style={styles.nextText}>Next</Text>
+                <Text style={styles.nextText}>{t('exam.next')}</Text>
                 <Ionicons name="arrow-forward" size={24} color="#F5F7FC" />
               </View>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.finishWrap}
-            onPress={async () => {
-              if (!hasSubscription && !hasUsedFreeTrial) {
-                await setHasUsedFreeTrial(true);
-              }
-              navigation.navigate('TestPassedNative');
-            }}
-          >
-            <Text style={styles.finishText}>Finish The Test</Text>
+          <TouchableOpacity style={styles.finishWrap} onPress={() => onPressFinishExam()}>
+            <Text style={styles.finishText}>{t('exam.finish')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  centered: {
     flex: 1,
-    width: '100%',
-    maxWidth: 430,
-    alignSelf: 'center',
-    backgroundColor: '#4A78D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 15,
+    color: '#F5F7FC',
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  retryBtnText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 14,
+    color: '#F5F7FC',
   },
   headerBlue: {
-    height: 92,
     backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
   },
   topRow: {
-    height: 92,
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backTap: {
-    width: 24,
-    height: 24,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -260,13 +371,20 @@ const styles = StyleSheet.create({
     color: '#3F414D',
   },
   optionCard: {
-    height: 72,
+    minHeight: 72,
     borderRadius: 12,
     backgroundColor: '#E6E6E7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
     paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  optionCardSelected: {
+    borderColor: '#4A78D0',
+    backgroundColor: '#D8E4F8',
   },
   optionText: {
     fontFamily: 'PlusJakartaSans-Medium',

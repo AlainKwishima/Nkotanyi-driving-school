@@ -1,15 +1,23 @@
-﻿import React from 'react';
+import React, { useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { RootStackParamList } from '../navigation/types';
 import { AuthButton } from '../components/AuthButton';
 import { AuthInputField } from '../components/AuthInputField';
-import { GlowOrb } from '../components/GlowOrb';
 import { useMobile } from '../hooks/useMobile';
 import { useAppFlow } from '../context/AppFlowContext';
+import { useAuth, getMessageFromUnknownError } from '../context/AuthContext';
+import { useI18n } from '../i18n/useI18n';
+import {
+  isValidRwandaAccountPhone,
+  validateName,
+  validatePasswordMin,
+  validatePasswordStrong,
+  validatePasswordsMatch,
+} from '../utils/validation';
 
 type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type CreateAccountProps = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
@@ -18,62 +26,106 @@ type ResetPasswordProps = NativeStackScreenProps<RootStackParamList, 'ResetPassw
 
 function LogoHeader({ showTitle }: { showTitle: boolean }) {
   const m = useMobile();
+  const { t } = useI18n();
 
   return (
     <View style={styles.logoHeader}>
       <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(94), height: m.scale(94) }]} resizeMode="contain" />
-      {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22) }]}>Nkotanyi Driving School</Text> : null}
+      {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22) }]}>{t('language.brand')}</Text> : null}
     </View>
   );
 }
 
 export function LoginScreen({ navigation }: LoginProps) {
   const m = useMobile();
-  const { setSignedIn } = useAppFlow();
+  const { t } = useI18n();
+  const { login } = useAuth();
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <GlowOrb size={m.scale(220)} top={m.verticalScale(150)} right={-m.scale(118)} />
-      <GlowOrb size={m.scale(300)} bottom={-m.verticalScale(116)} left={-m.scale(132)} />
-
       <ScrollView contentContainerStyle={[styles.authScroll, { width: m.contentWidth, paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]} showsVerticalScrollIndicator={false}>
         <LogoHeader showTitle={false} />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>Welcome Back</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>Please sign in to your driving school{`\n`}account to continue your journey.</Text>
+        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.welcomeBack')}</Text>
+        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>{t('auth.signInSubtitle')}</Text>
 
         <View style={styles.formGroup}>
-          <AuthInputField label="Phone" placeholder="Enter your phone number" leftIcon="phone" />
-          <AuthInputField label="Password" placeholder="Enter your Password" leftIcon="lock" rightIcon="eye" secureTextEntry />
+          <AuthInputField
+            label={t('auth.phone')}
+            placeholder={t('auth.phonePh')}
+            leftIcon="phone"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              setPhoneError(null);
+            }}
+            error={phoneError}
+          />
+          <AuthInputField
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPh')}
+            leftIcon="lock"
+            rightIcon="eye"
+            secureTextEntry
+            value={password}
+            onChangeText={(v) => {
+              setPassword(v);
+              setPasswordError(null);
+            }}
+            error={passwordError}
+          />
         </View>
 
         <Pressable style={styles.rememberRow}>
           <View style={styles.checkbox} />
-          <Text style={styles.rememberText}>Remember Me</Text>
+          <Text style={styles.rememberText}>{t('auth.rememberMe')}</Text>
         </Pressable>
 
         <AuthButton
-          label="Sign In"
+          label={t('auth.signIn')}
           withArrow
           onPress={async () => {
-            await setSignedIn(true);
-            navigation.replace('HomeNative');
+            let pe: string | null = null;
+            let pw: string | null = null;
+            if (!phone.trim()) pe = t('validate.phoneRequired');
+            else if (!isValidRwandaAccountPhone(phone)) pe = t('validate.phoneInvalid');
+            const pwr = validatePasswordMin(password);
+            if (!pwr.ok) pw = t(pwr.key);
+            setPhoneError(pe);
+            setPasswordError(pw);
+            if (pe || pw) return;
+            setBusy(true);
+            try {
+              await login(phone.trim(), password);
+              navigation.replace('HomeNative');
+            } catch (e) {
+              Alert.alert(t('auth.signInFailed'), getMessageFromUnknownError(e));
+            } finally {
+              setBusy(false);
+            }
           }}
         />
+        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#4C7DDD" /> : null}
 
         <Pressable style={styles.forgotLinkWrap} onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgotLink}>Forgot Password? Reset</Text>
+          <Text style={styles.forgotLink}>{t('auth.forgot')}</Text>
         </Pressable>
 
         <View style={styles.separatorRow}>
           <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>OR</Text>
+          <Text style={styles.separatorText}>{t('auth.or')}</Text>
           <View style={styles.separatorLine} />
         </View>
 
         <Pressable style={styles.bottomLinkRow} onPress={() => navigation.navigate('CreateAccount')}>
-          <Text style={styles.bottomLinkHint}>New User? </Text>
-          <Text style={styles.bottomLinkAction}>Create Account</Text>
+          <Text style={styles.bottomLinkHint}>{t('auth.newUser')} </Text>
+          <Text style={styles.bottomLinkAction}>{t('auth.createAccountLink')}</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -82,37 +134,95 @@ export function LoginScreen({ navigation }: LoginProps) {
 
 export function CreateAccountScreen({ navigation }: CreateAccountProps) {
   const m = useMobile();
-  const { setSignedIn, setHasUsedFreeTrial, setHasSubscription } = useAppFlow();
+  const { t } = useI18n();
+  const { setHasUsedFreeTrial, setHasSubscription } = useAppFlow();
+  const { signup } = useAuth();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <GlowOrb size={m.scale(260)} top={m.verticalScale(260)} right={-m.scale(145)} />
-
       <ScrollView contentContainerStyle={[styles.authScroll, { width: m.contentWidth, paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]} showsVerticalScrollIndicator={false}>
         <LogoHeader showTitle />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>Create Account</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>Start your journey to becoming a pro driver{`\n`}today.</Text>
+        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.createTitle')}</Text>
+        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>{t('auth.createSubtitle')}</Text>
 
         <View style={styles.formGroup}>
-          <AuthInputField label="Name" placeholder="Enter your name" leftIcon="user" />
-          <AuthInputField label="Phone" placeholder="Enter your phone number" leftIcon="phone" />
-          <AuthInputField label="Password" placeholder="Enter your password" leftIcon="lock" rightIcon="eye" secureTextEntry />
+          <AuthInputField
+            label={t('auth.name')}
+            placeholder={t('auth.namePh')}
+            leftIcon="user"
+            value={name}
+            onChangeText={(v) => {
+              setName(v);
+              setNameError(null);
+            }}
+            error={nameError}
+          />
+          <AuthInputField
+            label={t('auth.phone')}
+            placeholder={t('auth.phonePh')}
+            leftIcon="phone"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              setPhoneError(null);
+            }}
+            error={phoneError}
+          />
+          <AuthInputField
+            label={t('auth.password')}
+            placeholder={t('auth.passwordCreatePh')}
+            leftIcon="lock"
+            rightIcon="eye"
+            secureTextEntry
+            value={password}
+            onChangeText={(v) => {
+              setPassword(v);
+              setPasswordError(null);
+            }}
+            error={passwordError}
+          />
         </View>
 
         <AuthButton
-          label="Create Account"
+          label={t('auth.create')}
           onPress={async () => {
-            await setSignedIn(true);
-            await setHasUsedFreeTrial(false);
-            await setHasSubscription(false);
-            navigation.replace('HomeNative');
+            const ne = validateName(name);
+            let pe: string | null = null;
+            if (!phone.trim()) pe = t('validate.phoneRequired');
+            else if (!isValidRwandaAccountPhone(phone)) pe = t('validate.phoneInvalid');
+            const pwr = validatePasswordMin(password);
+            const pwErr = pwr.ok ? null : t(pwr.key);
+            setNameError(ne.ok ? null : t(ne.key));
+            setPhoneError(pe);
+            setPasswordError(pwErr);
+            if (!ne.ok || pe || pwErr) return;
+            setBusy(true);
+            try {
+              await signup(name.trim(), phone.trim(), password);
+              await setHasUsedFreeTrial(false);
+              await setHasSubscription(false);
+              navigation.replace('HomeNative');
+            } catch (e) {
+              Alert.alert(t('auth.createFailed'), getMessageFromUnknownError(e));
+            } finally {
+              setBusy(false);
+            }
           }}
         />
+        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#4C7DDD" /> : null}
 
         <Pressable style={styles.bottomLinkRowCreate} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.bottomLinkHint}>Already have an account? </Text>
-          <Text style={styles.bottomLinkAction}>Sign In</Text>
+          <Text style={styles.bottomLinkHint}>{t('auth.haveAccount')} </Text>
+          <Text style={styles.bottomLinkAction}>{t('auth.signInLink')}</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -121,6 +231,9 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
 
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
   const m = useMobile();
+  const { t } = useI18n();
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
@@ -129,33 +242,56 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Feather name="arrow-left" size={22} color="#23335F" />
           </Pressable>
-          <Text style={styles.topBarTitle}>Reset Password</Text>
+          <Text style={styles.topBarTitle}>{t('auth.resetTitle')}</Text>
           <View style={styles.backButton} />
         </View>
 
-        <View style={styles.resetIconOuter}>
-          <View style={styles.resetIconInner}>
-            <MaterialCommunityIcons name="lock-reset" size={28} color="#F5F9FF" />
-          </View>
+        <View style={styles.resetIconBadge}>
+          <MaterialCommunityIcons name="lock-reset" size={28} color="#F5F9FF" />
         </View>
 
-        <Text style={styles.secondaryTitle}>Forgot Your Password?</Text>
-        <Text style={styles.secondarySubtitle}>No worries! Enter your email or phone{`\n`}number below and we'll send you{`\n`}instructions to reset it.</Text>
+        <Text style={styles.secondaryTitle}>{t('auth.forgotTitle')}</Text>
+        <Text style={styles.secondarySubtitle}>{t('auth.forgotBody')}</Text>
 
         <View style={styles.secondaryFormGroup}>
-          <AuthInputField label="Phone Number" placeholder="e.g. name@example.com" leftIcon="mail" />
+          <AuthInputField
+            label={t('auth.phone')}
+            placeholder={t('auth.phonePh')}
+            leftIcon="phone"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              setPhoneError(null);
+            }}
+            error={phoneError}
+          />
         </View>
 
-        <AuthButton label="Send Reset Link" withArrow onPress={() => navigation.navigate('ResetPassword')} />
+        <AuthButton
+          label={t('auth.sendReset')}
+          withArrow
+          onPress={() => {
+            if (!phone.trim()) {
+              setPhoneError(t('validate.phoneRequired'));
+              return;
+            }
+            if (!isValidRwandaAccountPhone(phone)) {
+              setPhoneError(t('validate.phoneInvalid'));
+              return;
+            }
+            Alert.alert(t('auth.resetSelfServiceTitle'), t('auth.resetSelfServiceBody'), [{ text: t('common.ok') }]);
+          }}
+        />
 
         <Pressable style={styles.backSignInWrap} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backSignInText}>Back to Sign In</Text>
+          <Text style={styles.backSignInText}>{t('auth.backSignIn')}</Text>
         </Pressable>
 
         <View style={styles.helpCard}>
           <View>
-            <Text style={styles.helpTitle}>Need help?</Text>
-            <Text style={styles.helpSubtitle}>Contact our support if you're having trouble{`\n`}accessing your account.</Text>
+            <Text style={styles.helpTitle}>{t('auth.helpTitle')}</Text>
+            <Text style={styles.helpSubtitle}>{t('auth.helpSubtitle')}</Text>
           </View>
           <MaterialCommunityIcons name="face-agent" size={42} color="#D7DAE3" />
         </View>
@@ -166,53 +302,89 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
 
 export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
   const m = useMobile();
+  const { t } = useI18n();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView contentContainerStyle={[styles.secondaryScroll, { width: m.contentWidth, paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.lockBadgeOuter}>
-          <View style={styles.lockBadgeInner}>
-            <MaterialCommunityIcons name="lock-reset" size={24} color="#F0F6FF" />
-          </View>
+        <View style={styles.lockBadge}>
+          <MaterialCommunityIcons name="lock-reset" size={24} color="#F0F6FF" />
         </View>
 
-        <Text style={styles.resetTitle}>Create New Password</Text>
-        <Text style={styles.resetSubtitle}>Your new password must be different{`\n`}from previous used passwords.</Text>
+        <Text style={styles.resetTitle}>{t('auth.newPasswordTitle')}</Text>
+        <Text style={styles.resetSubtitle}>{t('auth.newPasswordSubtitle')}</Text>
 
         <View style={styles.secondaryFormGroup}>
           <AuthInputField
-            label="New Password"
+            label={t('auth.newPasswordField')}
             placeholder="••••••••"
             leftIcon="lock"
             rightIcon="eye"
             secureTextEntry
             variant="outline"
+            value={newPassword}
+            onChangeText={(v) => {
+              setNewPassword(v);
+              setNewPasswordError(null);
+            }}
+            error={newPasswordError}
           />
           <AuthInputField
-            label="Confirm Password"
+            label={t('auth.confirmPasswordField')}
             placeholder="••••••••"
             leftIcon="lock"
             rightIcon="eye"
             secureTextEntry
             variant="outline"
+            value={confirmPassword}
+            onChangeText={(v) => {
+              setConfirmPassword(v);
+              setConfirmPasswordError(null);
+            }}
+            error={confirmPasswordError}
           />
         </View>
 
         <View style={styles.requirementsCard}>
-          <Text style={styles.requirementsHeading}>Security Requirements</Text>
-          <Text style={styles.reqDone}>◉  At least 8 characters</Text>
-          <Text style={styles.reqTodo}>○  Include at least one number</Text>
-          <Text style={styles.reqTodo}>○  Include one special character</Text>
+          <Text style={styles.requirementsHeading}>{t('auth.securityRequirements')}</Text>
+          <Text style={styles.reqDone}>{'\u2713 '} {t('auth.req8chars')}</Text>
+          <Text style={styles.reqTodo}>{'\u2013 '} {t('auth.reqNumber')}</Text>
+          <Text style={styles.reqTodo}>{'\u2013 '} {t('auth.reqSpecial')}</Text>
         </View>
 
-        <AuthButton label="Reset Password" onPress={() => navigation.navigate('Login')} />
+        <AuthButton
+          label={t('auth.resetPassword')}
+          onPress={() => {
+            const strong = validatePasswordStrong(newPassword);
+            if (!strong.ok) {
+              setNewPasswordError(t(strong.key));
+              setConfirmPasswordError(null);
+              return;
+            }
+            const match = validatePasswordsMatch(newPassword, confirmPassword);
+            if (!match.ok) {
+              setNewPasswordError(null);
+              setConfirmPasswordError(t(match.key));
+              return;
+            }
+            setNewPasswordError(null);
+            setConfirmPasswordError(null);
+            navigation.navigate('Login');
+          }}
+        />
 
         <View style={styles.footerLines}>
           <View style={styles.footerLine} />
           <View style={styles.footerLine} />
         </View>
 
-        <Text style={styles.supportText}>Need help? <Text style={styles.supportAction}>Contact Support</Text></Text>
+        <Text style={styles.supportText}>
+          {t('auth.supportNeed')} <Text style={styles.supportAction}>{t('auth.supportContact')}</Text>
+        </Text>
       </ScrollView>
     </View>
   );
@@ -358,20 +530,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#1F2E57',
   },
-  resetIconOuter: {
+  resetIconBadge: {
     marginTop: 18,
     alignSelf: 'center',
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    backgroundColor: '#E6E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resetIconInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 8,
     backgroundColor: '#4C7DDD',
     alignItems: 'center',
     justifyContent: 'center',
@@ -430,20 +594,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: '#666D7D',
   },
-  lockBadgeOuter: {
+  lockBadge: {
     alignSelf: 'center',
     marginTop: 10,
-    width: 72,
-    height: 72,
-    borderRadius: 14,
-    backgroundColor: '#E5E7EF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockBadgeInner: {
     width: 56,
     height: 56,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: '#4C7DDD',
     alignItems: 'center',
     justifyContent: 'center',

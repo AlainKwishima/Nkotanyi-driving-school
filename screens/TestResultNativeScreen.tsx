@@ -5,6 +5,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
+import { useI18n } from '../i18n/useI18n';
 
 type FailedProps = NativeStackScreenProps<RootStackParamList, 'TestFailedNative'>;
 type PassedProps = NativeStackScreenProps<RootStackParamList, 'TestPassedNative'>;
@@ -59,13 +60,16 @@ function ResultTemplate({
   passed,
   score,
   time,
+  percent,
   navigation,
 }: {
   passed: boolean;
   score: string;
   time: string;
+  percent: number;
   navigation: FailedProps['navigation'] | PassedProps['navigation'];
 }) {
+  const { t } = useI18n();
   return (
     <View style={styles.screen}>
       <View style={styles.headerBlue}>
@@ -73,35 +77,35 @@ function ResultTemplate({
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color="#F5F8FF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Home</Text>
+          <Text style={styles.headerTitle}>{t('test.home')}</Text>
         </View>
       </View>
       <View style={styles.topDiagonal} />
 
       <View style={styles.content}>
-        <Text style={styles.headline}>{passed ? 'Congratulation!' : 'Whoops, sorry...'}</Text>
+        <Text style={styles.headline}>{passed ? t('test.passedHeadline') : t('test.failedHeadline')}</Text>
 
-        <ScoreRing passed={passed} percent={passed ? 85 : 35} />
+        <ScoreRing passed={passed} percent={percent} />
 
-        <Text style={styles.mainTitle}>{passed ? 'Driving Test Passed' : 'Driving Test Failed'}</Text>
+        <Text style={styles.mainTitle}>{passed ? t('test.passedTitle') : t('test.failedTitle')}</Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statCol}>
             <Text style={styles.statValue}>{score}</Text>
-            <Text style={styles.statLabel}>Results</Text>
+            <Text style={styles.statLabel}>{t('test.results')}</Text>
           </View>
           <View style={styles.statCol}>
             <Text style={styles.statValue}>{time}</Text>
-            <Text style={styles.statLabel}>Time</Text>
+            <Text style={styles.statLabel}>{t('test.time')}</Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('StartExamNative')}>
-          <Text style={styles.primaryText}>Start New Exam</Text>
+        <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('ExamInstructionsNative')}>
+          <Text style={styles.primaryText}>{t('test.newExam')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.navigate('PerformanceReviewNative')}>
-          <Text style={styles.secondaryText}>Check Results</Text>
+          <Text style={styles.secondaryText}>{t('test.checkResults')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -111,12 +115,36 @@ function ResultTemplate({
   );
 }
 
-export function TestFailedNativeScreen({ navigation }: FailedProps) {
-  return <ResultTemplate passed={false} score="20/50" time="25:30" navigation={navigation} />;
+export function TestFailedNativeScreen({ navigation, route }: FailedProps) {
+  const correct = route.params?.correct ?? 7;
+  const total = route.params?.total ?? 20;
+  const time = route.params?.timeLabel ?? '0:00';
+  const percent = route.params?.percent ?? Math.round((correct / Math.max(total, 1)) * 100);
+  return (
+    <ResultTemplate
+      passed={false}
+      score={`${correct}/${total}`}
+      time={time}
+      percent={percent}
+      navigation={navigation}
+    />
+  );
 }
 
-export function TestPassedNativeScreen({ navigation }: PassedProps) {
-  return <ResultTemplate passed score="45/50" time="19:20" navigation={navigation} />;
+export function TestPassedNativeScreen({ navigation, route }: PassedProps) {
+  const correct = route.params?.correct ?? 18;
+  const total = route.params?.total ?? 20;
+  const time = route.params?.timeLabel ?? '0:00';
+  const percent = route.params?.percent ?? Math.round((correct / Math.max(total, 1)) * 100);
+  return (
+    <ResultTemplate
+      passed
+      score={`${correct}/${total}`}
+      time={time}
+      percent={percent}
+      navigation={navigation}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

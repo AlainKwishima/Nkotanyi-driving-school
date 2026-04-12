@@ -1,11 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
+import { useI18n } from '../i18n/useI18n';
 
 export type TabKey = 'home' | 'exam' | 'read' | 'watch' | 'performance';
 
@@ -14,19 +17,6 @@ type BottomNavBarProps = {
   active?: TabKey;
   onPressTab?: (tab: TabKey) => void;
 };
-
-const TABS: Array<{
-  key: TabKey;
-  label: string;
-  route: keyof RootStackParamList;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-}> = [
-  { key: 'home', label: 'Home', route: 'HomeNative', icon: 'home-outline' },
-  { key: 'exam', label: 'Exam', route: 'ExamNative', icon: 'clipboard-outline' },
-  { key: 'read', label: 'READ', route: 'ReadingNative', icon: 'book-outline' },
-  { key: 'watch', label: 'Watch', route: 'VideoCourseList', icon: 'play-circle-outline' },
-  { key: 'performance', label: 'Performance', route: 'PerformanceNative', icon: 'analytics-outline' },
-];
 
 function resolveActive(routeName: string): TabKey {
   const examRoutes = new Set([
@@ -66,9 +56,20 @@ function resolveActive(routeName: string): TabKey {
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
   const route = useRoute();
-  const { hasSubscription, hasUsedFreeTrial } = useAppFlow();
+  const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const { hasSubscription } = useAppFlow();
   const { openGateModal } = useGateModal();
   const activeKey = active ?? resolveActive(route.name);
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 8);
+
+  const tabs = [
+    { key: 'home' as const, labelKey: 'nav.home' as const, route: 'HomeNative' as const, icon: 'home-outline' as const },
+    { key: 'exam' as const, labelKey: 'nav.exam' as const, route: 'ExamNative' as const, icon: 'clipboard-outline' as const },
+    { key: 'read' as const, labelKey: 'nav.read' as const, route: 'ReadingNative' as const, icon: 'book-outline' as const },
+    { key: 'watch' as const, labelKey: 'nav.watch' as const, route: 'VideoCourseList' as const, icon: 'play-circle-outline' as const },
+    { key: 'performance' as const, labelKey: 'nav.performance' as const, route: 'PerformanceNative' as const, icon: 'analytics-outline' as const },
+  ] as const;
 
   const onPress = (tab: TabKey, routeName: keyof RootStackParamList) => {
     if (onPressTab) {
@@ -77,7 +78,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
     }
     if (navigation) {
       if (tab === 'exam') {
-        (navigation as any).navigate('StartExamNative', { gateFor: 'exam' });
+        (navigation as any).navigate('ExamInstructionsNative');
         return;
       }
 
@@ -90,16 +91,24 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   };
 
   return (
-    <View style={styles.tabs}>
-      {TABS.map((tab) => {
+    <View style={[styles.tabs, { paddingBottom: bottomPad }]}>
+      {tabs.map((tab) => {
         const isActive = tab.key === activeKey;
         return (
-          <TouchableOpacity key={tab.key} style={styles.tab} onPress={() => onPress(tab.key, tab.route)}>
+          <Pressable
+            key={tab.key}
+            style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+            onPress={() => onPress(tab.key, tab.route)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+          >
             <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
-              <Ionicons name={tab.icon} size={20} color={isActive ? '#F5F8FF' : '#95A4BF'} />
+              <Ionicons name={tab.icon} size={22} color={isActive ? '#F5F8FF' : '#95A4BF'} />
             </View>
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
-          </TouchableOpacity>
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
+              {t(tab.labelKey)}
+            </Text>
+          </Pressable>
         );
       })}
     </View>
@@ -112,17 +121,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 74,
+    minHeight: 56,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     backgroundColor: '#EFF0F4',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
+    paddingTop: 8,
   },
-  tab: { alignItems: 'center' },
-  tabBubble: { width: 46, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  tab: {
+    alignItems: 'center',
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    justifyContent: 'center',
+  },
+  tabPressed: { opacity: 0.88 },
+  tabBubble: { width: 48, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   tabBubbleActive: { backgroundColor: '#4A78D0' },
   tabText: {
     marginTop: 2,

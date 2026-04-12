@@ -1,31 +1,25 @@
-﻿import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { useAuth } from '../context/AuthContext';
+import { getPerformanceHistory } from '../services/performanceApi';
+import { readLocalExamRecords } from '../services/examHistoryStorage';
+import { mergePerformanceHistory, type PerformanceHistoryRow } from '../services/performanceHistory';
+import { getMessageFromUnknownError } from '../services/api/client';
+import { useI18n } from '../i18n/useI18n';
 
 type PerfProps = NativeStackScreenProps<RootStackParamList, 'PerformanceNative'>;
 type DetailProps = NativeStackScreenProps<RootStackParamList, 'PerformanceDetailNative'>;
 type ReviewProps = NativeStackScreenProps<RootStackParamList, 'PerformanceReviewNative'>;
-
-type HistoryItem = {
-  id: string;
-  title: string;
-  date: string;
-  status: 'PASSED' | 'FAILED';
-  answers: string;
-  duration: string;
-};
-
-const HISTORY_ITEMS: HistoryItem[] = [
-  { id: '1', title: 'Exam #1', date: 'Oct 12, 2023 • 14:20 PM', status: 'PASSED', answers: '30/30', duration: '27 min' },
-  { id: '2', title: 'Exam #2', date: 'Oct 10, 2023 • 09:15 AM', status: 'FAILED', answers: '22/30', duration: '45 min' },
-  { id: '3', title: 'Exam #1', date: 'Oct 08, 2023 • 18:45 PM', status: 'PASSED', answers: '15/15', duration: '08 min' },
-  { id: '4', title: 'Theory Test #3', date: 'Oct 05, 2023 • 11:30 AM', status: 'PASSED', answers: '27/30', duration: '31 min' },
-];
 
 function TopHeader({
   title,
@@ -36,13 +30,14 @@ function TopHeader({
   onBack: () => void;
   navigation: PerfProps['navigation'] | DetailProps['navigation'] | ReviewProps['navigation'];
 }) {
+  const { insets } = useResponsiveLayout();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <TouchableOpacity onPress={onBack} style={styles.backBtn}>
         <Ionicons name="chevron-back" size={24} color="#F5F7FC" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
-      <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={72} rightOffset={16} />
+      <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={56} rightOffset={16} />
     </View>
   );
 }
@@ -51,8 +46,10 @@ function BottomTabs({ navigation }: { navigation: PerfProps['navigation'] | Deta
   return <BottomNavBar navigation={navigation} />;
 }
 
-function HistoryCard({ item, onPress }: { item: HistoryItem; onPress?: () => void }) {
+function HistoryCard({ item, onPress }: { item: PerformanceHistoryRow; onPress?: () => void }) {
+  const { t } = useI18n();
   const passed = item.status === 'PASSED';
+  const statusText = passed ? t('performance.passed') : t('performance.failed');
 
   return (
     <TouchableOpacity style={styles.historyCard} onPress={onPress} activeOpacity={0.9}>
@@ -65,7 +62,7 @@ function HistoryCard({ item, onPress }: { item: HistoryItem; onPress?: () => voi
           <Text style={styles.historyDate}>{item.date}</Text>
         </View>
         <View style={[styles.statusPill, passed ? styles.statusPillPass : styles.statusPillFail]}>
-          <Text style={[styles.statusPillText, passed ? styles.statusPillTextPass : styles.statusPillTextFail]}>{item.status}</Text>
+          <Text style={[styles.statusPillText, passed ? styles.statusPillTextPass : styles.statusPillTextFail]}>{statusText}</Text>
         </View>
       </View>
 
@@ -75,14 +72,14 @@ function HistoryCard({ item, onPress }: { item: HistoryItem; onPress?: () => voi
         <View style={styles.metricBlock}>
           <MaterialIcons name="fact-check" size={16} color="#5B5F6A" />
           <View style={styles.metricTextWrap}>
-            <Text style={styles.metricLabel}>ANSWERS</Text>
+            <Text style={styles.metricLabel}>{t('performance.answers').toUpperCase()}</Text>
             <Text style={styles.metricValue}>{item.answers}</Text>
           </View>
         </View>
         <View style={styles.metricBlock}>
           <Ionicons name="time-outline" size={16} color="#5B5F6A" />
           <View style={styles.metricTextWrap}>
-            <Text style={styles.metricLabel}>DURATION</Text>
+            <Text style={styles.metricLabel}>{t('performance.duration').toUpperCase()}</Text>
             <Text style={styles.metricValue}>{item.duration}</Text>
           </View>
         </View>
@@ -91,18 +88,57 @@ function HistoryCard({ item, onPress }: { item: HistoryItem; onPress?: () => voi
   );
 }
 
-function HistoryBackground({ navigation }: { navigation: PerfProps['navigation'] | DetailProps['navigation'] }) {
+function HistoryBackground({
+  navigation,
+  rows,
+  loading,
+  loadError,
+  onRetry,
+}: {
+  navigation: PerfProps['navigation'] | DetailProps['navigation'];
+  rows: PerformanceHistoryRow[];
+  loading: boolean;
+  loadError: string | null;
+  onRetry: () => void;
+}) {
+  const { t } = useI18n();
+  const { tabScrollBottomPad } = useResponsiveLayout();
   return (
     <>
-      <TopHeader title="Performance" onBack={() => navigation.goBack()} navigation={navigation} />
+      <TopHeader title={t('performance.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>History</Text>
-          <Text style={styles.viewAll}>View All</Text>
+          <Text style={styles.sectionTitle}>{t('performance.history')}</Text>
+          <TouchableOpacity onPress={onRetry} disabled={loading}>
+            <Text style={styles.viewAll}>{loading ? '…' : t('performance.refresh')}</Text>
+          </TouchableOpacity>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listPad}>
-          {HISTORY_ITEMS.map((item) => (
-            <HistoryCard key={item.id} item={item} onPress={() => navigation.navigate('PerformanceDetailNative')} />
+        {loadError ? <Text style={styles.inlineError}>{loadError}</Text> : null}
+        {loading && rows.length === 0 ? (
+          <View style={styles.centerPad}>
+            <ActivityIndicator size="large" color="#4A78D0" />
+          </View>
+        ) : null}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.listPad, { paddingBottom: tabScrollBottomPad }]}>
+          {rows.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>{t('performance.empty')}</Text>
+          ) : null}
+          {rows.map((item) => (
+            <HistoryCard
+              key={item.id}
+              item={item}
+              onPress={() =>
+                navigation.navigate('PerformanceDetailNative', {
+                  correct: item.correct,
+                  total: item.total,
+                  percent: item.percent,
+                  timeLabel: item.duration,
+                  passed: item.status === 'PASSED',
+                  dateLabel: item.date,
+                  title: item.title,
+                })
+              }
+            />
           ))}
         </ScrollView>
       </View>
@@ -125,32 +161,78 @@ function ProgressRow({ title, value }: { title: string; value: number }) {
 }
 
 export function PerformanceNativeScreen({ navigation }: PerfProps) {
+  const { accessToken } = useAuth();
+  const [rows, setRows] = useState<PerformanceHistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const local = await readLocalExamRecords();
+      if (!accessToken) {
+        setRows(mergePerformanceHistory([], local));
+        return;
+      }
+      const remote = await getPerformanceHistory(accessToken);
+      setRows(mergePerformanceHistory(remote, local));
+    } catch (e) {
+      setLoadError(getMessageFromUnknownError(e));
+      const local = await readLocalExamRecords();
+      setRows(mergePerformanceHistory([], local));
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
   return (
-    <View style={styles.safe}>
-      <HistoryBackground navigation={navigation} />
+    <ScreenColumn backgroundColor="#4A78D0">
+      <HistoryBackground navigation={navigation} rows={rows} loading={loading} loadError={loadError} onRetry={load} />
       <BottomTabs navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
-export function PerformanceDetailNativeScreen({ navigation }: DetailProps) {
+export function PerformanceDetailNativeScreen({ navigation, route }: DetailProps) {
+  const { t } = useI18n();
+  const p = route.params;
+  const passed = p?.passed ?? true;
+  const correct = p?.correct ?? 18;
+  const total = p?.total ?? 20;
+  const percent = p?.percent ?? Math.round((correct / Math.max(total, 1)) * 100);
+  const timeLabel = p?.timeLabel ?? '—';
+  const dateLabel = p?.dateLabel ?? '—';
+  const title = p?.title ?? t('performance.detail.title');
+
   return (
-    <View style={styles.safe}>
-      <HistoryBackground navigation={navigation} />
+    <ScreenColumn backgroundColor="#4A78D0">
+      <TopHeader title={t('performance.title')} onBack={() => navigation.goBack()} navigation={navigation} />
+      <View style={styles.body} />
 
       <View style={styles.overlay} />
       <View style={styles.modal}>
         <View style={styles.modalTop}>
           <View>
-            <View style={[styles.statusPill, styles.statusPillPass]}>
-              <Text style={[styles.statusPillText, styles.statusPillTextPass]}>PASSED</Text>
+            <View style={[styles.statusPill, passed ? styles.statusPillPass : styles.statusPillFail]}>
+              <Text style={[styles.statusPillText, passed ? styles.statusPillTextPass : styles.statusPillTextFail]}>
+                {(passed ? t('performance.passed') : t('performance.failed')).toUpperCase()}
+              </Text>
             </View>
-            <Text style={styles.modalExamTitle}>Exam #1</Text>
-            <Text style={styles.modalDate}>Oct 12, 2023</Text>
+            <Text style={styles.modalExamTitle}>{title}</Text>
+            <Text style={styles.modalDate}>{dateLabel}</Text>
           </View>
           <View style={styles.scoreWrap}>
-            <Text style={styles.scoreValue}>28/30</Text>
-            <Text style={styles.scoreLabel}>TOTAL SCORE</Text>
+            <Text style={styles.scoreValue}>
+              {correct}/{total}
+            </Text>
+            <Text style={styles.scoreLabel}>{t('performance.totalScore').toUpperCase()}</Text>
           </View>
         </View>
 
@@ -159,24 +241,22 @@ export function PerformanceDetailNativeScreen({ navigation }: DetailProps) {
           <View style={styles.metricBlock}>
             <Ionicons name="time-outline" size={16} color="#2C355C" />
             <View style={styles.metricTextWrap}>
-              <Text style={styles.modalMetaMain}>27 min</Text>
-              <Text style={styles.modalMetaSub}>Time Spent</Text>
+              <Text style={styles.modalMetaMain}>{timeLabel}</Text>
+              <Text style={styles.modalMetaSub}>{t('performance.time')}</Text>
             </View>
           </View>
           <View style={styles.metricBlock}>
             <Ionicons name="trending-up-outline" size={16} color="#2C355C" />
             <View style={styles.metricTextWrap}>
-              <Text style={styles.modalMetaMain}>93%</Text>
-              <Text style={styles.modalMetaSub}>Accuracy</Text>
+              <Text style={styles.modalMetaMain}>{percent}%</Text>
+              <Text style={styles.modalMetaSub}>{t('performance.accuracy')}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.modalDivider} />
-        <Text style={styles.breakdownTitle}>TOPIC BREAKDOWN</Text>
-        <ProgressRow title="Road Signs" value={100} />
-        <ProgressRow title="Traffic Rules" value={85} />
-        <ProgressRow title="Basic Controls" value={90} />
+        <Text style={styles.breakdownTitle}>SCORE</Text>
+        <ProgressRow title="Overall" value={percent} />
 
         <TouchableOpacity style={styles.reviewBtn} onPress={() => navigation.navigate('PerformanceReviewNative')}>
           <Text style={styles.reviewBtnText}>Review Questions</Text>
@@ -188,58 +268,52 @@ export function PerformanceDetailNativeScreen({ navigation }: DetailProps) {
       </View>
 
       <BottomTabs navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 export function PerformanceReviewNativeScreen({ navigation }: ReviewProps) {
-  const options = [
-    'Slowly and safely accelerate while steering in the direction of the skid',
-    'Turn your front wheels in the same direction that the rear of the vehicle is sliding',
-    'If your car does start to skid, take your foot off the gas, keep both hands on the wheel',
-  ];
+  const { t } = useI18n();
+  const { tabScrollBottomPad } = useResponsiveLayout();
 
   return (
-    <View style={styles.safe}>
-      <TopHeader title="Results" onBack={() => navigation.goBack()} navigation={navigation} />
+    <ScreenColumn backgroundColor="#4A78D0">
+      <TopHeader title={t('test.results')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.reviewPad}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.reviewPad, { paddingBottom: tabScrollBottomPad }]}>
           <View style={styles.questionCard}>
-            <Text style={styles.questionText}>
-              When skidding, if the rear end of the car is skidding to the right, turn your wheel to the:
-            </Text>
+            <Text style={styles.questionText}>{t('performance.mock.question')}</Text>
             <Image source={require('../assets/practice-road-diagram.png')} style={styles.diagram} resizeMode="contain" />
           </View>
 
           <View style={[styles.answerOption, styles.correctOption]}>
-            <Text style={styles.answerLight}>{options[0]}</Text>
+            <Text style={styles.answerLight}>{t('performance.mock.opt1')}</Text>
           </View>
           <View style={[styles.answerOption, styles.wrongOption]}>
-            <Text style={styles.answerLight}>{options[1]}</Text>
+            <Text style={styles.answerLight}>{t('performance.mock.opt2')}</Text>
           </View>
           <View style={styles.answerOption}>
-            <Text style={styles.answerDark}>{options[2]}</Text>
+            <Text style={styles.answerDark}>{t('performance.mock.opt3')}</Text>
           </View>
 
           <TouchableOpacity style={styles.nextBtn} onPress={() => navigation.navigate('PerformanceNative')}>
-            <Text style={styles.nextBtnText}>Next</Text>
+            <Text style={styles.nextBtnText}>{t('exam.next')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: '#4A78D0' },
   header: {
-    height: 78,
+    minHeight: 78,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backBtn: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, lineHeight: 24, color: '#F5F7FC' },
   body: {
     flex: 1,
@@ -256,7 +330,25 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, lineHeight: 28, color: '#1F2A52' },
   viewAll: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, lineHeight: 18, color: '#1F2A52' },
-  listPad: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 100 },
+  inlineError: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8B3A3A',
+  },
+  centerPad: { paddingVertical: 24, alignItems: 'center' },
+  emptyText: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#5A6170',
+    textAlign: 'center',
+  },
+  listPad: { paddingHorizontal: 16, paddingTop: 14 },
   historyCard: {
     borderRadius: 12,
     backgroundColor: '#F2F3F5',
@@ -367,7 +459,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#0E1A48',
   },
-  reviewPad: { padding: 16, paddingBottom: 24 },
+  reviewPad: { padding: 16 },
   questionCard: {
     borderRadius: 12,
     backgroundColor: '#ECEDEF',

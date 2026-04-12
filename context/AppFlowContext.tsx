@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type ContentLanguageCode = 'en' | 'rw' | 'fr';
+
 type AppFlowState = {
   hasChosenLanguage: boolean;
   isSignedIn: boolean;
   hasUsedFreeTrial: boolean;
   hasSubscription: boolean;
+  contentLanguage: ContentLanguageCode;
 };
 
 type AppFlowContextValue = AppFlowState & {
@@ -14,6 +17,7 @@ type AppFlowContextValue = AppFlowState & {
   setSignedIn: (signedIn: boolean) => Promise<void>;
   setHasUsedFreeTrial: (used: boolean) => Promise<void>;
   setHasSubscription: (subscribed: boolean) => Promise<void>;
+  setContentLanguage: (lang: ContentLanguageCode) => Promise<void>;
   resetFlow: () => Promise<void>;
 };
 
@@ -24,6 +28,7 @@ const defaultState: AppFlowState = {
   isSignedIn: false,
   hasUsedFreeTrial: false,
   hasSubscription: false,
+  contentLanguage: 'en',
 };
 
 const AppFlowContext = createContext<AppFlowContextValue | null>(null);
@@ -43,6 +48,8 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
             isSignedIn: Boolean(parsed.isSignedIn),
             hasUsedFreeTrial: Boolean(parsed.hasUsedFreeTrial),
             hasSubscription: Boolean(parsed.hasSubscription),
+            contentLanguage:
+              parsed.contentLanguage === 'rw' || parsed.contentLanguage === 'fr' ? parsed.contentLanguage : 'en',
           });
         }
       } finally {
@@ -65,6 +72,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       setSignedIn: async (signedIn) => persist({ ...state, isSignedIn: signedIn }),
       setHasUsedFreeTrial: async (used) => persist({ ...state, hasUsedFreeTrial: used }),
       setHasSubscription: async (subscribed) => persist({ ...state, hasSubscription: subscribed }),
+      setContentLanguage: async (lang) => persist({ ...state, contentLanguage: lang }),
       resetFlow: async () => {
         await AsyncStorage.removeItem(STORAGE_KEY);
         setState(defaultState);

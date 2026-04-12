@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NavigationProp } from '@react-navigation/native';
+import { CommonActions, NavigationProp } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/useI18n';
 
 type HeaderMenuProps = {
   navigation: NavigationProp<RootStackParamList>;
@@ -19,19 +23,28 @@ export function HeaderMenu({
   rightOffset = 14,
 }: HeaderMenuProps) {
   const [open, setOpen] = useState(false);
+  const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+  const { t } = useI18n();
 
   const menuItems = useMemo(
     () => [
-      { label: 'Profile', route: 'ProfileNative' as const, icon: 'person-outline' as const },
-      { label: 'Subscription', route: 'SubscriptionNative' as const, icon: 'card-outline' as const },
-      { label: 'Help Center', route: 'HelpCenterNative' as const, icon: 'help-circle-outline' as const },
+      { id: 'profile', labelKey: 'menu.profile' as const, route: 'ProfileNative' as const, icon: 'person-outline' as const },
+      { id: 'subscription', labelKey: 'menu.subscription' as const, route: 'SubscriptionNative' as const, icon: 'card-outline' as const },
+      { id: 'help', labelKey: 'menu.help' as const, route: 'HelpCenterNative' as const, icon: 'help-circle-outline' as const },
+      { id: 'signout', labelKey: 'menu.signOut' as const, route: null, icon: 'log-out-outline' as const },
     ],
     [],
   );
 
-  const onSelect = (route: keyof RootStackParamList) => {
+  const onSelect = async (route: keyof RootStackParamList | null) => {
     setOpen(false);
-    navigation.navigate(route as any);
+    if (route === null) {
+      await logout();
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }));
+      return;
+    }
+    navigation.navigate(route as never);
   };
 
   return (
@@ -42,16 +55,16 @@ export function HeaderMenu({
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <View style={[styles.dropdown, { top: topOffset, right: rightOffset }]}>
+          <View style={[styles.dropdown, { top: topOffset + insets.top, right: rightOffset + insets.right }]}>
             {menuItems.map((item, idx) => (
               <TouchableOpacity
-                key={item.label}
+                key={item.id}
                 style={[styles.menuItem, idx < menuItems.length - 1 && styles.menuItemDivider]}
-                onPress={() => onSelect(item.route)}
+                onPress={() => void onSelect(item.route)}
                 activeOpacity={0.85}
               >
                 <Ionicons name={item.icon} size={16} color="#2C355C" />
-                <Text style={styles.menuText}>{item.label}</Text>
+                <Text style={styles.menuText}>{t(item.labelKey)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -63,8 +76,8 @@ export function HeaderMenu({
 
 const styles = StyleSheet.create({
   iconBtn: {
-    width: 26,
-    height: 26,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -87,7 +100,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   menuItem: {
-    height: 44,
+    minHeight: MIN_TOUCH_TARGET,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,

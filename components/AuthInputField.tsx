@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
+import { KeyboardTypeOptions, StyleProp, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
@@ -15,6 +15,11 @@ type AuthInputFieldProps = {
   variant?: 'filled' | 'outline';
   style?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  value?: string;
+  onChangeText?: (text: string) => void;
+  keyboardType?: KeyboardTypeOptions;
+  /** Inline validation message (already translated). */
+  error?: string | null;
 };
 
 export function AuthInputField({
@@ -26,9 +31,14 @@ export function AuthInputField({
   variant = 'filled',
   style,
   inputStyle,
+  value,
+  onChangeText,
+  keyboardType = 'default',
+  error,
 }: AuthInputFieldProps) {
   const m = useMobile();
   const outline = variant === 'outline';
+  const hasError = Boolean(error);
 
   return (
     <View style={style}>
@@ -38,6 +48,7 @@ export function AuthInputField({
           styles.inputWrap,
           { height: m.verticalScale(48), borderRadius: m.scale(11), paddingHorizontal: m.scale(14) },
           outline ? styles.inputWrapOutline : styles.inputWrapFilled,
+          hasError && styles.inputWrapError,
         ]}
       >
         <Feather name={leftIcon} size={m.scale(17)} color={outline ? '#C5C8D2' : '#8A8FA2'} />
@@ -45,10 +56,16 @@ export function AuthInputField({
           placeholder={placeholder}
           placeholderTextColor="#A8AAB4"
           secureTextEntry={secureTextEntry}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
           style={[styles.input, { marginHorizontal: m.scale(10), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }, inputStyle]}
         />
         {rightIcon ? <Feather name={rightIcon} size={m.scale(17)} color="#BCBEC7" /> : null}
       </View>
+      {error ? (
+        <Text style={[styles.errorText, { marginTop: m.verticalScale(6), fontSize: m.fontScale(12), lineHeight: m.fontScale(17) }]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
@@ -79,6 +96,13 @@ const styles = StyleSheet.create({
   inputWrapOutline: {
     borderColor: '#A6ABBB',
     backgroundColor: '#F6F5F9',
+  },
+  inputWrapError: {
+    borderColor: '#D64B4B',
+  },
+  errorText: {
+    fontFamily: 'Poppins-Medium',
+    color: '#C23A3A',
   },
   input: {
     flex: 1,

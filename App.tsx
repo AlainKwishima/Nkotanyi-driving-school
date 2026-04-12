@@ -1,7 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 
@@ -26,6 +28,7 @@ import { VideoCourseListScreen } from './screens/VideoCourseListScreen';
 import { VideoCoursePlayerScreen } from './screens/VideoCoursePlayerScreen';
 import { SplashScreen } from './screens/SplashScreen';
 import { AppFlowProvider } from './context/AppFlowContext';
+import { AuthProvider } from './context/AuthContext';
 import { GateModalProvider } from './context/GateModalContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -60,9 +63,12 @@ export default function App() {
   }
 
   return (
-    <AppFlowProvider>
-      <GateModalProvider>
-        <NavigationContainer theme={navTheme}>
+    <SafeAreaProvider>
+      <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'} />
+      <AppFlowProvider>
+        <AuthProvider>
+          <GateModalProvider>
+            <NavigationContainer theme={navTheme}>
           <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
@@ -96,9 +102,11 @@ export default function App() {
             <Stack.Screen name="RoadSignsCategories" component={RoadSignsCategoriesScreen} />
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
           </Stack.Navigator>
-        </NavigationContainer>
-      </GateModalProvider>
-    </AppFlowProvider>
+            </NavigationContainer>
+          </GateModalProvider>
+        </AuthProvider>
+      </AppFlowProvider>
+    </SafeAreaProvider>
   );
 }
 

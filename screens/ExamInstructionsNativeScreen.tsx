@@ -1,57 +1,68 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { BottomNavBar } from '../components/BottomNavBar';
 import { HeaderMenu } from '../components/HeaderMenu';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useAppFlow } from '../context/AppFlowContext';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamInstructionsNative'>;
 
-type StatCard = {
+type StatCardDef = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
+  labelKey: string;
+  valueKey: string;
 };
 
-const STAT_CARDS: StatCard[] = [
-  { icon: 'timer-outline', label: 'TIME LIMIT', value: '20 Minutes' },
-  { icon: 'help-circle-outline', label: 'QUESTIONS', value: '20 MCQs' },
-  { icon: 'ribbon-outline', label: 'PASSING SCORE', value: '18/20 (90%)' },
-  { icon: 'clipboard-outline', label: 'EXAM TYPE', value: 'Definitive Test' },
+const STAT_CARD_DEFS: StatCardDef[] = [
+  { icon: 'timer-outline', labelKey: 'examInstructions.statTimeLimit', valueKey: 'examInstructions.statTimeValue' },
+  { icon: 'help-circle-outline', labelKey: 'examInstructions.statQuestions', valueKey: 'examInstructions.statQuestionsValue' },
+  { icon: 'ribbon-outline', labelKey: 'examInstructions.statPassing', valueKey: 'examInstructions.statPassingValue' },
+  { icon: 'clipboard-outline', labelKey: 'examInstructions.statExamType', valueKey: 'examInstructions.statExamTypeValue' },
 ];
 
-const GUIDELINES = [
-  'Read each question carefully before selecting your answer from the multiple choices.',
-  'You cannot go back to previous questions once you move forward.',
-  'The timer starts as soon as you click the "Start Exam" button.',
-  'Ensure you have a stable internet connection throughout the duration.',
-];
+const GUIDE_KEYS = ['examInstructions.guide1', 'examInstructions.guide2', 'examInstructions.guide3', 'examInstructions.guide4'] as const;
 
 export function ExamInstructionsNativeScreen({ navigation }: Props) {
   const { hasSubscription, hasUsedFreeTrial } = useAppFlow();
   const { openGateModal } = useGateModal();
+  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const { t } = useI18n();
+
+  const statCards = useMemo(
+    () =>
+      STAT_CARD_DEFS.map((c) => ({
+        icon: c.icon,
+        label: t(c.labelKey),
+        value: t(c.valueKey),
+      })),
+    [t],
+  );
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.headerBlue}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.backTap} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Exam Instructions</Text>
-          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={72} rightOffset={14} />
+          <Text style={styles.headerTitle}>{t('examInstructions.title')}</Text>
+          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
         </View>
       </View>
 
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
           <View style={styles.readyStrip}>
-            <Text style={styles.readyTitle}>Ready to start?</Text>
-            <Text style={styles.readySub}>Good luck, future driver!</Text>
+            <Text style={styles.readyTitle}>{t('examInstructions.readyTitle')}</Text>
+            <Text style={styles.readySub}>{t('examInstructions.readySub')}</Text>
           </View>
 
           <TouchableOpacity
@@ -64,18 +75,16 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
               openGateModal('exam_ready', () => navigation.navigate('ExamNative'));
             }}
           >
-            <Text style={styles.startBtnText}>Start Exam</Text>
+            <Text style={styles.startBtnText}>{t('examInstructions.startExam')}</Text>
             <Ionicons name="arrow-forward" size={18} color="#F4F7FE" />
           </TouchableOpacity>
 
           <View style={styles.contentWrap}>
-            <Text style={styles.sectionTitle}>Theory Exam Instructions</Text>
-            <Text style={styles.sectionSub}>
-              Please review the details below before{'\n'}commencing your definitive driving test{'\n'}simulation.
-            </Text>
+            <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
+            <Text style={styles.sectionSub}>{t('examInstructions.sectionSub')}</Text>
 
             <View style={styles.statsGrid}>
-              {STAT_CARDS.map((card) => (
+              {statCards.map((card) => (
                 <View key={card.label} style={styles.statCard}>
                   <Ionicons name={card.icon} size={16} color="#4A78D0" />
                   <Text style={styles.statLabel}>{card.label}</Text>
@@ -87,15 +96,15 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
             <View style={styles.guideCard}>
               <View style={styles.guideHeader}>
                 <View style={styles.guideBar} />
-                <Text style={styles.guideTitle}>ESSENTIAL GUIDELINES</Text>
+                <Text style={styles.guideTitle}>{t('examInstructions.guidelinesTitle').toUpperCase()}</Text>
               </View>
 
-              {GUIDELINES.map((text, index) => (
-                <View key={text} style={styles.guideItem}>
+              {GUIDE_KEYS.map((key, index) => (
+                <View key={key} style={styles.guideItem}>
                   <View style={styles.numberDot}>
                     <Text style={styles.numberDotText}>{index + 1}</Text>
                   </View>
-                  <Text style={styles.guideText}>{text}</Text>
+                  <Text style={styles.guideText}>{t(key)}</Text>
                 </View>
               ))}
             </View>
@@ -104,32 +113,24 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
       </View>
 
       <BottomNavBar navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 430,
-    alignSelf: 'center',
-    backgroundColor: '#4A78D0',
-  },
   headerBlue: {
-    height: 78,
     backgroundColor: '#4A78D0',
     paddingHorizontal: 14,
   },
   topRow: {
-    height: 78,
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backTap: {
-    width: 24,
-    height: 24,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   scrollPad: {
-    paddingBottom: 94,
+    paddingTop: 0,
   },
   readyStrip: {
     paddingTop: 10,

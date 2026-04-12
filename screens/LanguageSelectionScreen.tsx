@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image, ImageSourcePropType, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,57 +8,70 @@ import { LanguageOptionCard } from '../components/LanguageOptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useMobile } from '../hooks/useMobile';
 import { useAppFlow } from '../context/AppFlowContext';
+import type { ContentLanguageCode } from '../context/AppFlowContext';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSelection'>;
 type LanguageKey = 'kinyarwanda' | 'english' | 'francais';
 
 type LanguageOption = {
   key: LanguageKey;
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
   flagUri: ImageSourcePropType;
 };
 
 const LANGUAGE_OPTIONS: LanguageOption[] = [
-  {
-    key: 'kinyarwanda',
-    title: 'Kinyarwanda',
-    subtitle: "Ururimi rw'Ikinyarwanda",
-    flagUri: FIGMA_ASSETS.flagKinyarwanda,
-  },
-  {
-    key: 'english',
-    title: 'English',
-    subtitle: 'International Language',
-    flagUri: FIGMA_ASSETS.flagEnglish,
-  },
-  {
-    key: 'francais',
-    title: 'Francais',
-    subtitle: 'Langue Francaise',
-    flagUri: FIGMA_ASSETS.flagFrancais,
-  },
+  { key: 'kinyarwanda', titleKey: 'language.opt.rw.title', subtitleKey: 'language.opt.rw.sub', flagUri: FIGMA_ASSETS.flagKinyarwanda },
+  { key: 'english', titleKey: 'language.opt.en.title', subtitleKey: 'language.opt.en.sub', flagUri: FIGMA_ASSETS.flagEnglish },
+  { key: 'francais', titleKey: 'language.opt.fr.title', subtitleKey: 'language.opt.fr.sub', flagUri: FIGMA_ASSETS.flagFrancais },
 ];
 
-export function LanguageSelectionScreen({ navigation }: Props) {
+function contentLangToCardKey(code: ContentLanguageCode): LanguageKey {
+  if (code === 'rw') return 'kinyarwanda';
+  if (code === 'fr') return 'francais';
+  return 'english';
+}
+
+export function LanguageSelectionScreen({ navigation, route }: Props) {
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageKey>('kinyarwanda');
   const m = useMobile();
-  const { setLanguageChosen } = useAppFlow();
+  const { t } = useI18n();
+  const { setLanguageChosen, setContentLanguage, contentLanguage } = useAppFlow();
+  const changeOnly = Boolean(route.params?.changeOnly);
+
+  useEffect(() => {
+    if (changeOnly) {
+      setSelectedLanguage(contentLangToCardKey(contentLanguage));
+    }
+  }, [changeOnly, contentLanguage]);
+
+  const apiLang = (key: LanguageKey): ContentLanguageCode => {
+    if (key === 'kinyarwanda') return 'rw';
+    if (key === 'francais') return 'fr';
+    return 'en';
+  };
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter }]}>
       <ScrollView contentContainerStyle={[styles.phoneFrame, { width: m.contentWidth }]} showsVerticalScrollIndicator={false} bounces={false}>
         <View style={[styles.header, { width: m.contentWidth, height: m.verticalScale(216) }]}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(184), height: m.scale(184) }]} resizeMode="cover" />
-          <Text style={[styles.brandTitle, { width: m.scale(266), fontSize: m.fontScale(20), lineHeight: m.fontScale(32) }]}>Nkotanyi Driving School</Text>
+          <Text style={[styles.brandTitle, { width: m.scale(266), fontSize: m.fontScale(20), lineHeight: m.fontScale(32) }]}>
+            {t('language.brand')}
+          </Text>
         </View>
 
         <View style={[styles.main, { width: m.contentWidth, paddingTop: m.verticalScale(30), paddingHorizontal: m.scale(24) }]}>
           <View>
             <View style={[styles.titleMargin, { width: m.contentWidth - m.scale(48), paddingBottom: m.verticalScale(32) }]}>
               <View style={[styles.titleSection, { width: m.contentWidth - m.scale(48) }]}>
-                <Text style={[styles.heading, { width: m.scale(223), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>Choose Your Language</Text>
-                <Text style={[styles.subHeading, { marginTop: m.verticalScale(8), width: m.scale(99), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>Hitamo Ururimi</Text>
+                <Text style={[styles.heading, { width: m.scale(260), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
+                  {changeOnly ? t('language.changeTitle') : t('language.chooseTitle')}
+                </Text>
+                <Text style={[styles.subHeading, { marginTop: m.verticalScale(8), maxWidth: m.scale(280), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
+                  {changeOnly ? t('language.changeHint') : t('language.chooseSubtitle')}
+                </Text>
               </View>
             </View>
 
@@ -66,8 +79,8 @@ export function LanguageSelectionScreen({ navigation }: Props) {
               {LANGUAGE_OPTIONS.map((option) => (
                 <View key={option.key} style={option.key === 'kinyarwanda' ? undefined : [styles.languageCardSpacing, { marginTop: m.verticalScale(16) }]}>
                   <LanguageOptionCard
-                    title={option.title}
-                    subtitle={option.subtitle}
+                    title={t(option.titleKey)}
+                    subtitle={t(option.subtitleKey)}
                     flagUri={option.flagUri}
                     selected={option.key === selectedLanguage}
                     onPress={() => setSelectedLanguage(option.key)}
@@ -79,13 +92,20 @@ export function LanguageSelectionScreen({ navigation }: Props) {
 
           <View style={[styles.footerActions, { width: m.contentWidth - m.scale(48), paddingBottom: m.verticalScale(24), paddingTop: m.verticalScale(20) }]}>
             <PrimaryButton
-              label="Continue"
+              label={t('language.continue')}
               onPress={async () => {
+                await setContentLanguage(apiLang(selectedLanguage));
                 await setLanguageChosen(true);
+                if (changeOnly) {
+                  navigation.goBack();
+                  return;
+                }
                 navigation.replace('CreateAccount');
               }}
             />
-            <Text style={[styles.copyright, { marginTop: m.verticalScale(24), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>© 2024 NKOTANYI DRIVING SCHOOL</Text>
+            <Text style={[styles.copyright, { marginTop: m.verticalScale(24), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
+              {t('language.copyright')}
+            </Text>
           </View>
         </View>
       </ScrollView>

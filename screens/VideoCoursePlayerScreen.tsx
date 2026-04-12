@@ -1,11 +1,15 @@
-﻿import React from 'react';
+import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
+import { useI18n } from '../i18n/useI18n';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { HeaderMenu } from '../components/HeaderMenu';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VideoCoursePlayer'>;
 
@@ -20,25 +24,36 @@ function BottomTabs({ navigation }: { navigation: Props['navigation'] }) {
   return <BottomNavBar navigation={navigation} />;
 }
 
-export function VideoCoursePlayerScreen({ navigation }: Props) {
+export function VideoCoursePlayerScreen({ navigation, route }: Props) {
+  const { t } = useI18n();
+  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const title = route.params?.title ?? t('video.playerTitle');
+  const videoUrl = route.params?.videoUrl;
+
+  const openVideo = () => {
+    if (videoUrl) {
+      void Linking.openURL(videoUrl);
+    }
+  };
+
   return (
-    <View style={styles.safe}>
-      <View style={styles.header}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Video Course</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={72} rightOffset={14} />
+        <Text style={styles.headerTitle}>{t('video.playerTitle')}</Text>
+        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
       </View>
 
       <View style={styles.body}>
         <Image source={require('../assets/ui/video_thumb_2.png')} style={styles.hero} resizeMode="cover" />
 
-        <View style={styles.playerOverlay}>
+        <TouchableOpacity style={styles.playerOverlay} onPress={openVideo} activeOpacity={0.85} disabled={!videoUrl}>
           <Ionicons name="play-circle-outline" size={72} color="rgba(255,255,255,0.85)" />
           <View style={styles.rewindLeft}><Text style={styles.seekText}>10s</Text></View>
           <View style={styles.rewindRight}><Text style={styles.seekText}>10s</Text></View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.timelineRow}>
           <Text style={styles.timeText}>04:10</Text>
@@ -46,9 +61,16 @@ export function VideoCoursePlayerScreen({ navigation }: Props) {
           <Text style={styles.timeText}>24:10</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Speed limit signs</Text>
+        <Text style={styles.sectionTitle} numberOfLines={3}>
+          {title}
+        </Text>
+        {!videoUrl ? (
+          <Text style={styles.noUrl}>{t('video.noUrl')}</Text>
+        ) : (
+          <Text style={styles.hint}>{t('video.tapOpen')}</Text>
+        )}
 
-        <ScrollView contentContainerStyle={styles.listPad} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.listPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
           {LESSONS.map((lesson, idx) => (
             <TouchableOpacity key={`${lesson.title}-${idx}`} style={[styles.card, lesson.active && styles.cardActive]} onPress={() => navigation.navigate('VideoCoursePlayer')}>
               <Image source={lesson.thumb} style={styles.thumb} resizeMode="cover" />
@@ -62,21 +84,20 @@ export function VideoCoursePlayerScreen({ navigation }: Props) {
       </View>
 
       <BottomTabs navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: '#4A78D0' },
   header: {
-    height: 78,
+    minHeight: 78,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerBtn: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 17, lineHeight: 24, color: '#F7F9FE' },
+  headerBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, lineHeight: 24, color: '#F7F9FE' },
   body: {
     flex: 1,
     backgroundColor: '#CAD2DF',
@@ -102,7 +123,9 @@ const styles = StyleSheet.create({
   track: { flex: 1, height: 3, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.5)', marginHorizontal: 10 },
   progress: { width: '28%', height: 3, borderRadius: 999, backgroundColor: '#FFFFFF' },
   sectionTitle: { marginTop: 8, marginHorizontal: 14, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, lineHeight: 20, color: '#2F3545' },
-  listPad: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 90 },
+  noUrl: { marginHorizontal: 14, marginTop: 4, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#8A4B4B' },
+  hint: { marginHorizontal: 14, marginTop: 4, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#5A6170' },
+  listPad: { paddingHorizontal: 14, paddingTop: 8 },
   card: {
     height: 82,
     borderRadius: 10,

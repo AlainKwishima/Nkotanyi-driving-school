@@ -10,35 +10,40 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
+import { ScreenColumn } from '../components/ScreenColumn';
 import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
+import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
+import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HomeNative'>;
 
 type QuickAction = {
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-  route: 'StartExamNative' | 'RoadSignsListNative' | 'ReadingNative' | 'VideoCourseList' | 'PerformanceNative';
+  route: 'ExamInstructionsNative' | 'RoadSignsListNative' | 'ReadingNative' | 'VideoCourseList' | 'PerformanceNative';
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { title: 'Examinations', subtitle: 'Test your\nknowledge', icon: 'file-question-outline', route: 'StartExamNative' },
-  { title: 'Road Signs', subtitle: 'Visual library', icon: 'traffic-light-outline', route: 'RoadSignsListNative' },
-  { title: 'Reading\nMaterials', subtitle: 'Manuals & guides', icon: 'book-open-page-variant-outline', route: 'ReadingNative' },
-  { title: 'Performance\nHistory', subtitle: 'Review your scores', icon: 'history', route: 'PerformanceNative' },
+  { titleKey: 'home.action.exams', subtitleKey: 'home.action.examsSub', icon: 'file-question-outline', route: 'ExamInstructionsNative' },
+  { titleKey: 'home.action.roadSigns', subtitleKey: 'home.action.roadSignsSub', icon: 'traffic-light-outline', route: 'RoadSignsListNative' },
+  { titleKey: 'home.action.reading', subtitleKey: 'home.action.readingSub', icon: 'book-open-page-variant-outline', route: 'ReadingNative' },
+  { titleKey: 'home.action.performance', subtitleKey: 'home.action.performanceSub', icon: 'history', route: 'PerformanceNative' },
 ];
 
-function QuickActionCard({ action, onPress }: { action: QuickAction; onPress: () => void }) {
+function QuickActionCard({ action, title, subtitle, onPress }: { action: QuickAction; title: string; subtitle: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardIconWrap}>
         <MaterialCommunityIcons name={action.icon} size={20} color="#F6F7FA" />
       </View>
-      <Text style={styles.cardTitle}>{action.title}</Text>
-      <Text style={styles.cardSubtitle}>{action.subtitle}</Text>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardSubtitle}>{subtitle}</Text>
     </TouchableOpacity>
   );
 }
@@ -50,10 +55,14 @@ function BottomNav({ navigation }: { navigation: Props['navigation'] }) {
 export function HomeNativeScreen({ navigation }: Props) {
   const { hasUsedFreeTrial, hasSubscription } = useAppFlow();
   const { openGateModal } = useGateModal();
-  const showTrial = !hasUsedFreeTrial && !hasSubscription;
+  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const { t } = useI18n();
+  const { name } = useAuth();
+  const showTrial = !hasSubscription;
+  const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
   const handleQuickAction = (route: QuickAction['route']) => {
-    if (route === 'StartExamNative') {
-      navigation.navigate('StartExamNative', { gateFor: 'exam' });
+    if (route === 'ExamInstructionsNative') {
+      navigation.navigate('ExamInstructionsNative');
       return;
     }
 
@@ -69,39 +78,44 @@ export function HomeNativeScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.headerBlue}>
+    <ScreenColumn backgroundColor="#4A78D0">
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
         <View style={styles.titleRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backTap}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backTap} accessibilityRole="button">
             <Ionicons name="chevron-back" size={24} color="#4B79D0" />
           </TouchableOpacity>
-          <Text style={styles.homeTitle}>Home</Text>
-          <HeaderMenu navigation={navigation} iconColor="#F2F3F8" topOffset={72} rightOffset={16} />
+          <Text style={styles.homeTitle}>{t('home.title')}</Text>
+          <HeaderMenu navigation={navigation} iconColor="#F2F3F8" topOffset={56} rightOffset={16} />
         </View>
       </View>
 
       <View style={styles.bodyWrap}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.welcome}>Welcome back, Alain!</Text>
-          <Text style={styles.subwelcome}>You're on the fast track to getting your{'\n'}license.</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabScrollBottomPad }]}>
+          <Text style={styles.welcome}>{welcome}</Text>
+          <Text style={styles.subwelcome}>{t('home.subwelcome')}</Text>
           {showTrial ? (
             <View style={styles.trialCard}>
-              <Text style={styles.trialTitle}>Free Trial Available</Text>
-              <Text style={styles.trialText}>You have 1 free exam trial. Use it before subscribing.</Text>
+              <Text style={styles.trialTitle}>{hasUsedFreeTrial ? t('home.trialUsedTitle') : t('home.trialAvailableTitle')}</Text>
+              <Text style={styles.trialText}>{hasUsedFreeTrial ? t('home.trialUsedBody') : t('home.trialAvailableBody')}</Text>
             </View>
           ) : null}
 
           <View style={styles.quickHeader}>
-            <Text style={styles.quickTitle}>Quick Actions</Text>
+            <Text style={styles.quickTitle}>{t('home.quickActions')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('ScreensHub')}>
-              <Text style={styles.viewAll}>View All</Text>
+              <Text style={styles.viewAll}>{t('home.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.grid}>
             {QUICK_ACTIONS.map((action, index) => (
-              <View key={action.title} style={[styles.gridItem, index % 2 === 1 && styles.gridItemRight]}>
-                <QuickActionCard action={action} onPress={() => handleQuickAction(action.route)} />
+              <View key={action.titleKey} style={[styles.gridItem, index % 2 === 1 && styles.gridItemRight]}>
+                <QuickActionCard
+                  action={action}
+                  title={t(action.titleKey)}
+                  subtitle={t(action.subtitleKey)}
+                  onPress={() => handleQuickAction(action.route)}
+                />
               </View>
             ))}
           </View>
@@ -109,34 +123,27 @@ export function HomeNativeScreen({ navigation }: Props) {
       </View>
 
       <BottomNav navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 430,
-    alignSelf: 'center',
-    backgroundColor: '#4A78D0',
-  },
   headerBlue: {
     backgroundColor: '#4A78D0',
-    height: 78,
     paddingHorizontal: 20,
-    paddingTop: 0,
+    paddingBottom: 0,
   },
   titleRow: {
-    marginTop: 0,
-    height: 78,
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backTap: {
-    width: 26,
-    height: 26,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeTitle: {
     color: '#F3F5FA',
@@ -154,7 +161,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 98,
   },
   welcome: {
     fontSize: 20,

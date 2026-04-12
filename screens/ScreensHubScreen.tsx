@@ -2,16 +2,22 @@ import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { REFERENCE_SCREENS } from '../assets/referenceScreens';
+import { REFERENCE_SCREENS, type ReferenceScreenKey } from '../assets/referenceScreens';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScreensHub'>;
 
+function hubScreenTitleKey(key: ReferenceScreenKey): string {
+  return `hub.screen.${key}`;
+}
+
 export function ScreensHubScreen({ navigation }: Props) {
+  const { t } = useI18n();
   return (
     <View style={styles.root}>
-      <ScreenHeader title="All Screens" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('hub.title')} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {REFERENCE_SCREENS.map((screen) => (
           <Pressable
@@ -51,7 +57,7 @@ export function ScreensHubScreen({ navigation }: Props) {
                 return;
               }
               if (screen.key === 'startExam') {
-                navigation.navigate('StartExamNative');
+                navigation.navigate('ExamInstructionsNative');
                 return;
               }
               if (screen.key === 'practiceNoSelected') {
@@ -129,7 +135,7 @@ export function ScreensHubScreen({ navigation }: Props) {
               navigation.navigate('ReferenceImage', { key: screen.key });
             }}
           >
-            <Text style={styles.cardTitle}>{screen.title}</Text>
+            <Text style={styles.cardTitle}>{t(hubScreenTitleKey(screen.key))}</Text>
           </Pressable>
         ))}
       </ScrollView>
