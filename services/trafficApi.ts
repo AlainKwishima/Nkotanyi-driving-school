@@ -1,5 +1,6 @@
-import { apiRequest } from './api/client';
-import type { StandardResponse } from './api/types';
+import type { ContentLanguageCode } from '../context/AppFlowContext';
+
+import { apiRequest, unwrapApiPayload } from './api/client';
 
 export type TrafficOption = {
   _id: string;
@@ -19,18 +20,32 @@ export type TrafficQuestion = {
   isTrial?: boolean;
 };
 
-export async function getExamQuestions(accessToken: string): Promise<TrafficQuestion[]> {
-  const res = await apiRequest<StandardResponse<TrafficQuestion[]>>(`/api/traffic/get-questions`, {
-    method: 'GET',
-    accessToken,
-  });
-  return res.data ?? [];
+function withLanguageQuery(path: string, language?: ContentLanguageCode): string {
+  if (!language) return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}language=${encodeURIComponent(language)}`;
 }
 
-export async function getSignQuestions(accessToken: string): Promise<TrafficQuestion[]> {
-  const res = await apiRequest<StandardResponse<TrafficQuestion[]>>(`/api/traffic/get-sign-questions`, {
+export async function getExamQuestions(
+  accessToken: string,
+  language?: ContentLanguageCode,
+): Promise<TrafficQuestion[]> {
+  const json = await apiRequest<unknown>(withLanguageQuery(`/api/traffic/get-questions`, language), {
     method: 'GET',
     accessToken,
   });
-  return res.data ?? [];
+  const data = unwrapApiPayload<TrafficQuestion[] | unknown>(json);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getSignQuestions(
+  accessToken: string,
+  language?: ContentLanguageCode,
+): Promise<TrafficQuestion[]> {
+  const json = await apiRequest<unknown>(withLanguageQuery(`/api/traffic/get-sign-questions`, language), {
+    method: 'GET',
+    accessToken,
+  });
+  const data = unwrapApiPayload<TrafficQuestion[] | unknown>(json);
+  return Array.isArray(data) ? data : [];
 }

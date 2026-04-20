@@ -5,7 +5,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { REFERENCE_SCREENS, type ReferenceScreenKey } from '../assets/referenceScreens';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { useAppFlow } from '../context/AppFlowContext';
+import { useGateModal } from '../context/GateModalContext';
 import { useI18n } from '../i18n/useI18n';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScreensHub'>;
 
@@ -15,6 +18,38 @@ function hubScreenTitleKey(key: ReferenceScreenKey): string {
 
 export function ScreensHubScreen({ navigation }: Props) {
   const { t } = useI18n();
+  const {
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+    hasUsedFreeTrial,
+  } = useAppFlow();
+  const { openGateModal } = useGateModal();
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
+
+  const gateIfNeeded = (kind: 'exam' | 'read' | 'watch', next: () => void) => {
+    if (kind === 'exam') {
+      if ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial)) {
+        openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+        return;
+      }
+      next();
+      return;
+    }
+
+    if (!languageAccessGranted) {
+      openGateModal(kind === 'read' ? 'subscription_read' : 'subscription_watch', () => navigation.navigate('SubscriptionNative'));
+      return;
+    }
+    next();
+  };
+
   return (
     <View style={styles.root}>
       <ScreenHeader title={t('hub.title')} onBack={() => navigation.goBack()} />
@@ -53,11 +88,11 @@ export function ScreensHubScreen({ navigation }: Props) {
                 return;
               }
               if (screen.key === 'exam') {
-                navigation.navigate('ExamNative');
+                gateIfNeeded('exam', () => navigation.navigate('ExamInstructionsNative'));
                 return;
               }
               if (screen.key === 'startExam') {
-                navigation.navigate('ExamInstructionsNative');
+                gateIfNeeded('exam', () => navigation.navigate('ExamInstructionsNative'));
                 return;
               }
               if (screen.key === 'practiceNoSelected') {
@@ -89,15 +124,7 @@ export function ScreensHubScreen({ navigation }: Props) {
                 return;
               }
               if (screen.key === 'readingDocument') {
-                navigation.navigate('ReadingNative');
-                return;
-              }
-              if (screen.key === 'roadSignsList') {
-                navigation.navigate('RoadSignsListNative');
-                return;
-              }
-              if (screen.key === 'roadSignsDetails') {
-                navigation.navigate('RoadSignsDetailNative');
+                gateIfNeeded('read', () => navigation.navigate('ReadingNative'));
                 return;
               }
               if (screen.key === 'helpCenter') {
@@ -120,16 +147,13 @@ export function ScreensHubScreen({ navigation }: Props) {
                 navigation.navigate('ProfileNative');
                 return;
               }
-              if (screen.key === 'roadSignsCategories') {
-                navigation.navigate('RoadSignsCategories');
-                return;
-              }
+
               if (screen.key === 'videoCourseList') {
-                navigation.navigate('VideoCourseList');
+                gateIfNeeded('watch', () => navigation.navigate('VideoCourseList'));
                 return;
               }
               if (screen.key === 'videoCoursePlayer') {
-                navigation.navigate('VideoCoursePlayer');
+                gateIfNeeded('watch', () => navigation.navigate('VideoCoursePlayer'));
                 return;
               }
               navigation.navigate('ReferenceImage', { key: screen.key });

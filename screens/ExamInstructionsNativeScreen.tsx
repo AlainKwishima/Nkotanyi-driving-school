@@ -12,6 +12,7 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamInstructionsNative'>;
 
@@ -31,10 +32,22 @@ const STAT_CARD_DEFS: StatCardDef[] = [
 const GUIDE_KEYS = ['examInstructions.guide1', 'examInstructions.guide2', 'examInstructions.guide3', 'examInstructions.guide4'] as const;
 
 export function ExamInstructionsNativeScreen({ navigation }: Props) {
-  const { hasSubscription, hasUsedFreeTrial } = useAppFlow();
+  const {
+    hasSubscription,
+    hasUsedFreeTrial,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  } = useAppFlow();
   const { openGateModal } = useGateModal();
   const { insets, tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   const statCards = useMemo(
     () =>
@@ -68,11 +81,15 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.startBtn}
             onPress={() => {
+              if (hasSubscription && !languageAccessGranted) {
+                openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+                return;
+              }
               if (!hasSubscription && hasUsedFreeTrial) {
                 openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
                 return;
               }
-              openGateModal('exam_ready', () => navigation.navigate('ExamNative'));
+              navigation.navigate('ExamTypeSelectNative');
             }}
           >
             <Text style={styles.startBtnText}>{t('examInstructions.startExam')}</Text>

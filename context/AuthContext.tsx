@@ -1,11 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { DeviceEventEmitter, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAppFlow } from './AppFlowContext';
 import { loginRequest, logoutRequest, signupRequest } from '../services/authApi';
 import { getMessageFromUnknownError } from '../services/api/client';
-import { getUserAndPayment, paymentsIndicateActiveSubscription } from '../services/userApi';
-import { normalizeAccountPhone } from '../utils/phone';
+import {
+  getUserAndPayment,
+  latestActiveSubscriptionLanguage,
+  profileHasHighestSubscription,
+  profileIndicatesActiveSubscription,
+} from '../services/userApi';
+import { phoneForSignupApi } from '../utils/phone';
+import { navigationRef } from '../App';
 
 const AUTH_KEY = 'nkotanyi.auth.v1';
 
@@ -36,7 +43,14 @@ async function persistAuth(state: AuthState) {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setSignedIn, setHasSubscription, setHasUsedFreeTrial, contentLanguage } = useAppFlow();
+  const {
+    setSignedIn,
+    setHasSubscription,
+    setHasUsedFreeTrial,
+    setCanChangeLanguage,
+    setSubscriptionLanguage,
+    contentLanguage,
+  } = useAppFlow();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
@@ -47,20 +61,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (token: string, uid: string): Promise<boolean> => {
       const profile = await getUserAndPayment(uid, token);
       const u = profile.user;
+
+      // DEV-only: print raw profile so we can verify subscription field shapes
+      if (__DEV__) {
+        console.log(
+          '[AuthContext] raw profile.user →',
+          JSON.stringify({ role: u.role, isSubscribed: u.isSubscribed, subscriptionStatus: u.subscriptionStatus, subscriptionActive: u.subscriptionActive, hasActiveSubscription: u.hasActiveSubscription, plan: u.plan, planName: u.planName, subscriptionExpiry: u.subscriptionExpiry, subscriptionExpiresAt: u.subscriptionExpiresAt, expiresAt: u.expiresAt }),
+        );
+        console.log('[AuthContext] raw profile.payment →', JSON.stringify(profile.payment));
+      }
+
       setName(u.name);
       setPhone(u.phone);
       if (typeof u.hasAttemptedTrial === 'boolean' && u.hasAttemptedTrial) {
         await setHasUsedFreeTrial(true);
       }
-      const sub = paymentsIndicateActiveSubscription(profile.payment);
+      const sub = profileIndicatesActiveSubscription(profile);
+      const highestSub = profileHasHighestSubscription(profile);
+      const paidLanguage = sub ? latestActiveSubscriptionLanguage(profile) : null;
+      if (__DEV__) {
+        console.log('[AuthContext] hasSubscription resolved to →', sub);
+        console.log('[AuthContext] highest subscription resolved to →', highestSub);
+        console.log('[AuthContext] paid language resolved to →', paidLanguage);
+      }
       await setHasSubscription(sub);
+      await setCanChangeLanguage(highestSub);
+      await setSubscriptionLanguage(paidLanguage);
       return sub;
     },
-    [setHasSubscription, setHasUsedFreeTrial],
+    [setCanChangeLanguage, setHasSubscription, setHasUsedFreeTrial, setSubscriptionLanguage],
   );
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      if (authReady) return;
       try {
         const raw = await AsyncStorage.getItem(AUTH_KEY);
         if (!raw) {
@@ -77,25 +112,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             await applyProfile(parsed.accessToken, parsed.userId);
           } catch {
-            await AsyncStorage.removeItem(AUTH_KEY);
-            setAccessToken(null);
-            setUserId(null);
-            setName(null);
-            setPhone(null);
-            await setSignedIn(false);
+            if (!cancelled) {
+              await AsyncStorage.removeItem(AUTH_KEY);
+              setAccessToken(null);
+              setUserId(null);
+              setName(null);
+              setPhone(null);
+              await setSignedIn(false);
+            }
           }
         }
       } finally {
-        setAuthReady(true);
+        if (!cancelled) setAuthReady(true);
       }
     };
     void load();
-  }, [applyProfile, setSignedIn]);
+    return () => { cancelled = true; };
+    // Empty dependency array ensures this single-fire bootstrap logic doesn't repeatedly trigger.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(
     async (accountRaw: string, password: string) => {
-      const account = normalizeAccountPhone(accountRaw);
-      const data = await loginRequest(account, password);
+      const data = await loginRequest(accountRaw, password);
       const token = data.accessToken;
       if (!token) {
         throw new Error('Login did not return an access token');
@@ -114,9 +152,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(
     async (fullName: string, phoneRaw: string, password: string) => {
-      const phoneDigits = normalizeAccountPhone(phoneRaw);
-      await signupRequest(fullName, phoneDigits, password, contentLanguage);
-      await login(phoneRaw, password);
+      const phoneDigits = phoneForSignupApi(phoneRaw);
+      await signupRequest(fullName, phoneDigits, password.trim(), contentLanguage);
+      await login(phoneRaw, password.trim());
     },
     [contentLanguage, login],
   );
@@ -129,6 +167,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPhone(null);
     await AsyncStorage.removeItem(AUTH_KEY);
     await setSignedIn(false);
+    await setCanChangeLanguage(false);
+    await setSubscriptionLanguage(null);
     if (t) {
       try {
         await logoutRequest(t);
@@ -136,7 +176,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
     }
-  }, [accessToken, setSignedIn]);
+  }, [accessToken, setCanChangeLanguage, setSignedIn, setSubscriptionLanguage]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('AUTH_EXPIRED', () => {
+      void logout();
+      Alert.alert('Session Expired', 'Your session has expired. Please log in again.');
+      if (navigationRef.isReady()) {
+        navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+      }
+    });
+    return () => sub.remove();
+  }, [logout]);
 
   const refreshProfile = useCallback(async (): Promise<boolean> => {
     if (!accessToken || !userId) return false;
@@ -170,3 +221,4 @@ export function useAuth() {
 }
 
 export { getMessageFromUnknownError };
+

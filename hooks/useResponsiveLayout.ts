@@ -39,12 +39,7 @@ export function useResponsiveLayout() {
 /** Merge into root column styles instead of a fixed maxWidth. */
 export function useScreenColumnStyle(): {
   width: '100%';
-  maxWidth: number;
-  alignSelf: 'center';
+  alignSelf: 'stretch';
 } {
-  const { contentMaxWidth } = useResponsiveLayout();
-  return useMemo(
-    () => ({ width: '100%' as const, maxWidth: contentMaxWidth, alignSelf: 'center' as const }),
-    [contentMaxWidth],
-  );
+  return useMemo(() => ({ width: '100%' as const, alignSelf: 'stretch' as const }), []);
 }

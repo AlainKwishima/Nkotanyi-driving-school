@@ -19,6 +19,7 @@ import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HomeNative'>;
 
@@ -26,12 +27,12 @@ type QuickAction = {
   titleKey: string;
   subtitleKey: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-  route: 'ExamInstructionsNative' | 'RoadSignsListNative' | 'ReadingNative' | 'VideoCourseList' | 'PerformanceNative';
+  route: 'ExamInstructionsNative' | 'ReadingNative' | 'VideoCourseList' | 'PerformanceNative';
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
   { titleKey: 'home.action.exams', subtitleKey: 'home.action.examsSub', icon: 'file-question-outline', route: 'ExamInstructionsNative' },
-  { titleKey: 'home.action.roadSigns', subtitleKey: 'home.action.roadSignsSub', icon: 'traffic-light-outline', route: 'RoadSignsListNative' },
+  { titleKey: 'video.listTitle', subtitleKey: 'nav.watch', icon: 'play-circle-outline', route: 'VideoCourseList' },
   { titleKey: 'home.action.reading', subtitleKey: 'home.action.readingSub', icon: 'book-open-page-variant-outline', route: 'ReadingNative' },
   { titleKey: 'home.action.performance', subtitleKey: 'home.action.performanceSub', icon: 'history', route: 'PerformanceNative' },
 ];
@@ -39,6 +40,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 function QuickActionCard({ action, title, subtitle, onPress }: { action: QuickAction; title: string; subtitle: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+      <View pointerEvents="none" style={styles.cardInnerHighlight} />
       <View style={styles.cardIconWrap}>
         <MaterialCommunityIcons name={action.icon} size={20} color="#F6F7FA" />
       </View>
@@ -53,23 +55,33 @@ function BottomNav({ navigation }: { navigation: Props['navigation'] }) {
 }
 
 export function HomeNativeScreen({ navigation }: Props) {
-  const { hasUsedFreeTrial, hasSubscription } = useAppFlow();
+  const { hasUsedFreeTrial, hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage } = useAppFlow();
   const { openGateModal } = useGateModal();
   const { insets, tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
   const { name } = useAuth();
   const showTrial = !hasSubscription;
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
   const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
   const handleQuickAction = (route: QuickAction['route']) => {
     if (route === 'ExamInstructionsNative') {
+      if (hasSubscription && !languageAccessGranted) {
+        openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+        return;
+      }
       navigation.navigate('ExamInstructionsNative');
       return;
     }
 
-    const needsReadGate = route === 'ReadingNative' || route === 'RoadSignsListNative';
+    const needsReadGate = route === 'ReadingNative';
     const needsWatchGate = route === 'VideoCourseList';
 
-    if (!hasSubscription && (needsReadGate || needsWatchGate)) {
+    if ((needsReadGate || needsWatchGate) && !languageAccessGranted) {
       openGateModal(needsReadGate ? 'subscription_read' : 'subscription_watch', () => navigation.navigate('SubscriptionNative'));
       return;
     }
@@ -229,10 +241,27 @@ const styles = StyleSheet.create({
     marginLeft: '4%',
   },
   card: {
-    borderRadius: 20,
-    backgroundColor: '#D8D7DC',
+    position: 'relative',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     minHeight: 158,
     padding: 14,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cardInnerHighlight: {
+    position: 'absolute',
+    left: 1,
+    right: 1,
+    top: 1,
+    height: 14,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   cardIconWrap: {
     width: 52,

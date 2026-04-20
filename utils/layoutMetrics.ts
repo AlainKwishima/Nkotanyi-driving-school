@@ -8,16 +8,21 @@ export const TABLET_COLUMN_MAX = 800;
 
 export const TABLET_SHORT_SIDE_BREAKPOINT = 600;
 
+/**
+ * Usable column width after **symmetric** horizontal inset (max of left/right + min gutter).
+ * Avoids `contentWidth` + extra `sideGutter` exceeding the screen (which pushed layouts to one side on phones).
+ */
 export function computeContentMaxWidth(width: number, height: number, insets: EdgeInsets): number {
-  const avail = width - insets.left - insets.right;
+  const hPad = Math.max(insets.left, insets.right);
+  const inner = Math.max(0, width - 2 * hPad);
   const shortSide = Math.min(width, height);
   if (shortSide >= TABLET_SHORT_SIDE_BREAKPOINT) {
-    return Math.min(avail * 0.96, TABLET_COLUMN_MAX);
+    return Math.min(inner * 0.96, TABLET_COLUMN_MAX);
   }
-  return Math.min(avail, PHONE_COLUMN_MAX);
+  return Math.min(inner, width);
 }
 
 /** Bottom padding for scroll areas above the floating tab bar + home indicator (matches BottomNavBar chrome). */
-export function scrollBottomPaddingWithTabs(insetsBottom: number, tabChromeHeight = 100, extra = 12): number {
+export function scrollBottomPaddingWithTabs(insetsBottom: number, tabChromeHeight = 118, extra = 14): number {
   return tabChromeHeight + extra + Math.max(insetsBottom, 0);
 }

@@ -3,6 +3,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY = 'nkotanyi.examHistory.v1';
 const MAX_RECORDS = 50;
 
+export type LocalExamAnswerDetail = {
+  questionId: string;
+  questionText: string;
+  selectedOptionId: string | null;
+  selectedOptionText: string | null;
+  correctOptionId: string | null;
+  correctOptionText: string | null;
+  isCorrect: boolean;
+};
+
 export type LocalExamRecord = {
   id: string;
   correct: number;
@@ -11,6 +21,11 @@ export type LocalExamRecord = {
   timeLabel: string;
   mode: string;
   createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  elapsedSec?: number;
+  answeredCount?: number;
+  answers?: LocalExamAnswerDetail[];
 };
 
 export async function readLocalExamRecords(): Promise<LocalExamRecord[]> {

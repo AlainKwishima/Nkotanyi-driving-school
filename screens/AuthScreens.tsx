@@ -48,7 +48,11 @@ export function LoginScreen({ navigation }: LoginProps) {
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <ScrollView contentContainerStyle={[styles.authScroll, { width: m.contentWidth, paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
+        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
+        showsVerticalScrollIndicator={false}
+      >
         <LogoHeader showTitle={false} />
 
         <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.welcomeBack')}</Text>
@@ -95,8 +99,7 @@ export function LoginScreen({ navigation }: LoginProps) {
             let pw: string | null = null;
             if (!phone.trim()) pe = t('validate.phoneRequired');
             else if (!isValidRwandaAccountPhone(phone)) pe = t('validate.phoneInvalid');
-            const pwr = validatePasswordMin(password);
-            if (!pwr.ok) pw = t(pwr.key);
+            if (!password) pw = t('validate.passwordRequired');
             setPhoneError(pe);
             setPasswordError(pw);
             if (pe || pw) return;
@@ -135,7 +138,7 @@ export function LoginScreen({ navigation }: LoginProps) {
 export function CreateAccountScreen({ navigation }: CreateAccountProps) {
   const m = useMobile();
   const { t } = useI18n();
-  const { setHasUsedFreeTrial, setHasSubscription } = useAppFlow();
+  const { setHasUsedFreeTrial, setHasSubscription, setCanChangeLanguage } = useAppFlow();
   const { signup } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -147,7 +150,11 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <ScrollView contentContainerStyle={[styles.authScroll, { width: m.contentWidth, paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
+        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
+        showsVerticalScrollIndicator={false}
+      >
         <LogoHeader showTitle />
 
         <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.createTitle')}</Text>
@@ -210,6 +217,7 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
               await signup(name.trim(), phone.trim(), password);
               await setHasUsedFreeTrial(false);
               await setHasSubscription(false);
+              await setCanChangeLanguage(false);
               navigation.replace('HomeNative');
             } catch (e) {
               Alert.alert(t('auth.createFailed'), getMessageFromUnknownError(e));
@@ -237,7 +245,11 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <ScrollView contentContainerStyle={[styles.secondaryScroll, { width: m.contentWidth, paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
+        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.topBar}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Feather name="arrow-left" size={22} color="#23335F" />
@@ -310,7 +322,11 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
-      <ScrollView contentContainerStyle={[styles.secondaryScroll, { width: m.contentWidth, paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
+        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.lockBadge}>
           <MaterialCommunityIcons name="lock-reset" size={24} color="#F0F6FF" />
         </View>
@@ -511,6 +527,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    alignItems: 'center',
   },
   topBar: {
     height: 30,

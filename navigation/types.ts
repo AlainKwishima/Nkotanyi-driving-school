@@ -3,6 +3,7 @@ import { ReferenceScreenKey } from '../assets/referenceScreens';
 export type RootStackParamList = {
   Splash: undefined;
   LanguageSelection: { changeOnly?: boolean } | undefined;
+  LanguageSettings: undefined;
   Login: undefined;
   CreateAccount: undefined;
   ForgotPassword: undefined;
@@ -10,6 +11,7 @@ export type RootStackParamList = {
   HomeNative: undefined;
   ExamNative: { mode?: 'traffic' | 'signs' } | undefined;
   ExamInstructionsNative: undefined;
+  ExamTypeSelectNative: undefined;
   StartExamNative: { gateFor?: 'exam' | 'read' | 'watch' } | undefined;
   PracticeNoSelectedNative: undefined;
   PracticeSelectedNative: undefined;
@@ -25,12 +27,42 @@ export type RootStackParamList = {
         passed?: boolean;
         dateLabel?: string;
         title?: string;
+        answeredCount?: number;
+        startedAt?: string;
+        finishedAt?: string;
+        elapsedSec?: number;
+        answerDetails?: Array<{
+          questionId: string;
+          questionText: string;
+          selectedOptionText: string | null;
+          correctOptionText: string | null;
+          isCorrect: boolean;
+        }>;
       }
     | undefined;
-  PerformanceReviewNative: undefined;
+  PerformanceReviewNative:
+    | {
+        title?: string;
+        dateLabel?: string;
+        correct?: number;
+        total?: number;
+        percent?: number;
+        timeLabel?: string;
+        passed?: boolean;
+        answeredCount?: number;
+        startedAt?: string;
+        finishedAt?: string;
+        elapsedSec?: number;
+        answerDetails?: Array<{
+          questionId: string;
+          questionText: string;
+          selectedOptionText: string | null;
+          correctOptionText: string | null;
+          isCorrect: boolean;
+        }>;
+      }
+    | undefined;
   ReadingNative: undefined;
-  RoadSignsListNative: undefined;
-  RoadSignsDetailNative: undefined;
   HelpCenterNative: undefined;
   SubscriptionNative: undefined;
   PaymentNative:
@@ -54,7 +86,21 @@ export type RootStackParamList = {
   ScreensHub: undefined;
   ReferenceImage: { key: ReferenceScreenKey };
   VideoCourseList: undefined;
-  VideoCoursePlayer: { title?: string; videoUrl?: string } | undefined;
-  RoadSignsCategories: undefined;
+  VideoCoursePlayer:
+    | {
+        title?: string;
+        videoUrl?: string;
+        videoId?: string;
+        currentIndex?: number;
+        allVideos?: Array<{
+          _id?: string;
+          title?: string;
+          videoUrl?: string;
+          thumbUri?: string;
+          duration?: string;
+        }>;
+      }
+    | undefined;
   HelpCenter: undefined;
+  PdfViewer: { title: string; url: string };
 };

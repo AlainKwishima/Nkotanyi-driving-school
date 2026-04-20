@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image, ImageSourcePropType, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
@@ -37,8 +38,9 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageKey>('kinyarwanda');
   const m = useMobile();
   const { t } = useI18n();
-  const { setLanguageChosen, setContentLanguage, contentLanguage } = useAppFlow();
+  const { setContentLanguage, contentLanguage, commitLanguageSelection } = useAppFlow();
   const changeOnly = Boolean(route.params?.changeOnly);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (changeOnly) {
@@ -54,19 +56,28 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter }]}>
-      <ScrollView contentContainerStyle={[styles.phoneFrame, { width: m.contentWidth }]} showsVerticalScrollIndicator={false} bounces={false}>
-        <View style={[styles.header, { width: m.contentWidth, height: m.verticalScale(216) }]}>
+      <ScrollView
+        style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
+        contentContainerStyle={[
+          styles.phoneFrame,
+          { paddingBottom: Math.max(insets.bottom, m.verticalScale(16)), flexGrow: 1 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={[styles.header, { height: m.verticalScale(216) }]}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(184), height: m.scale(184) }]} resizeMode="cover" />
           <Text style={[styles.brandTitle, { width: m.scale(266), fontSize: m.fontScale(20), lineHeight: m.fontScale(32) }]}>
             {t('language.brand')}
           </Text>
         </View>
 
-        <View style={[styles.main, { width: m.contentWidth, paddingTop: m.verticalScale(30), paddingHorizontal: m.scale(24) }]}>
-          <View>
-            <View style={[styles.titleMargin, { width: m.contentWidth - m.scale(48), paddingBottom: m.verticalScale(32) }]}>
-              <View style={[styles.titleSection, { width: m.contentWidth - m.scale(48) }]}>
-                <Text style={[styles.heading, { width: m.scale(260), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
+        <View style={[styles.main, { paddingTop: m.verticalScale(30), paddingHorizontal: m.scale(24) }]}>
+          <View style={styles.mainInner}>
+            <View style={[styles.titleMargin, { paddingBottom: m.verticalScale(32) }]}>
+              <View style={styles.titleSection}>
+                <Text style={[styles.heading, { maxWidth: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
                   {changeOnly ? t('language.changeTitle') : t('language.chooseTitle')}
                 </Text>
                 <Text style={[styles.subHeading, { marginTop: m.verticalScale(8), maxWidth: m.scale(280), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
@@ -75,7 +86,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
               </View>
             </View>
 
-            <View style={[styles.languageList, { width: m.contentWidth - m.scale(48) }]}>
+            <View style={styles.languageList}>
               {LANGUAGE_OPTIONS.map((option) => (
                 <View key={option.key} style={option.key === 'kinyarwanda' ? undefined : [styles.languageCardSpacing, { marginTop: m.verticalScale(16) }]}>
                   <LanguageOptionCard
@@ -90,16 +101,17 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          <View style={[styles.footerActions, { width: m.contentWidth - m.scale(48), paddingBottom: m.verticalScale(24), paddingTop: m.verticalScale(20) }]}>
+          <View style={[styles.footerActions, { paddingBottom: m.verticalScale(24), paddingTop: m.verticalScale(20) }]}>
             <PrimaryButton
               label={t('language.continue')}
               onPress={async () => {
-                await setContentLanguage(apiLang(selectedLanguage));
-                await setLanguageChosen(true);
+                const lang = apiLang(selectedLanguage);
                 if (changeOnly) {
+                  await setContentLanguage(lang);
                   navigation.goBack();
                   return;
                 }
+                await commitLanguageSelection(lang);
                 navigation.replace('CreateAccount');
               }}
             />
@@ -126,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    width: 390,
+    width: '100%',
     height: 216,
     alignItems: 'center',
   },
@@ -144,23 +156,26 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   main: {
-    width: 390,
+    width: '100%',
     flex: 1,
     paddingTop: 34,
     paddingHorizontal: 24,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     justifyContent: 'space-between',
   },
+  mainInner: {
+    width: '100%',
+    alignItems: 'stretch',
+  },
   titleMargin: {
-    width: 342,
+    width: '100%',
     paddingBottom: 40,
   },
   titleSection: {
-    width: 342,
+    width: '100%',
     alignItems: 'center',
   },
   heading: {
-    width: 222.89,
     textAlign: 'center',
     color: '#1B1B1E',
     fontFamily: 'Poppins-Bold',
@@ -169,7 +184,6 @@ const styles = StyleSheet.create({
   },
   subHeading: {
     marginTop: 8,
-    width: 98.69,
     textAlign: 'center',
     color: 'rgba(69, 70, 78, 0.7)',
     fontFamily: 'Poppins-Medium',
@@ -177,13 +191,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   languageList: {
-    width: 342,
+    width: '100%',
   },
   languageCardSpacing: {
     marginTop: 16,
   },
   footerActions: {
-    width: 342,
+    width: '100%',
     alignItems: 'center',
     paddingBottom: 24,
     paddingTop: 20,

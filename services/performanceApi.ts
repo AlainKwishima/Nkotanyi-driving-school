@@ -1,5 +1,4 @@
-import { apiRequest } from './api/client';
-import type { StandardResponse } from './api/types';
+import { apiRequest, unwrapApiPayload } from './api/client';
 
 /**
  * `GET /api/performance/all` — authenticated user's performance history.
@@ -10,10 +9,10 @@ export async function getPerformanceHistory(accessToken: string): Promise<unknow
     method: 'GET',
     accessToken,
   });
-  if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === 'object' && 'data' in raw) {
-    const d = (raw as { data: unknown }).data;
-    if (Array.isArray(d)) return d;
+  try {
+    const data = unwrapApiPayload<unknown[] | unknown>(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
   }
-  return [];
 }

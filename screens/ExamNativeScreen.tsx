@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,8 @@ import { getExamQuestions, getSignQuestions, type TrafficQuestion } from '../ser
 import { appendLocalExamRecord } from '../services/examHistoryStorage';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
+import { useGateModal } from '../context/GateModalContext';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
 
@@ -27,11 +29,31 @@ function formatTime(totalSec: number): string {
 }
 
 export function ExamNativeScreen({ navigation, route }: Props) {
-  const { hasSubscription, hasUsedFreeTrial, setHasUsedFreeTrial } = useAppFlow();
+  const {
+    hasSubscription,
+    hasUsedFreeTrial,
+    setHasUsedFreeTrial,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  } = useAppFlow();
   const { accessToken } = useAuth();
+  const { openGateModal } = useGateModal();
   const { insets } = useResponsiveLayout();
   const { t } = useI18n();
   const mode = route.params?.mode ?? 'traffic';
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
+
+  useEffect(() => {
+    if (hasSubscription && !languageAccessGranted) {
+      openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+    }
+  }, [hasSubscription, languageAccessGranted, navigation, openGateModal]);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -40,6 +62,16 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(EXAM_DURATION_SEC);
   const [selectedByQuestion, setSelectedByQuestion] = useState<Record<number, string>>({});
+  const scrollRef = useRef<ScrollView>(null);
+  const startedAtRef = useRef(new Date().toISOString());
+
+  useEffect(() => {
+    // Auto-scroll to current box
+    if (scrollRef.current) {
+      const boxWidth = 44 + 10; // box width + gap
+      scrollRef.current.scrollTo({ x: questionIndex * boxWidth - 16, animated: true });
+    }
+  }, [questionIndex]);
 
   const totalQuestions = questions.length;
   const current = questions[questionIndex];
@@ -54,6 +86,10 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
+      if (hasSubscription && !languageAccessGranted) {
+        setLoading(false);
+        return;
+      }
       if (!accessToken) {
         setLoadError(t('exam.needSignIn'));
         setLoading(false);
@@ -78,7 +114,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, mode, t]);
+  }, [accessToken, contentLanguage, hasSubscription, languageAccessGranted, mode, t]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -111,8 +147,35 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     const percent = Math.round((correct / total) * 100);
     const passed = percent >= PASS_PERCENT;
     const timeLabel = formatTime(elapsedSec);
+    const finishedAt = new Date().toISOString();
+    const answeredCount = questions.reduce((n, _, idx) => (selectedByQuestion[idx] ? n + 1 : n), 0);
+    const answers = questions.map((q, idx) => {
+      const selectedId = selectedByQuestion[idx] ?? null;
+      const selectedOpt = selectedId ? q.options.find((o) => o._id === selectedId) : undefined;
+      const correctOpt = q.options.find((o) => o.is_correct);
+      return {
+        questionId: q._id,
+        questionText: q.question.description,
+        selectedOptionId: selectedId,
+        selectedOptionText: selectedOpt?.optionText ?? null,
+        correctOptionId: correctOpt?._id ?? null,
+        correctOptionText: correctOpt?.optionText ?? null,
+        isCorrect: Boolean(selectedOpt?.is_correct),
+      };
+    });
 
-    await appendLocalExamRecord({ correct, total, percent, timeLabel, mode });
+    await appendLocalExamRecord({
+      correct,
+      total,
+      percent,
+      timeLabel,
+      mode,
+      startedAt: startedAtRef.current,
+      finishedAt,
+      elapsedSec,
+      answeredCount,
+      answers,
+    });
 
     const payload = { correct, total, timeLabel, percent };
     if (passed) {
@@ -171,6 +234,17 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   const imageUri = current.question.imageURLs?.[0];
   const selectedId = selectedByQuestion[questionIndex];
 
+  if (hasSubscription && !languageAccessGranted) {
+    return (
+      <ScreenColumn backgroundColor="#4A78D0">
+        <View style={[styles.centered, { paddingTop: insets.top, flex: 1 }]}>
+          <ActivityIndicator size="large" color="#F5F7FC" />
+          <Text style={styles.loadingText}>{t('exam.loading')}</Text>
+        </View>
+      </ScreenColumn>
+    );
+  }
+
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
@@ -190,18 +264,48 @@ export function ExamNativeScreen({ navigation, route }: Props) {
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <Text style={styles.sectionTitle}>{t('exam.question')}</Text>
-          <View style={styles.progressRow}>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-            </View>
-            <Text style={styles.progressText}>
-              {currentQuestionNo}/{totalQuestions}
-            </Text>
-          </View>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.paginationScroll}
+            contentContainerStyle={styles.paginationContent}
+          >
+            {questions.map((_, idx) => {
+              const isCurrent = idx === questionIndex;
+              const isAnswered = !!selectedByQuestion[idx];
+              const isUnanswered = !isAnswered;
+
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.pageBox,
+                    isCurrent && styles.pageBoxActive,
+                    isAnswered && !isCurrent && styles.pageBoxAnswered,
+                    isUnanswered && !isCurrent && styles.pageBoxUnanswered,
+                  ]}
+                  onPress={() => setQuestionIndex(idx)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.pageText,
+                      isCurrent && styles.pageTextActive,
+                      isAnswered && !isCurrent && styles.pageTextAnswered,
+                      isUnanswered && !isCurrent && styles.pageTextUnanswered,
+                    ]}
+                  >
+                    {idx + 1}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
           <View style={styles.questionCard}>
             {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.questionImage} resizeMode="cover" />
+              <Image source={{ uri: imageUri }} style={styles.questionImage} resizeMode="contain" />
             ) : null}
             <Text style={styles.questionText}>{current.question.description}</Text>
           </View>
@@ -243,9 +347,11 @@ export function ExamNativeScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.finishWrap} onPress={() => onPressFinishExam()}>
-            <Text style={styles.finishText}>{t('exam.finish')}</Text>
-          </TouchableOpacity>
+          {questionIndex === totalQuestions - 1 ? (
+            <TouchableOpacity style={styles.finishWrap} onPress={() => onPressFinishExam()}>
+              <Text style={styles.finishText}>{t('exam.finish')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </View>
     </ScreenColumn>
@@ -328,63 +434,100 @@ const styles = StyleSheet.create({
     color: '#282B67',
     marginBottom: 10,
   },
-  progressRow: {
-    flexDirection: 'row',
+  paginationScroll: {
+    marginBottom: 18,
+    marginHorizontal: -16, // Bleed into padding
+  },
+  paginationContent: {
+    paddingHorizontal: 16,
+    columnGap: 10,
     alignItems: 'center',
-    marginBottom: 16,
   },
-  progressTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#8DABE3',
-    marginRight: 10,
-    overflow: 'hidden',
+  pageBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  progressFill: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#477AD8',
+  pageBoxActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
-  progressText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 16 * 1,
-    lineHeight: 20,
-    color: '#282B67',
+  pageBoxAnswered: {
+    backgroundColor: '#EBF2FF',
+    borderColor: '#4A78D0',
+  },
+  pageBoxUnanswered: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+    borderStyle: 'dashed',
+  },
+  pageText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 15,
+    color: '#374151',
+  },
+  pageTextActive: {
+    color: '#FFFFFF',
+  },
+  pageTextAnswered: {
+    color: '#1E40AF',
+  },
+  pageTextUnanswered: {
+    color: '#B45309',
   },
   questionCard: {
-    borderRadius: 14,
-    backgroundColor: '#DEDEDF',
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#171717',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   questionImage: {
     width: '100%',
-    height: 220,
-    borderRadius: 10,
-    marginBottom: 12,
+    height: 260,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   questionText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 20 / 2 * 2,
-    lineHeight: 30 / 2 * 2,
-    color: '#3F414D',
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#1E293B',
   },
   optionCard: {
     minHeight: 72,
-    borderRadius: 12,
-    backgroundColor: '#E6E6E7',
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E2E8F0',
   },
   optionCardSelected: {
     borderColor: '#4A78D0',
-    backgroundColor: '#D8E4F8',
+    backgroundColor: '#EBF2FF',
   },
   optionText: {
     fontFamily: 'PlusJakartaSans-Medium',
@@ -444,6 +587,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#D2D6DF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 4,
   },
   finishText: {
     fontFamily: 'PlusJakartaSans-Medium',

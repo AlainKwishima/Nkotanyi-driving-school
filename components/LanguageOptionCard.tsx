@@ -26,7 +26,7 @@ export function LanguageOptionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { width: m.contentWidth - m.scale(48), height: m.verticalScale(90), padding: m.scale(18) },
+        { width: '100%', height: m.verticalScale(90), padding: m.scale(18) },
         selected ? styles.cardSelected : styles.cardDefault,
         pressed && styles.cardPressed,
       ]}

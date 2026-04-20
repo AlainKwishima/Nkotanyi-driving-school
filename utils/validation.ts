@@ -1,6 +1,7 @@
 import { normalizeAccountPhone } from './phone';
 
-const RW_MOBILE = /^250(78|79|72|73)\d{7}$/;
+/** Rwanda mobile in international form: 250 + 7 + 8 digits (same as backend / website). */
+const RW_MOBILE = /^2507\d{8}$/;
 
 /** Phone/account field for login and signup (normalized 250… Rwanda mobile). */
 export function isValidRwandaAccountPhone(raw: string): boolean {

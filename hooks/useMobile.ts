@@ -29,7 +29,7 @@ export function useMobile() {
     const fontScale = (size: number) => moderateScale(size, 0.4);
 
     const contentWidth = computeContentMaxWidth(width, height, insets);
-    const sideGutter = Math.max(insets.left, insets.right, 14, Math.round((shortSide - contentWidth) / 2));
+    const sideGutter = Math.max(insets.left, insets.right, 0);
     const isSmallDevice = shortSide <= 360;
     const isLargeDevice = shortSide >= 412;
     const isTablet = shortSide >= 600;

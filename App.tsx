@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,26 +12,29 @@ import { CreateAccountScreen, ForgotPasswordScreen, LoginScreen, ResetPasswordSc
 import { ExamNativeScreen } from './screens/ExamNativeScreen';
 import { HomeNativeScreen } from './screens/HomeNativeScreen';
 import { LanguageSelectionScreen } from './screens/LanguageSelectionScreen';
+import { LanguageSettingsScreen } from './screens/LanguageSettingsScreen';
 import { PracticeNoSelectedNativeScreen, PracticeSelectedNativeScreen } from './screens/PracticeNativeScreen';
 import { PerformanceDetailNativeScreen, PerformanceNativeScreen, PerformanceReviewNativeScreen } from './screens/PerformanceNativeScreens';
-import { HelpCenterNativeScreen, ReadingNativeScreen, RoadSignsDetailNativeScreen, RoadSignsListNativeScreen } from './screens/LearningNativeScreens';
+import { HelpCenterNativeScreen, ReadingNativeScreen } from './screens/LearningNativeScreens';
 import { PaymentConfirmationNativeScreen, PaymentNativeScreen, SubscriptionNativeScreen } from './screens/PaymentNativeScreens';
 import { ProfileNativeScreen } from './screens/ProfileNativeScreen';
 import { RootStackParamList } from './navigation/types';
 import { ReferenceImageScreen } from './screens/ReferenceImageScreen';
-import { RoadSignsCategoriesScreen } from './screens/RoadSignsCategoriesScreen';
 import { ScreensHubScreen } from './screens/ScreensHubScreen';
 import { StartExamNativeScreen } from './screens/StartExamNativeScreen';
 import { ExamInstructionsNativeScreen } from './screens/ExamInstructionsNativeScreen';
+import { ExamTypeSelectNativeScreen } from './screens/ExamTypeSelectNativeScreen';
 import { TestFailedNativeScreen, TestPassedNativeScreen } from './screens/TestResultNativeScreen';
 import { VideoCourseListScreen } from './screens/VideoCourseListScreen';
 import { VideoCoursePlayerScreen } from './screens/VideoCoursePlayerScreen';
+import { PdfViewerScreen } from './screens/PdfViewerScreen';
 import { SplashScreen } from './screens/SplashScreen';
 import { AppFlowProvider } from './context/AppFlowContext';
 import { AuthProvider } from './context/AuthContext';
 import { GateModalProvider } from './context/GateModalContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const navTheme = {
   ...DefaultTheme,
@@ -68,10 +71,11 @@ export default function App() {
       <AppFlowProvider>
         <AuthProvider>
           <GateModalProvider>
-            <NavigationContainer theme={navTheme}>
+            <NavigationContainer theme={navTheme} ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
+            <Stack.Screen name="LanguageSettings" component={LanguageSettingsScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
@@ -79,6 +83,7 @@ export default function App() {
             <Stack.Screen name="HomeNative" component={HomeNativeScreen} />
             <Stack.Screen name="ExamNative" component={ExamNativeScreen} />
             <Stack.Screen name="ExamInstructionsNative" component={ExamInstructionsNativeScreen} />
+            <Stack.Screen name="ExamTypeSelectNative" component={ExamTypeSelectNativeScreen} />
             <Stack.Screen name="StartExamNative" component={StartExamNativeScreen} />
             <Stack.Screen name="PracticeNoSelectedNative" component={PracticeNoSelectedNativeScreen} />
             <Stack.Screen name="PracticeSelectedNative" component={PracticeSelectedNativeScreen} />
@@ -88,8 +93,6 @@ export default function App() {
             <Stack.Screen name="PerformanceDetailNative" component={PerformanceDetailNativeScreen} />
             <Stack.Screen name="PerformanceReviewNative" component={PerformanceReviewNativeScreen} />
             <Stack.Screen name="ReadingNative" component={ReadingNativeScreen} />
-            <Stack.Screen name="RoadSignsListNative" component={RoadSignsListNativeScreen} />
-            <Stack.Screen name="RoadSignsDetailNative" component={RoadSignsDetailNativeScreen} />
             <Stack.Screen name="HelpCenterNative" component={HelpCenterNativeScreen} />
             <Stack.Screen name="SubscriptionNative" component={SubscriptionNativeScreen} />
             <Stack.Screen name="PaymentNative" component={PaymentNativeScreen} />
@@ -99,8 +102,8 @@ export default function App() {
             <Stack.Screen name="ReferenceImage" component={ReferenceImageScreen} />
             <Stack.Screen name="VideoCourseList" component={VideoCourseListScreen} />
             <Stack.Screen name="VideoCoursePlayer" component={VideoCoursePlayerScreen} />
-            <Stack.Screen name="RoadSignsCategories" component={RoadSignsCategoriesScreen} />
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+            <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />
           </Stack.Navigator>
             </NavigationContainer>
           </GateModalProvider>
@@ -118,4 +121,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBF8FD',
   },
 });
-

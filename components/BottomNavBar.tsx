@@ -2,13 +2,14 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
 import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { useI18n } from '../i18n/useI18n';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 export type TabKey = 'home' | 'exam' | 'read' | 'watch' | 'performance';
 
@@ -56,12 +57,24 @@ function resolveActive(routeName: string): TabKey {
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
   const route = useRoute();
-  const insets = useSafeAreaInsets();
+  const { shortSide } = useResponsiveLayout();
   const { t } = useI18n();
-  const { hasSubscription } = useAppFlow();
+  const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage } = useAppFlow();
   const { openGateModal } = useGateModal();
   const activeKey = active ?? resolveActive(route.name);
-  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 8);
+  const isCompact = shortSide <= 360;
+  const isWidePhone = shortSide >= 412;
+  const iconSize = isCompact ? 19 : 21;
+  const labelSize = isCompact ? 10 : isWidePhone ? 12 : 11;
+  const bubbleWidth = isCompact ? 42 : isWidePhone ? 50 : 46;
+  const bubbleHeight = isCompact ? 32 : 34;
+  const floatingBottom = Platform.OS === 'ios' ? 12 : 14;
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   const tabs = [
     { key: 'home' as const, labelKey: 'nav.home' as const, route: 'HomeNative' as const, icon: 'home-outline' as const },
@@ -77,12 +90,17 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
       return;
     }
     if (navigation) {
+      if (tab === 'exam' && hasSubscription && !languageAccessGranted) {
+        openGateModal('subscription_exam', () => (navigation as any).navigate('SubscriptionNative'));
+        return;
+      }
+
       if (tab === 'exam') {
         (navigation as any).navigate('ExamInstructionsNative');
         return;
       }
 
-      if ((tab === 'read' || tab === 'watch') && !hasSubscription) {
+      if ((tab === 'read' || tab === 'watch') && !languageAccessGranted) {
         openGateModal(tab === 'read' ? 'subscription_read' : 'subscription_watch', () => (navigation as any).navigate('SubscriptionNative'));
         return;
       }
@@ -91,7 +109,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   };
 
   return (
-    <View style={[styles.tabs, { paddingBottom: bottomPad }]}>
+    <View style={[styles.tabs, { bottom: floatingBottom }]}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeKey;
         return (
@@ -102,10 +120,10 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
           >
-            <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
-              <Ionicons name={tab.icon} size={22} color={isActive ? '#F5F8FF' : '#95A4BF'} />
+            <View style={[styles.tabBubble, { width: bubbleWidth, height: bubbleHeight, borderRadius: bubbleHeight / 2 }, isActive && styles.tabBubbleActive]}>
+              <Ionicons name={tab.icon} size={iconSize} color={isActive ? '#F5F8FF' : '#95A4BF'} />
             </View>
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
+            <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
               {t(tab.labelKey)}
             </Text>
           </Pressable>
@@ -118,18 +136,22 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
 const styles = StyleSheet.create({
   tabs: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: 16,
+    right: 16,
+    bottom: 12,
     minHeight: 56,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: '#EFF0F4',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 4,
-    paddingTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 12,
   },
   tab: {
     alignItems: 'center',

@@ -11,11 +11,17 @@ import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
-import { initiateAirtelPayment, initiateCardPayment, initiateMomoPayment } from '../services/paymentApi';
+import {
+  checkPaymentStatus,
+  initiateAirtelPayment,
+  initiateCardPayment,
+  initiateMomoPayment,
+} from '../services/paymentApi';
 import { extractPaymentReceipt, localeTagForContentLanguage } from '../services/paymentReceipt';
 import { getMessageFromUnknownError } from '../services/api/client';
-import { toLocalRwandaPhone } from '../utils/phone';
+import { toIntlRwandaPhone, toLocalRwandaPhone } from '../utils/phone';
 import type { SubscriptionType } from '../services/api/subscriptionTypes';
+import { fetchLiveSubscriptionPlans, type LiveSubscriptionPlan } from '../services/backendPricing';
 import { useI18n } from '../i18n/useI18n';
 import {
   validateCardNumber,
@@ -54,15 +60,162 @@ type Plan = {
   subscriptionType: SubscriptionType;
   featured?: boolean;
 };
-const PLAN_DEFS: Plan[] = [
-  { titleKey: 'payment.plan.month', price: '15,000', amountRwf: 15000, subscriptionType: 'monthly', featured: true },
-  { titleKey: 'payment.plan.twoWeeks', price: '10,000', amountRwf: 10000, subscriptionType: 'two-weekly' },
-  { titleKey: 'payment.plan.week', price: '6,000', amountRwf: 6000, subscriptionType: 'weekly' },
-  { titleKey: 'payment.plan.day', price: '2,000', amountRwf: 2000, subscriptionType: 'daily' },
-  { titleKey: 'payment.plan.fiveExams', price: '1,000', amountRwf: 1000, subscriptionType: 'five-exams' },
-];
+const PLAN_TITLE_KEYS: Record<SubscriptionType, string> = {
+  monthly: 'payment.plan.month',
+  'two-weekly': 'payment.plan.twoWeeks',
+  weekly: 'payment.plan.week',
+  daily: 'payment.plan.day',
+  'five-exams': 'payment.plan.fiveExams',
+  'two-exams': 'payment.plan.twoExams',
+};
 
 const FEATURE_KEYS = ['payment.feature1', 'payment.feature2', 'payment.feature3'] as const;
+
+function toPlanCard(plan: LiveSubscriptionPlan, locale: string): Plan {
+  return {
+    subscriptionType: plan.subscriptionType,
+    amountRwf: plan.amountRwf,
+    price: plan.amountRwf.toLocaleString(locale),
+    titleKey: PLAN_TITLE_KEYS[plan.subscriptionType],
+    featured: plan.subscriptionType === 'monthly',
+  };
+}
+
+function extractPaymentReference(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const objs: Record<string, unknown>[] = [];
+  const root = payload as Record<string, unknown>;
+  objs.push(root);
+  if (root.data && typeof root.data === 'object' && !Array.isArray(root.data)) objs.push(root.data as Record<string, unknown>);
+  if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
+  if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
+  const keys = [
+    'transaction_id',
+    'transactionId',
+    'orderId',
+    'order_id',
+    'reference',
+    'ref',
+    'paymentId',
+    'payment_id',
+    'trx_id',
+    'trxId',
+    'uniqueTransactionId',
+    'id',
+    '_id',
+  ];
+  for (const obj of objs) {
+    for (const key of keys) {
+      const value = obj[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
+function looksLikeSuccessfulPayment(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  const root = payload as Record<string, unknown>;
+  const objs: Record<string, unknown>[] = [root];
+  if (root.data && typeof root.data === 'object' && !Array.isArray(root.data)) objs.push(root.data as Record<string, unknown>);
+  if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
+  if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
+  const truthyKeys = ['paymentStatus', 'paid', 'success', 'successful', 'confirmed', 'active', 'status'];
+  for (const obj of objs) {
+    if (obj.paymentStatus === true || obj.paid === true || obj.success === true || obj.successful === true || obj.confirmed === true || obj.active === true) {
+      return true;
+    }
+    const status = String(obj.status ?? obj.state ?? obj.paymentStatus ?? '').toLowerCase().trim();
+    if (['approved', 'active', 'completed', 'success', 'paid', 'successful', 'confirmed', 'valid', 'activated', 'processing'].includes(status)) {
+      return true;
+    }
+    const message = String(obj.message ?? obj.msg ?? '').toLowerCase();
+    if (message.includes('success')) return true;
+    if (truthyKeys.some((k) => obj[k] === true)) return true;
+  }
+  return false;
+}
+
+function looksLikePendingPayment(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  const root = payload as Record<string, unknown>;
+  const objs: Record<string, unknown>[] = [root];
+  if (root.data && typeof root.data === 'object' && !Array.isArray(root.data)) objs.push(root.data as Record<string, unknown>);
+  if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
+  if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
+  for (const obj of objs) {
+    const status = String(obj.status ?? obj.state ?? obj.paymentStatus ?? '').toLowerCase().trim();
+    if (['pending', 'processing', 'initiated', 'waiting', 'queued', 'in progress', 'in-progress'].includes(status)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPaymentConfirmation(
+  accessToken: string,
+  probe: Record<string, unknown>,
+  attempts = 5,
+): Promise<unknown> {
+  let last: unknown = null;
+  for (let i = 0; i < attempts; i += 1) {
+    last = await checkPaymentStatus(probe, accessToken);
+    if (looksLikeSuccessfulPayment(last)) {
+      return last;
+    }
+    if (!looksLikePendingPayment(last) && i > 0) {
+      return last;
+    }
+    if (i < attempts - 1) {
+      await sleep(3500);
+    }
+  }
+  return last;
+}
+
+function buildPaymentProbe(
+  body: {
+    amount: number;
+    payment_method: 'momo' | 'airtel' | 'card';
+    phone: string;
+    subscription_type: SubscriptionType;
+  },
+  reference: string | null,
+): Record<string, unknown> {
+  const localPhone = toLocalRwandaPhone(body.phone) ?? body.phone;
+  const intlPhone = toIntlRwandaPhone(body.phone) ?? (localPhone ? `250${localPhone.slice(1)}` : body.phone);
+  return {
+    amount: body.amount,
+    amountRwf: body.amount,
+    amount_rwf: body.amount,
+    phone: localPhone,
+    phoneIntl: intlPhone,
+    msisdn: localPhone,
+    msisdnIntl: intlPhone,
+    customer_phone: localPhone,
+    customer_phone_intl: intlPhone,
+    phone_number: localPhone,
+    phone_number_intl: intlPhone,
+    phoneNumber: localPhone,
+    payment_method: body.payment_method,
+    paymentMethod: body.payment_method.toUpperCase(),
+    subscription_type: body.subscription_type,
+    subscriptionType: body.subscription_type,
+    reference,
+    ref: reference,
+    orderId: reference,
+    order_id: reference,
+    transactionId: reference,
+    transaction_id: reference,
+    paymentId: reference,
+    payment_id: reference,
+    uniqueTransactionId: reference,
+  };
+}
 
 function PlanCard({
   plan,
@@ -108,8 +261,38 @@ function PlanCard({
 export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
-  const { hasSubscription } = useAppFlow();
+  const { hasSubscription, contentLanguage } = useAppFlow();
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [pricingLoading, setPricingLoading] = useState(true);
+  const [pricingError, setPricingError] = useState<string | null>(null);
   const planActionLabel = hasSubscription ? t('payment.renewOrChangePlan') : t('payment.startNow');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setPricingLoading(true);
+      setPricingError(null);
+      try {
+        const livePlans = await fetchLiveSubscriptionPlans(contentLanguage);
+        if (!cancelled) {
+          const locale = localeTagForContentLanguage(contentLanguage);
+          setPlans(livePlans.map((plan) => toPlanCard(plan, locale)));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPricingError(getMessageFromUnknownError(e));
+          setPlans([]);
+        }
+      } finally {
+        if (!cancelled) setPricingLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [contentLanguage]);
+
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       <Header title={t('subscription.title')} onBack={() => navigation.goBack()} navigation={navigation} />
@@ -125,22 +308,33 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
             </View>
           ) : null}
 
-          {PLAN_DEFS.map((plan) => (
-            <PlanCard
-              key={plan.subscriptionType}
-              plan={plan}
-              title={t(plan.titleKey)}
-              featureTexts={plan.featured ? FEATURE_KEYS.map((k) => t(k)) : undefined}
-              actionLabel={planActionLabel}
-              onPress={() =>
-                navigation.navigate('PaymentNative', {
-                  planTitle: t(plan.titleKey),
-                  amountRwf: plan.amountRwf,
-                  subscriptionType: plan.subscriptionType,
-                })
-              }
-            />
-          ))}
+          {pricingLoading ? (
+            <View style={styles.pricingStatusCard}>
+              <ActivityIndicator color="#4A78D0" />
+              <Text style={styles.pricingStatusText}>{t('payment.loadingPlans')}</Text>
+            </View>
+          ) : pricingError ? (
+            <View style={styles.pricingStatusCard}>
+              <Text style={styles.pricingStatusError}>{pricingError}</Text>
+            </View>
+          ) : (
+            plans.map((plan) => (
+              <PlanCard
+                key={plan.subscriptionType}
+                plan={plan}
+                title={t(PLAN_TITLE_KEYS[plan.subscriptionType])}
+                featureTexts={plan.featured ? FEATURE_KEYS.map((k) => t(k)) : undefined}
+                actionLabel={planActionLabel}
+                onPress={() =>
+                  navigation.navigate('PaymentNative', {
+                    planTitle: t(PLAN_TITLE_KEYS[plan.subscriptionType]),
+                    amountRwf: plan.amountRwf,
+                    subscriptionType: plan.subscriptionType,
+                  })
+                }
+              />
+            ))
+          )}
 
           <View style={styles.customPlanCard}>
             <Text style={styles.customPlanTitle}>{t('payment.customTitle')}</Text>
@@ -157,7 +351,13 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
   const { accessToken, refreshProfile, phone: profilePhone } = useAuth();
-  const { setHasSubscription, contentLanguage, hasSubscription } = useAppFlow();
+  const {
+    setHasSubscription,
+    setCanChangeLanguage,
+    setSubscriptionLanguage,
+    contentLanguage,
+    hasSubscription,
+  } = useAppFlow();
   const [method, setMethod] = useState<'momo' | 'airtel' | 'card'>('momo');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -172,10 +372,37 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     cardCvv?: string;
   }>({});
   const [payBusy, setPayBusy] = useState(false);
+  const [livePlans, setLivePlans] = useState<Plan[]>([]);
 
-  const planTitle = route.params?.planTitle ?? t('payment.planDefault');
-  const amountRwf = route.params?.amountRwf ?? 2000;
-  const subscriptionType = (route.params?.subscriptionType as SubscriptionType | undefined) ?? 'daily';
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const live = await fetchLiveSubscriptionPlans(contentLanguage);
+        if (!cancelled) {
+          setLivePlans(live.map((plan) => toPlanCard(plan, localeTagForContentLanguage(contentLanguage))));
+        }
+      } catch {
+        if (!cancelled) setLivePlans([]);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [contentLanguage]);
+
+  const fallbackPlan =
+    livePlans.find((plan) => plan.subscriptionType === route.params?.subscriptionType) ??
+    livePlans[0] ??
+    null;
+  const subscriptionType =
+    (route.params?.subscriptionType as SubscriptionType | undefined) ??
+    fallbackPlan?.subscriptionType ??
+    'daily';
+  const amountRwf = route.params?.amountRwf ?? fallbackPlan?.amountRwf ?? 0;
+  const planTitle = route.params?.planTitle ?? t(PLAN_TITLE_KEYS[subscriptionType]);
+  const fallbackCardPhone = profilePhone ? toLocalRwandaPhone(profilePhone.replace(/^250/, '0')) : null;
 
   useEffect(() => {
     if (profilePhone) {
@@ -194,6 +421,10 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   const submitPayment = async () => {
     if (!accessToken) {
       Alert.alert(t('payment.title'), t('payment.needSignIn'));
+      return;
+    }
+    if (amountRwf <= 0) {
+      Alert.alert(t('payment.title'), t('payment.loadingPlans'));
       return;
     }
     if (!isCard) {
@@ -222,8 +453,27 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             ? await initiateMomoPayment(body, accessToken)
             : await initiateAirtelPayment(body, accessToken);
         const receipt = extractPaymentReceipt(paymentPayload, contentLanguage);
-        await refreshProfile();
-        await setHasSubscription(true);
+        const reference = extractPaymentReference(paymentPayload) ?? receipt.orderId.replace(/^#/, '');
+        const probe = buildPaymentProbe(body, reference);
+        const confirmedPayload = looksLikeSuccessfulPayment(paymentPayload)
+          ? paymentPayload
+          : reference
+            ? await waitForPaymentConfirmation(accessToken, probe)
+            : paymentPayload;
+
+        const confirmed = looksLikeSuccessfulPayment(confirmedPayload);
+        if (!confirmed) {
+          const pending = looksLikePendingPayment(confirmedPayload);
+          if (pending) {
+            Alert.alert(t('payment.title'), t('payment.pendingNotice'));
+            return;
+          }
+        }
+
+        const refreshConfirmed = await refreshProfile();
+        await setHasSubscription(refreshConfirmed || confirmed);
+        await setCanChangeLanguage(subscriptionType === 'monthly');
+        await setSubscriptionLanguage(contentLanguage);
         navigation.navigate('PaymentConfirmationNative', {
           planTitle,
           amountRwf,
@@ -231,7 +481,8 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           paidAtLabel: receipt.paidAtLabel,
         });
       } catch (e) {
-        Alert.alert(t('payment.failed'), getMessageFromUnknownError(e));
+        const msg = getMessageFromUnknownError(e);
+        Alert.alert(t('payment.failed'), msg);
       } finally {
         setPayBusy(false);
       }
@@ -251,6 +502,10 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       setFieldErrors(err);
       return;
     }
+    if (!fallbackCardPhone) {
+      Alert.alert(t('payment.failed'), t('payment.phoneInvalid'));
+      return;
+    }
     setFieldErrors({});
 
     setPayBusy(true);
@@ -260,12 +515,15 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           amount: amountRwf,
           payment_method: 'card',
           subscription_type: subscriptionType,
+          phone: fallbackCardPhone,
         },
         accessToken,
       );
       const receipt = extractPaymentReceipt(paymentPayload, contentLanguage);
       await refreshProfile();
       await setHasSubscription(true);
+      await setCanChangeLanguage(subscriptionType === 'monthly');
+      await setSubscriptionLanguage(contentLanguage);
       navigation.navigate('PaymentConfirmationNative', {
         planTitle,
         amountRwf,
@@ -513,7 +771,7 @@ export function PaymentConfirmationNativeScreen({ navigation, route }: Confirmat
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 78,
+    minHeight: 100,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -607,6 +865,31 @@ const styles = StyleSheet.create({
   },
   customPlanTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, lineHeight: 26, color: '#22315A' },
   customPlanText: { marginTop: 4, textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, lineHeight: 17, color: '#5D6678' },
+  pricingStatusCard: {
+    marginTop: 12,
+    borderRadius: 10,
+    backgroundColor: '#DDE3EF',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 84,
+  },
+  pricingStatusText: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#41506E',
+  },
+  pricingStatusError: {
+    textAlign: 'center',
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#B03030',
+  },
 
   sectionTitle: { marginTop: 10, marginBottom: 10, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 24, color: '#252A35' },
   changeLink: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 12, lineHeight: 18, color: '#4A78D0' },

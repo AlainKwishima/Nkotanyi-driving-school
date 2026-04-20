@@ -12,6 +12,17 @@ export type PerformanceHistoryRow = {
   percent: number;
   correct: number;
   total: number;
+  answeredCount?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  elapsedSec?: number;
+  answerDetails?: Array<{
+    questionId: string;
+    questionText: string;
+    selectedOptionText: string | null;
+    correctOptionText: string | null;
+    isCorrect: boolean;
+  }>;
 };
 
 function parseTime(isoLike: string): number {
@@ -19,10 +30,12 @@ function parseTime(isoLike: string): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-function formatHistoryDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function mapExamTitleKey(examTypeRaw: string): string {
+  const examType = examTypeRaw.trim().toLowerCase();
+  if (!examType) return 'performance.theoryExam';
+  if (examType.includes('sign')) return 'performance.signsExam';
+  if (examType.includes('traffic') || examType.includes('road')) return 'performance.trafficExam';
+  return 'performance.theoryExam';
 }
 
 /** Best-effort map for `GET /api/performance/all` items (schema not documented). */
@@ -32,6 +45,8 @@ export function mapServerPerformanceEntry(raw: unknown, index: number): Performa
   const id = String(o._id ?? o.id ?? `srv_${index}`);
   const createdRaw = o.createdAt ?? o.updatedAt ?? o.date ?? o.examDate;
   const createdAt = typeof createdRaw === 'string' ? createdRaw : new Date().toISOString();
+  const startedAt = typeof o.startedAt === 'string' ? o.startedAt : undefined;
+  const finishedAt = typeof o.finishedAt === 'string' ? o.finishedAt : undefined;
   const correct = Number(o.correctAnswers ?? o.correct ?? o.score ?? o.obtainedMarks ?? o.marksObtained ?? 0);
   const total = Number(o.totalQuestions ?? o.total ?? o.outOf ?? o.maxQuestions ?? 20) || 20;
   const percentRaw = o.percentage ?? o.percent ?? o.scorePercent;
@@ -44,19 +59,20 @@ export function mapServerPerformanceEntry(raw: unknown, index: number): Performa
   const duration =
     typeof durationMin === 'number' && durationMin > 0
       ? `${Math.round(durationMin)} min`
+      : typeof o.duration === 'string' && o.duration.trim()
+        ? String(o.duration)
       : typeof o.timeSpent === 'string'
         ? o.timeSpent
         : typeof o.durationLabel === 'string'
           ? o.durationLabel
           : '—';
   const examType = typeof o.examType === 'string' ? o.examType : typeof o.type === 'string' ? o.type : '';
-  const title =
-    examType.toLowerCase().includes('sign') ? 'Signs exam' : examType ? `Exam (${examType})` : 'Theory exam';
+  const title = mapExamTitleKey(examType);
 
   return {
     id,
     title,
-    date: formatHistoryDate(createdAt),
+    date: createdAt,
     status: passed ? 'PASSED' : 'FAILED',
     answers: `${correct}/${total}`,
     duration,
@@ -64,6 +80,24 @@ export function mapServerPerformanceEntry(raw: unknown, index: number): Performa
     percent,
     correct,
     total,
+    answeredCount: typeof o.answeredCount === 'number' ? o.answeredCount : undefined,
+    startedAt,
+    finishedAt,
+    elapsedSec: typeof o.elapsedSec === 'number' ? o.elapsedSec : typeof o.elapsedSeconds === 'number' ? o.elapsedSeconds : undefined,
+    answerDetails: Array.isArray(o.answers)
+      ? o.answers
+          .filter((a) => a && typeof a === 'object')
+          .map((a) => {
+            const r = a as Record<string, unknown>;
+            return {
+              questionId: String(r.questionId ?? r._id ?? r.id ?? ''),
+              questionText: String(r.questionText ?? r.question ?? ''),
+              selectedOptionText: typeof r.selectedOptionText === 'string' ? r.selectedOptionText : null,
+              correctOptionText: typeof r.correctOptionText === 'string' ? r.correctOptionText : null,
+              isCorrect: Boolean(r.isCorrect),
+            };
+          })
+      : undefined,
   };
 }
 
@@ -71,15 +105,26 @@ export function mapLocalExamRecord(r: LocalExamRecord): PerformanceHistoryRow {
   const passed = r.percent >= 60;
   return {
     id: r.id,
-    title: r.mode === 'signs' ? 'Signs exam' : 'Traffic exam',
-    date: formatHistoryDate(r.createdAt),
+    title: r.mode === 'signs' ? 'performance.signsExam' : 'performance.theoryExam',
+    date: r.finishedAt ?? r.createdAt,
     status: passed ? 'PASSED' : 'FAILED',
     answers: `${r.correct}/${r.total}`,
     duration: r.timeLabel,
-    sortKey: parseTime(r.createdAt),
+    sortKey: parseTime(r.finishedAt ?? r.createdAt),
     percent: r.percent,
     correct: r.correct,
     total: r.total,
+    answeredCount: r.answeredCount,
+    startedAt: r.startedAt,
+    finishedAt: r.finishedAt,
+    elapsedSec: r.elapsedSec,
+    answerDetails: r.answers?.map((a) => ({
+      questionId: a.questionId,
+      questionText: a.questionText,
+      selectedOptionText: a.selectedOptionText,
+      correctOptionText: a.correctOptionText,
+      isCorrect: a.isCorrect,
+    })),
   };
 }
 

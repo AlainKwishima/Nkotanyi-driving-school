@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -10,74 +19,81 @@ import { ScreenColumn } from '../components/ScreenColumn';
 import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
+import { useAppFlow } from '../context/AppFlowContext';
+import { useGateModal } from '../context/GateModalContext';
 import { getPdfs, type PdfItem } from '../services/contentApi';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 
 type ReadProps = NativeStackScreenProps<RootStackParamList, 'ReadingNative'>;
-type ListProps = NativeStackScreenProps<RootStackParamList, 'RoadSignsListNative'>;
-type DetailProps = NativeStackScreenProps<RootStackParamList, 'RoadSignsDetailNative'>;
 type HelpProps = NativeStackScreenProps<RootStackParamList, 'HelpCenterNative'>;
-type AnyNav = ReadProps['navigation'] | ListProps['navigation'] | DetailProps['navigation'] | HelpProps['navigation'];
+type AnyNav = ReadProps['navigation'] | HelpProps['navigation'];
 
-const ROAD_ITEMS = [
-  'Railway crossing with a barrier',
-  'Single-track railway',
-  'Crossing the tram line',
-  'Crossing of equivalent roads',
-  'Light regulation',
-  'Crossing with circular motion',
-];
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-const ROAD_ICONS = [
-  require('../assets/ui/road_sign_1.png'),
-  require('../assets/ui/road_sign_2.png'),
-  require('../assets/ui/road_sign_3.png'),
-  require('../assets/ui/road_sign_4.png'),
-  require('../assets/ui/road_sign_5.png'),
-  require('../assets/ui/road_sign_6.png'),
-];
-const ROAD_SIGN_DETAILS = [
-  {
-    title: 'Railway crossing with a barrier',
-    description:
-      'This sign warns drivers about an upcoming railway crossing protected by barriers. Reduce speed, observe signals, and stop when required.',
-  },
-  {
-    title: 'Single-track railway',
-    description:
-      'This sign indicates a single-track railway crossing ahead. Approach with caution and ensure the track is clear before crossing.',
-  },
-  {
-    title: 'Crossing the tram line',
-    description:
-      'This sign warns of a tram crossing point. Always yield where required and keep the crossing clear for rail vehicles.',
-  },
-  {
-    title: 'Crossing of equivalent roads',
-    description:
-      'This sign marks an intersection where roads have equal priority. Slow down and apply right-of-way rules carefully.',
-  },
-  {
-    title: 'Light regulation',
-    description:
-      'This sign indicates a traffic-light-controlled area ahead. Be prepared to stop safely and follow light indications strictly.',
-  },
-  {
-    title: 'Crossing with circular motion',
-    description:
-      'This sign indicates a roundabout ahead. Reduce speed, yield appropriately, and follow the circular direction of travel.',
-  },
-];
-function TopHeader({
-  title,
-  onBack,
-  navigation,
-}: {
-  title: string;
-  onBack: () => void;
-  navigation: AnyNav;
-}) {
+function pdfOpenUrl(item: PdfItem): string | undefined {
+  const u = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl;
+  return typeof u === 'string' && u.startsWith('http') ? u : undefined;
+}
+
+function pdfLabel(item: PdfItem, idx: number, fallback: string): string {
+  return (item.title ?? item.name ?? `${fallback} ${idx + 1}`).trim();
+}
+
+function pdfExt(item: PdfItem): string {
+  const url = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl ?? '';
+  const lower = url.toLowerCase();
+  if (lower.includes('.pdf')) return 'PDF';
+  if (lower.includes('.docx') || lower.includes('.doc')) return 'DOC';
+  if (lower.includes('.pptx') || lower.includes('.ppt')) return 'PPT';
+  return 'FILE';
+}
+
+function normalizePdfLanguage(value?: string | null): 'en' | 'rw' | 'fr' | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (
+    normalized === 'en' ||
+    normalized.startsWith('en-') ||
+    normalized.startsWith('eng') ||
+    normalized.includes('english') ||
+    normalized.includes('anglais')
+  ) {
+    return 'en';
+  }
+  if (
+    normalized === 'rw' ||
+    normalized.startsWith('rw-') ||
+    normalized.includes('kinyarwanda')
+  ) {
+    return 'rw';
+  }
+  if (
+    normalized === 'fr' ||
+    normalized.startsWith('fr-') ||
+    normalized.includes('francais') ||
+    normalized.includes('français')
+  ) {
+    return 'fr';
+  }
+  return null;
+}
+
+function pdfLanguage(item: PdfItem): 'en' | 'rw' | 'fr' | null {
+  return normalizePdfLanguage(item.language ?? null);
+}
+
+const EXT_COLORS: Record<string, string> = {
+  PDF: '#E4552A',
+  DOC: '#2B5EAE',
+  PPT: '#C0392B',
+  FILE: '#5C6474',
+};
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function TopHeader({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: AnyNav }) {
   const { insets } = useResponsiveLayout();
   return (
     <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -90,208 +106,234 @@ function TopHeader({
   );
 }
 
-function BottomTabs({ navigation }: { navigation: AnyNav }) {
-  return <BottomNavBar navigation={navigation} />;
-}
-
-function ReadRow({
-  color,
-  icon,
-  title,
+function DocCard({
+  item,
+  idx,
+  fallback,
   onPress,
 }: {
-  color: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
+  item: PdfItem;
+  idx: number;
+  fallback: string;
   onPress: () => void;
 }) {
+  const { t } = useI18n();
+  const label = pdfLabel(item, idx, fallback);
+  const url = pdfOpenUrl(item);
+  const ext = pdfExt(item);
+  const extColor = EXT_COLORS[ext] ?? EXT_COLORS.FILE;
+
   return (
-    <TouchableOpacity style={styles.readRow} onPress={onPress} activeOpacity={0.9}>
-      <View style={[styles.readIconBox, { backgroundColor: color }]}>
-        <Ionicons name={icon} size={18} color="#FFFFFF" />
+    <TouchableOpacity style={styles.docCard} onPress={onPress} activeOpacity={0.88}>
+      {/* File-type badge */}
+      <View style={[styles.extBadge, { backgroundColor: extColor }]}>
+        <Text style={styles.extText}>{ext}</Text>
       </View>
-      <Text style={[styles.readText, { color }]}>{title}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#2A3762" />
+
+      {/* Label */}
+      <View style={styles.docInfo}>
+        <Text style={styles.docTitle} numberOfLines={2}>
+          {label}
+        </Text>
+        {url ? (
+          <View style={styles.docMeta}>
+            <Ionicons name="download-outline" size={12} color="#4A78D0" />
+            <Text style={styles.docMetaText}>{t('reading.tapToOpen')}</Text>
+          </View>
+        ) : (
+          <Text style={styles.docNoLink}>{t('reading.noLinkAvailable')}</Text>
+        )}
+      </View>
+
+      <Ionicons name="open-outline" size={18} color={url ? '#4A78D0' : '#C0C7D2'} />
     </TouchableOpacity>
   );
 }
 
-function SignRow({ text, icon, onPress }: { text: string; icon: any; onPress?: () => void }) {
-  return (
-    <TouchableOpacity style={styles.signRow} onPress={onPress} activeOpacity={0.9}>
-      <Image source={icon} style={styles.signIcon} resizeMode="contain" />
-      <Text style={styles.signText}>{text}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function pdfOpenUrl(item: PdfItem): string | undefined {
-  const u = item.pdfURL ?? item.url ?? item.fileUrl;
-  return typeof u === 'string' && u.startsWith('http') ? u : undefined;
-}
+// ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function ReadingNativeScreen({ navigation }: ReadProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
   const { accessToken } = useAuth();
+  const {
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  } = useAppFlow();
+  const { openGateModal } = useGateModal();
   const [pdfs, setPdfs] = useState<PdfItem[]>([]);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
+
+  const loadPdfs = useCallback(async (token: string, cancelledRef: { current: boolean }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getPdfs(token, contentLanguage);
+      if (__DEV__ && data.length > 0) {
+        console.log('[Pdfs] first item shape →', JSON.stringify(data[0]));
+      }
+      if (!cancelledRef.current) setPdfs(data);
+    } catch (err) {
+      if (!cancelledRef.current) setError(getMessageFromUnknownError(err));
+    } finally {
+      if (!cancelledRef.current) setLoading(false);
+    }
+  }, [contentLanguage]);
 
   useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    (async () => {
-      setPdfLoading(true);
-      setPdfError(null);
-      try {
-        const list = await getPdfs(accessToken);
-        if (!cancelled) setPdfs(list);
-      } catch (e) {
-        if (!cancelled) setPdfError(getMessageFromUnknownError(e));
-      } finally {
-        if (!cancelled) setPdfLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
+    const cancelledRef = { current: false };
+    if (!languageAccessGranted) {
+      setLoading(false);
+      return () => { cancelledRef.current = true; };
+    }
+    if (accessToken) {
+      void loadPdfs(accessToken, cancelledRef);
+    }
+    return () => { cancelledRef.current = true; };
+  }, [accessToken, languageAccessGranted, loadPdfs]);
 
-  return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader title={t('reading.title')} onBack={() => navigation.goBack()} navigation={navigation} />
-      <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.readListPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          {accessToken ? (
-            <View style={styles.pdfBlock}>
-              <Text style={styles.pdfSectionTitle}>{t('reading.pdfSection')}</Text>
-              {pdfLoading ? <ActivityIndicator style={styles.pdfSpinner} color="#4A78D0" /> : null}
-              {pdfError ? <Text style={styles.pdfError}>{pdfError}</Text> : null}
-              {!pdfLoading && !pdfError && pdfs.length === 0 ? (
-                <Text style={styles.pdfEmpty}>{t('reading.pdfEmpty')}</Text>
-              ) : null}
-              {pdfs.map((pdf, idx) => {
-                const url = pdfOpenUrl(pdf);
-                const label = (pdf.title ?? pdf.name ?? t('reading.materialFallback', { n: idx + 1 })).trim();
-                return (
-                  <ReadRow
-                    key={pdf._id ?? `${label}-${idx}`}
-                    color="#6B7C93"
-                    icon="document-attach-outline"
-                    title={label}
-                    onPress={() => {
-                      if (url) void Linking.openURL(url);
-                      else Alert.alert(t('reading.pdfAlertTitle'), t('reading.pdfNoLink'));
-                    }}
-                  />
-                );
-              })}
-            </View>
-          ) : null}
-          <ReadRow color="#4A78D0" icon="language" title={t('reading.roadSigns')} onPress={() => navigation.navigate('RoadSignsListNative')} />
-          <ReadRow color="#F3BC2F" icon="create-outline" title={t('reading.policeGestures')} onPress={() => navigation.navigate('HelpCenterNative')} />
-          <ReadRow color="#2EA86A" icon="git-network-outline" title={t('reading.carSigns')} onPress={() => navigation.navigate('RoadSignsListNative')} />
-          <ReadRow color="#F05555" icon="reader-outline" title={t('reading.study')} onPress={() => navigation.navigate('RoadSignsDetailNative')} />
-          <ReadRow color="#F0914B" icon="document-text-outline" title={t('reading.practice')} onPress={() => navigation.navigate('PracticeNoSelectedNative')} />
-        </ScrollView>
-      </View>
-      <BottomTabs navigation={navigation} />
-    </ScreenColumn>
-  );
-}
+  useEffect(() => {
+    if (!languageAccessGranted) {
+      openGateModal('subscription_read', () => navigation.navigate('SubscriptionNative'));
+    }
+  }, [languageAccessGranted, navigation, openGateModal]);
 
-export function RoadSignsListNativeScreen({ navigation }: ListProps) {
-  const { t } = useI18n();
-  const { tabScrollBottomPad } = useResponsiveLayout();
-  return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader title={t('reading.warningSigns')} onBack={() => navigation.goBack()} navigation={navigation} />
-      <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.signListPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          {ROAD_ITEMS.concat(ROAD_ITEMS).map((item, idx) => (
-            <SignRow
-              key={`${item}-${idx}`}
-              text={item}
-              icon={ROAD_ICONS[idx % ROAD_ICONS.length]}
-              onPress={() => navigation.navigate('RoadSignsDetailNative')}
-            />
-          ))}
-        </ScrollView>
-      </View>
-      <BottomTabs navigation={navigation} />
-    </ScreenColumn>
-  );
-}
+  const languageDocs = useMemo(() => {
+    return pdfs.filter((pdf) => {
+      const lang = pdfLanguage(pdf);
+      return !lang || lang === contentLanguage;
+    });
+  }, [contentLanguage, pdfs]);
 
-export function RoadSignsDetailNativeScreen({ navigation }: DetailProps) {
-  const { t } = useI18n();
-  const { tabScrollBottomPad } = useResponsiveLayout();
-  const [detailIndex, setDetailIndex] = useState(0);
-  const canGoPrev = detailIndex > 0;
-  const canGoNext = detailIndex < ROAD_SIGN_DETAILS.length - 1;
-  const activeDetail = ROAD_SIGN_DETAILS[detailIndex];
+  const selectedLanguageLabel = t(`profile.lang.${contentLanguage}`);
+  const hasDocs = languageDocs.length > 0;
+  const hasDocsInOtherLanguages = pdfs.length > 0 && languageDocs.length === 0;
+  const emptyLanguageMessage = t('reading.pdfEmptyLanguage', { lang: selectedLanguageLabel });
 
-  return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader title={t('reading.warningSigns')} onBack={() => navigation.goBack()} navigation={navigation} />
-      <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.signListPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          {ROAD_ITEMS.concat(ROAD_ITEMS).map((item, idx) => (
-            <SignRow key={`${item}-${idx}`} text={item} icon={ROAD_ICONS[idx % ROAD_ICONS.length]} />
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.overlay} />
-      <View style={styles.modal}>
-        <TouchableOpacity style={styles.modalClose} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color="#8895B2" />
-        </TouchableOpacity>
-        <Text style={styles.modalTitle}>{activeDetail.title}</Text>
-        <Image source={ROAD_ICONS[detailIndex]} style={styles.modalSign} resizeMode="contain" />
-        <Text style={styles.modalText}>{activeDetail.description}</Text>
-
-        <View style={styles.detailPagerRow}>
-          <TouchableOpacity
-            style={[styles.detailPagerBtn, !canGoPrev && styles.detailPagerBtnDisabled]}
-            onPress={() => canGoPrev && setDetailIndex((prev) => prev - 1)}
-            disabled={!canGoPrev}
-          >
-            <Ionicons name="arrow-back" size={16} color="#364162" />
-            <Text style={styles.detailPagerText}>{t('exam.previous')}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.detailPagerIndex}>
-            {detailIndex + 1}/{ROAD_SIGN_DETAILS.length}
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.detailPagerBtnBlue, !canGoNext && styles.detailPagerBtnBlueDisabled]}
-            onPress={() => canGoNext && setDetailIndex((prev) => prev + 1)}
-            disabled={!canGoNext}
-          >
-            <Text style={styles.detailPagerTextBlue}>{t('exam.next')}</Text>
-            <Ionicons name="arrow-forward" size={16} color="#F5F7FC" />
-          </TouchableOpacity>
+  if (!languageAccessGranted) {
+    return (
+      <ScreenColumn backgroundColor="#4A78D0">
+        <TopHeader
+          title={t('reading.title')}
+          onBack={() => navigation.goBack()}
+          navigation={navigation}
+        />
+        <View style={styles.centeredGate}>
+          <ActivityIndicator size="large" color="#4A78D0" />
+          <Text style={styles.gateText}>{t('reading.loadingDocuments')}</Text>
         </View>
+      </ScreenColumn>
+    );
+  }
+
+  return (
+    <ScreenColumn backgroundColor="#4A78D0">
+      <TopHeader
+        title={t('reading.title')}
+        onBack={() => navigation.goBack()}
+        navigation={navigation}
+      />
+
+      <View style={styles.body}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Documents section ──────────────────────────────────── */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="document-text-outline" size={18} color="#4A78D0" />
+            <Text style={styles.sectionTitle}>{t('reading.pdfSection')}</Text>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color="#4A78D0" />
+              <Text style={styles.loadingText}>{t('reading.loadingDocuments')}</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorCard}>
+              <Ionicons name="alert-circle-outline" size={20} color="#A05050" />
+              <Text style={styles.errorText}>{error}</Text>
+              {accessToken ? (
+                <TouchableOpacity
+                  style={styles.retryBtn}
+                  onPress={() => loadPdfs(accessToken, { current: false })}
+                >
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : !hasDocs ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="folder-open-outline" size={32} color="#A0A8BC" />
+              <Text style={styles.emptyText}>
+                {hasDocsInOtherLanguages ? emptyLanguageMessage : t('reading.pdfEmpty')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.docCount}>
+                {languageDocs.length} {languageDocs.length === 1 ? t('reading.documentSingular') : t('reading.documentPlural')}
+              </Text>
+              {languageDocs.map((pdf, idx) => (
+                <DocCard
+                  key={pdf._id ?? `pdf-${idx}`}
+                  item={pdf}
+                  idx={idx}
+                  fallback={t('reading.materialFallback', { n: '' }).replace('{n}', '').trim()}
+                  onPress={() => {
+                    const docUrl = pdfOpenUrl(pdf);
+                    if (docUrl) {
+                      navigation.navigate('PdfViewer', { title: pdf.title || 'Document', url: docUrl });
+                    } else {
+                      Alert.alert(t('reading.pdfAlertTitle'), t('reading.pdfNoLink'));
+                    }
+                  }}
+                />
+              ))}
+            </>
+          )}
+        </ScrollView>
       </View>
 
-      <BottomTabs navigation={navigation} />
+      <BottomNavBar navigation={navigation} />
     </ScreenColumn>
   );
 }
+
+// ── Help center screen (unchanged structure, kept here) ────────────────────────
 
 export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
-  const faqs = [t('reading.faq1'), t('reading.faq2'), t('reading.faq3'), t('reading.faq4')];
+  const faqs = [
+    t('reading.faq1'),
+    t('reading.faq2'),
+    t('reading.faq3'),
+    t('reading.faq4'),
+  ];
 
   return (
     <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader title={t('menu.help')} onBack={() => navigation.goBack()} navigation={navigation} />
+      <TopHeader
+        title={t('menu.help')}
+        onBack={() => navigation.goBack()}
+        navigation={navigation}
+      />
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.readListPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.helpSectionTitle}>{t('reading.helpContact')}</Text>
           <View style={styles.contactCard}>
             <View style={styles.contactRow}>
@@ -303,7 +345,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
                 <Text style={styles.contactValue}>nkotanyidrivings@gmail.com</Text>
               </View>
             </View>
-            <View style={[styles.contactRow, styles.contactRowBottom]}>
+            <View style={[styles.contactRow, { marginBottom: 0 }]}>
               <View style={styles.contactIconCircle}>
                 <Ionicons name="phone-portrait-outline" size={16} color="#2D3666" />
               </View>
@@ -316,226 +358,228 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
 
           <Text style={styles.helpSectionTitle}>{t('reading.faqTitle')}</Text>
           {faqs.map((q) => (
-            <TouchableOpacity key={q} style={styles.faqCard} activeOpacity={0.9}>
+            <TouchableOpacity key={q} style={styles.faqCard} activeOpacity={0.85}>
               <Text style={styles.faqText}>{q}</Text>
               <Ionicons name="chevron-down" size={16} color="#7A8091" />
             </TouchableOpacity>
           ))}
-
-          <Image source={require('../assets/visual.png')} style={styles.helpBanner} resizeMode="cover" />
         </ScrollView>
       </View>
-      <BottomTabs navigation={navigation} />
+      <BottomNavBar navigation={navigation} />
     </ScreenColumn>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   header: {
-    minHeight: 78,
+    minHeight: 100,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerIconBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, lineHeight: 24, color: '#F7F9FE' },
+  headerIconBtn: {
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: '#F7F9FE',
+  },
   body: {
     flex: 1,
     backgroundColor: '#CBD3E0',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    overflow: 'hidden',
   },
-  readListPad: { padding: 14 },
-  pdfBlock: { marginBottom: 8 },
-  pdfSectionTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#1F2A52',
-    marginBottom: 10,
-  },
-  pdfSpinner: { alignSelf: 'flex-start', marginBottom: 8 },
-  pdfError: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#9A3D3D',
-    marginBottom: 8,
-  },
-  pdfEmpty: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#5C6474',
-    marginBottom: 8,
-  },
-  readRow: {
-    height: 70,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  readIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+  centeredGate: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 24,
   },
-  readText: {
-    marginLeft: 16,
-    flex: 1,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  signListPad: { padding: 14 },
-  signRow: {
-    height: 58,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  signIcon: { width: 32, height: 32 },
-  signText: {
-    marginLeft: 14,
-    flex: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#2D3668',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(73,82,105,0.42)',
-  },
-  modal: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-    top: 90,
-    borderRadius: 14,
-    backgroundColor: '#F7F7F8',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  modalClose: { position: 'absolute', right: 10, top: 8, zIndex: 2 },
-  modalTitle: {
+  gateText: {
     marginTop: 12,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#2A3462',
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4A4F5C',
   },
-  modalSign: { width: 150, height: 124, alignSelf: 'center', marginTop: 10 },
-  modalText: {
-    marginTop: 10,
-    textAlign: 'center',
+  scrollPad: {
+    padding: 14,
+  },
+
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#1F2A52',
+  },
+
+  // Loading
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  loadingText: {
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 13,
-    lineHeight: 20,
-    color: '#3D4370',
+    color: '#5C6474',
   },
-  detailPagerRow: {
-    marginTop: 14,
+
+  // Error
+  errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: '#F5E8E8',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    flexWrap: 'wrap',
   },
-  detailPagerBtn: {
-    width: '34%',
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E6E8EF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  errorText: {
+    flex: 1,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#8A3030',
   },
-  detailPagerBtnDisabled: { opacity: 0.5 },
-  detailPagerText: {
-    marginLeft: 5,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#364162',
-  },
-  detailPagerIndex: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#4C5576',
-  },
-  detailPagerBtnBlue: {
-    width: '34%',
-    height: 40,
-    borderRadius: 20,
+  retryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
     backgroundColor: '#4A78D0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  detailPagerBtnBlueDisabled: { opacity: 0.7 },
-  detailPagerTextBlue: {
-    marginRight: 5,
+  retryText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 12,
-    lineHeight: 16,
-    color: '#F5F7FC',
+    color: '#FFFFFF',
   },
-  tabs: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 74,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: '#EFF0F4',
+
+  // Empty
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyText: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#5C6474',
+    textAlign: 'center',
+  },
+
+  // Count
+  docCount: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#5C6474',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+
+  // Document card
+  docCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    backgroundColor: '#F3F4F7',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    gap: 12,
   },
-  tab: { alignItems: 'center' },
-  tabBubble: { width: 46, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  tabBubbleActive: { backgroundColor: '#4A78D0' },
-  tabText: { marginTop: 2, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 14, color: '#8A98B2' },
-  tabTextActive: { color: '#4A78D0' },
+  extBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  extText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  docInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  docTitle: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#1F2952',
+  },
+  docMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  docMetaText: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#4A78D0',
+  },
+  docNoLink: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 11,
+    color: '#A0A8BC',
+  },
+
+  // Help center
   helpSectionTitle: {
     marginTop: 10,
     marginBottom: 10,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 34 / 2,
-    lineHeight: 44 / 2,
+    fontSize: 15,
+    lineHeight: 22,
     color: '#25325C',
   },
   contactCard: {
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: '#ECECF0',
     paddingHorizontal: 14,
     paddingVertical: 14,
     marginBottom: 14,
+    gap: 12,
   },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 12,
   },
-  contactRowBottom: { marginBottom: 0 },
   contactIconCircle: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    borderRadius: 14,
+    backgroundColor: '#D8DCEC',
   },
   atSymbol: {
     fontFamily: 'PlusJakartaSans-Bold',
@@ -558,7 +602,7 @@ const styles = StyleSheet.create({
     color: '#2C355D',
   },
   faqCard: {
-    minHeight: 44,
+    minHeight: 46,
     borderRadius: 10,
     backgroundColor: '#F2F3F5',
     paddingHorizontal: 12,
@@ -574,11 +618,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: '#333844',
-  },
-  helpBanner: {
-    marginTop: 14,
-    height: 140,
-    borderRadius: 0,
   },
 });
 

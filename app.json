@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Nkotanyi",
+    "name": "Ibyapa",
     "slug": "nkotanyi",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "scheme": "nkotanyi",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -32,8 +32,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "name": "Nkotanyi",
-      "shortName": "Nkotanyi",
+      "name": "Ibyapa",
+      "shortName": "Ibyapa",
       "lang": "en",
       "description": "Road safety learning and driving exam preparation.",
       "themeColor": "#4A78D0",

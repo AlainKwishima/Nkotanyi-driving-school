@@ -130,7 +130,7 @@ export function ProfileNativeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 78,
+    minHeight: 100,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
