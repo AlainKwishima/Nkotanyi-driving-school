@@ -18,10 +18,34 @@ function backendBaseUrl(): string {
   return API_BASE_URL.replace(/\/+$/, '');
 }
 
-async function fetchText(url: string): Promise<string> {
+function languageQueryValue(lang: ContentLanguageCode): string {
+  switch (lang) {
+    case 'rw':
+      return 'rw';
+    case 'fr':
+      return 'fr';
+    default:
+      return 'en';
+  }
+}
+
+function acceptLanguageFor(lang: ContentLanguageCode): string {
+  switch (lang) {
+    case 'rw':
+      return 'rw-RW,rw;q=0.9,en;q=0.7';
+    case 'fr':
+      return 'fr-FR,fr;q=0.9,en;q=0.7';
+    default:
+      return 'en-US,en;q=0.9';
+  }
+}
+
+async function fetchText(url: string, accessToken?: string | null, lang?: ContentLanguageCode): Promise<string> {
   const res = await fetch(url, {
     headers: {
       Accept: 'text/html,application/javascript,text/javascript,*/*',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(lang ? { 'Accept-Language': acceptLanguageFor(lang) } : {}),
       Pragma: 'no-cache',
       'Cache-Control': 'no-cache',
     },
@@ -137,9 +161,67 @@ function languageBucket(lang: ContentLanguageCode): keyof BackendPricingMatrix {
 
 export async function fetchLiveSubscriptionPlans(
   contentLanguage: ContentLanguageCode,
+  accessToken?: string | null,
 ): Promise<LiveSubscriptionPlan[]> {
-  const matrix = await fetchBackendPricingMatrix();
-  const bucket = matrix[languageBucket(contentLanguage)];
+  try {
+    const queryLang = languageQueryValue(contentLanguage);
+    const baseUrl = backendBaseUrl();
+    const html = await fetchText(`${baseUrl}/?lang=${encodeURIComponent(queryLang)}`, accessToken, contentLanguage);
+    const scriptSrc = extractFirstScriptSrc(html);
+    if (!scriptSrc) {
+      throw new Error('Backend script not found');
+    }
+
+    const indexBundle = await fetchText(
+      scriptSrc.startsWith('http') ? scriptSrc : `${baseUrl}${scriptSrc.startsWith('/') ? '' : '/'}${scriptSrc}`,
+      accessToken,
+      contentLanguage,
+    );
+    const paymentChunkSrc = extractPaymentChunkSrc(indexBundle);
+    if (!paymentChunkSrc) {
+      throw new Error('Payment pricing chunk not found');
+    }
+
+    const paymentChunk = await fetchText(
+      paymentChunkSrc.startsWith('http') ? paymentChunkSrc : `${baseUrl}${paymentChunkSrc.startsWith('/') ? '' : '/'}${paymentChunkSrc}`,
+      accessToken,
+      contentLanguage,
+    );
+    const matrix = parsePricingMatrix(paymentChunk);
+    const bucket = matrix[languageBucket(contentLanguage)];
+    const plans = PLAN_ORDER.map((subscriptionType) => {
+      const amountRwf = bucket[subscriptionType];
+      if (typeof amountRwf !== 'number' || !Number.isFinite(amountRwf) || amountRwf <= 0) {
+        return null;
+      }
+      return { subscriptionType, amountRwf };
+    }).filter((item): item is LiveSubscriptionPlan => item !== null);
+
+    if (plans.length > 0) {
+      return plans;
+    }
+  } catch {
+    // fall through to local fallback matrix below
+  }
+
+  const fallbackMatrix: BackendPricingMatrix = {
+    rw: {
+      'two-exams': 300,
+      'five-exams': 500,
+      daily: 2000,
+      weekly: 5000,
+      'two-weekly': 8000,
+      monthly: 10000,
+    },
+    en_fr: {
+      'five-exams': 1000,
+      daily: 2000,
+      weekly: 6000,
+      'two-weekly': 10000,
+      monthly: 15000,
+    },
+  };
+  const bucket = fallbackMatrix[languageBucket(contentLanguage)];
   return PLAN_ORDER.map((subscriptionType) => {
     const amountRwf = bucket[subscriptionType];
     if (typeof amountRwf !== 'number' || !Number.isFinite(amountRwf) || amountRwf <= 0) {
@@ -148,4 +230,3 @@ export async function fetchLiveSubscriptionPlans(
     return { subscriptionType, amountRwf };
   }).filter((item): item is LiveSubscriptionPlan => item !== null);
 }
-

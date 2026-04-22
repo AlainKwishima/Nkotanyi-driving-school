@@ -96,12 +96,16 @@ const EXT_COLORS: Record<string, string> = {
 function TopHeader({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: AnyNav }) {
   const { insets } = useResponsiveLayout();
   return (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <TouchableOpacity onPress={onBack} style={styles.headerIconBtn}>
-        <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
+    <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
+      <View style={styles.topRow}>
+        <TouchableOpacity onPress={onBack} style={styles.headerLeft}>
+          <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <View style={styles.headerRight}>
+          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -208,10 +212,7 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
   }, [languageAccessGranted, navigation, openGateModal]);
 
   const languageDocs = useMemo(() => {
-    return pdfs.filter((pdf) => {
-      const lang = pdfLanguage(pdf);
-      return !lang || lang === contentLanguage;
-    });
+    return pdfs.filter((pdf) => pdfLanguage(pdf) === contentLanguage);
   }, [contentLanguage, pdfs]);
 
   const selectedLanguageLabel = t(`profile.lang.${contentLanguage}`);
@@ -228,7 +229,7 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
           navigation={navigation}
         />
         <View style={styles.centeredGate}>
-          <ActivityIndicator size="large" color="#4A78D0" />
+          <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.gateText}>{t('reading.loadingDocuments')}</Text>
         </View>
       </ScreenColumn>
@@ -322,6 +323,12 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
     t('reading.faq4'),
   ];
 
+  const handleWhatsApp = () => {
+    Linking.openURL('https://wa.me/0780211466').catch(() => {
+      Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
+    });
+  };
+
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       <TopHeader
@@ -345,7 +352,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
                 <Text style={styles.contactValue}>nkotanyidrivings@gmail.com</Text>
               </View>
             </View>
-            <View style={[styles.contactRow, { marginBottom: 0 }]}>
+            <View style={[styles.contactRow, { marginBottom: 4 }]}>
               <View style={styles.contactIconCircle}>
                 <Ionicons name="phone-portrait-outline" size={16} color="#2D3666" />
               </View>
@@ -354,6 +361,15 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
                 <Text style={styles.contactValue}>0780211466</Text>
               </View>
             </View>
+
+            <TouchableOpacity 
+              style={styles.whatsappBtn} 
+              onPress={handleWhatsApp}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
+              <Text style={styles.whatsappBtnText}>{t('auth.whatsappUs')}</Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.helpSectionTitle}>{t('reading.faqTitle')}</Text>
@@ -373,31 +389,48 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 100,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  headerBlue: {
+    backgroundColor: '#4A78D0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  headerIconBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
+  topRow: {
+    minHeight: 64,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#F7F9FE',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
+    color: '#F5F7FC',
+    textAlign: 'center',
   },
   body: {
     flex: 1,
-    backgroundColor: '#CBD3E0',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     overflow: 'hidden',
+    marginTop: -20,
   },
   centeredGate: {
     flex: 1,
@@ -414,7 +447,8 @@ const styles = StyleSheet.create({
     color: '#4A4F5C',
   },
   scrollPad: {
-    padding: 14,
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
 
   // Section header
@@ -425,10 +459,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#1F2A52',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    color: '#1E293B',
   },
 
   // Loading
@@ -490,24 +523,28 @@ const styles = StyleSheet.create({
 
   // Count
   docCount: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 11,
-    lineHeight: 16,
-    color: '#5C6474',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: '#94A3B8',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 8,
+    letterSpacing: 0.5,
+    marginBottom: 16,
   },
 
   // Document card
   docCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F7',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   extBadge: {
     width: 44,
@@ -530,9 +567,9 @@ const styles = StyleSheet.create({
   },
   docTitle: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#1F2952',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1E293B',
   },
   docMeta: {
     flexDirection: 'row',
@@ -554,19 +591,23 @@ const styles = StyleSheet.create({
   // Help center
   helpSectionTitle: {
     marginTop: 10,
-    marginBottom: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#25325C',
+    marginBottom: 16,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    color: '#1E293B',
   },
   contactCard: {
-    borderRadius: 12,
-    backgroundColor: '#ECECF0',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 14,
-    gap: 12,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    marginBottom: 24,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   contactRow: {
     flexDirection: 'row',
@@ -574,18 +615,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   contactIconCircle: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: '#D8DCEC',
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
   },
   atSymbol: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#2D3666',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    color: '#2563EB',
   },
   contactLabel: {
     fontFamily: 'PlusJakartaSans-Bold',
@@ -597,20 +637,45 @@ const styles = StyleSheet.create({
   contactValue: {
     marginTop: 2,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#2C355D',
+    fontSize: 15,
+    color: '#1E293B',
+  },
+  whatsappBtn: {
+    marginTop: 8,
+    width: '100%',
+    backgroundColor: '#10B981',
+    height: 52,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  whatsappBtnText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   faqCard: {
-    minHeight: 46,
-    borderRadius: 10,
-    backgroundColor: '#F2F3F5',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    minHeight: 56,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
   },
   faqText: {
     flex: 1,

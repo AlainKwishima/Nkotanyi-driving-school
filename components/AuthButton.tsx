@@ -19,7 +19,7 @@ export function AuthButton({ label, onPress, withArrow = false, style }: AuthBut
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { height: m.verticalScale(50), borderRadius: m.scale(12) },
+        { height: m.verticalScale(56), borderRadius: m.scale(28) },
         style,
         pressed && styles.buttonPressed,
       ]}
@@ -33,24 +33,24 @@ export function AuthButton({ label, onPress, withArrow = false, style }: AuthBut
 const styles = StyleSheet.create({
   button: {
     width: '100%',
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#4C7DDD',
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: '#1F2F54',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
     elevation: 4,
   },
   buttonPressed: {
     opacity: 0.95,
   },
   label: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
     lineHeight: 20,
     color: '#FFFFFF',
   },

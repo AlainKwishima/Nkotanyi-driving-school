@@ -38,12 +38,16 @@ type Nav = SubscriptionProps['navigation'] | PaymentProps['navigation'] | Confir
 function Header({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: Nav }) {
   const { insets } = useResponsiveLayout();
   return (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <TouchableOpacity onPress={onBack} style={styles.headerBtn}>
-        <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
+    <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
+      <View style={styles.topRow}>
+        <TouchableOpacity style={styles.headerLeft} onPress={onBack}>
+          <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <View style={styles.headerRight}>
+          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -59,6 +63,7 @@ type Plan = {
   /** Must match backend enum for `subscription_type` on payment APIs */
   subscriptionType: SubscriptionType;
   featured?: boolean;
+  isActive?: boolean;
 };
 const PLAN_TITLE_KEYS: Record<SubscriptionType, string> = {
   monthly: 'payment.plan.month',
@@ -69,7 +74,14 @@ const PLAN_TITLE_KEYS: Record<SubscriptionType, string> = {
   'two-exams': 'payment.plan.twoExams',
 };
 
-const FEATURE_KEYS = ['payment.feature1', 'payment.feature2', 'payment.feature3'] as const;
+const PLAN_FEATURES: Record<SubscriptionType, string[]> = {
+  'monthly': ['payment.feature.unlimited', 'payment.feature.duration30d', 'payment.feature2', 'payment.feature3'],
+  'two-weekly': ['payment.feature.unlimited', 'payment.feature.duration14d', 'payment.feature2'],
+  'weekly': ['payment.feature.unlimited', 'payment.feature.duration7d', 'payment.feature2'],
+  'daily': ['payment.feature.unlimited', 'payment.feature.duration24h', 'payment.feature2'],
+  'five-exams': ['payment.feature.exams5', 'payment.feature.duration24h'],
+  'two-exams': ['payment.feature.exams2', 'payment.feature.duration24h'],
+};
 
 function toPlanCard(plan: LiveSubscriptionPlan, locale: string): Plan {
   return {
@@ -77,7 +89,7 @@ function toPlanCard(plan: LiveSubscriptionPlan, locale: string): Plan {
     amountRwf: plan.amountRwf,
     price: plan.amountRwf.toLocaleString(locale),
     titleKey: PLAN_TITLE_KEYS[plan.subscriptionType],
-    featured: plan.subscriptionType === 'monthly',
+    featured: false, // Will be determined by scroll position
   };
 }
 
@@ -222,37 +234,47 @@ function PlanCard({
   title,
   featureTexts,
   actionLabel,
+  isActive,
   onPress,
 }: {
   plan: Plan;
   title: string;
   featureTexts?: string[];
   actionLabel: string;
+  isActive?: boolean;
   onPress: () => void;
 }) {
   const { t } = useI18n();
+
   return (
-    <View style={[styles.planCard, plan.featured && styles.planCardFeatured]}>
-      {plan.featured ? <Text style={styles.bestValue}>{t('payment.bestValue').toUpperCase()}</Text> : null}
-      <Text style={[styles.planTitle, plan.featured && styles.planTitleFeatured]}>{title}</Text>
-      <View style={styles.planPriceRow}>
-        <Text style={[styles.planPrice, plan.featured && styles.planPriceFeatured]}>{plan.price}</Text>
-        <Text style={[styles.planCurrency, plan.featured && styles.planCurrencyFeatured]}>RWF</Text>
+    <View style={[styles.planCard, isActive && styles.planCardActive]}>
+      <View style={styles.planCardHeader}>
+        <View style={{ flex: 1 }}>
+          {isActive ? <Text style={styles.bestValue}>{t('payment.bestValue').toUpperCase()}</Text> : null}
+          <Text style={[styles.planTitle, isActive && styles.planTitleActive]}>{title}</Text>
+        </View>
+        <View style={styles.planPriceCol}>
+          <Text style={[styles.planPrice, isActive && styles.planPriceActive]}>{plan.price}</Text>
+          <Text style={[styles.planCurrency, isActive && styles.planCurrencyActive]}>RWF</Text>
+        </View>
       </View>
 
-      {plan.featured && featureTexts ? (
+      {isActive && featureTexts ? (
         <View style={styles.planFeatures}>
           {featureTexts.map((text) => (
             <View key={text} style={styles.featureRow}>
-              <Ionicons name="checkmark-circle-outline" size={14} color="#D5E4FF" />
+              <Ionicons name="checkmark-circle" size={14} color="#D5E4FF" />
               <Text style={styles.featureText}>{text}</Text>
             </View>
           ))}
         </View>
       ) : null}
 
-      <TouchableOpacity style={styles.startNowBtn} onPress={onPress}>
-        <Text style={styles.startNowText}>{actionLabel}</Text>
+      <TouchableOpacity
+        style={[styles.startNowBtn, isActive && styles.startNowBtnActive]}
+        onPress={onPress}
+      >
+        <Text style={[styles.startNowText, isActive && styles.startNowTextActive]}>{actionLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -261,10 +283,13 @@ function PlanCard({
 export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
+  const { accessToken } = useAuth();
   const { hasSubscription, contentLanguage } = useAppFlow();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingError, setPricingError] = useState<string | null>(null);
+  const [activePlanIndex, setActivePlanIndex] = useState(0);
+
   const planActionLabel = hasSubscription ? t('payment.renewOrChangePlan') : t('payment.startNow');
 
   useEffect(() => {
@@ -273,10 +298,14 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
       setPricingLoading(true);
       setPricingError(null);
       try {
-        const livePlans = await fetchLiveSubscriptionPlans(contentLanguage);
+        const livePlans = await fetchLiveSubscriptionPlans(contentLanguage, accessToken);
         if (!cancelled) {
           const locale = localeTagForContentLanguage(contentLanguage);
-          setPlans(livePlans.map((plan) => toPlanCard(plan, locale)));
+          // Sort plans by price (ascending) as requested
+          const sorted = [...livePlans]
+            .sort((a, b) => a.amountRwf - b.amountRwf)
+            .map((plan) => toPlanCard(plan, locale));
+          setPlans(sorted);
         }
       } catch (e) {
         if (!cancelled) {
@@ -291,13 +320,30 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
     return () => {
       cancelled = true;
     };
-  }, [contentLanguage]);
+  }, [accessToken, contentLanguage]);
+
+  const onScroll = (event: any) => {
+    const y = event.nativeEvent.contentOffset.y;
+    // Estimate card height: card height (approx 100-200) + margin (12)
+    // We'll use a rough estimation to determine which card is in focus.
+    // In a production app, we'd use onLayout to get exact heights.
+    const cardHeight = 130;
+    const index = Math.round(y / cardHeight);
+    if (index !== activePlanIndex && index >= 0 && index < plans.length) {
+      setActivePlanIndex(index);
+    }
+  };
 
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       <Header title={t('subscription.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad + 40 }]}
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+        >
           <Text style={styles.subHeading}>{t('payment.investTitle')}</Text>
           <Text style={styles.subLead}>{t('payment.investBody')}</Text>
 
@@ -318,12 +364,13 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
               <Text style={styles.pricingStatusError}>{pricingError}</Text>
             </View>
           ) : (
-            plans.map((plan) => (
+            plans.map((plan, index) => (
               <PlanCard
                 key={plan.subscriptionType}
                 plan={plan}
+                isActive={index === activePlanIndex}
                 title={t(PLAN_TITLE_KEYS[plan.subscriptionType])}
-                featureTexts={plan.featured ? FEATURE_KEYS.map((k) => t(k)) : undefined}
+                featureTexts={PLAN_FEATURES[plan.subscriptionType].map((k) => t(k))}
                 actionLabel={planActionLabel}
                 onPress={() =>
                   navigation.navigate('PaymentNative', {
@@ -378,7 +425,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     let cancelled = false;
     const load = async () => {
       try {
-        const live = await fetchLiveSubscriptionPlans(contentLanguage);
+        const live = await fetchLiveSubscriptionPlans(contentLanguage, accessToken);
         if (!cancelled) {
           setLivePlans(live.map((plan) => toPlanCard(plan, localeTagForContentLanguage(contentLanguage))));
         }
@@ -390,7 +437,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     return () => {
       cancelled = true;
     };
-  }, [contentLanguage]);
+  }, [accessToken, contentLanguage]);
 
   const fallbackPlan =
     livePlans.find((plan) => plan.subscriptionType === route.params?.subscriptionType) ??
@@ -770,22 +817,50 @@ export function PaymentConfirmationNativeScreen({ navigation, route }: Confirmat
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 100,
-    paddingHorizontal: 14,
+  headerBlue: {
+    backgroundColor: '#4A78D0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  topRow: {
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
-  headerBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, lineHeight: 24, color: '#F7F9FE' },
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
+    color: '#F7F9FE',
+    textAlign: 'center',
+  },
   body: {
     flex: 1,
-    backgroundColor: '#CBD3E0',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    marginTop: -20,
   },
-  scrollPad: { paddingHorizontal: 18, paddingTop: 16 },
+  scrollPad: { paddingHorizontal: 20, paddingTop: 24 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   subHeading: {
@@ -820,42 +895,68 @@ const styles = StyleSheet.create({
     color: '#1F2B54',
   },
   planCard: {
-    marginTop: 12,
-    borderRadius: 10,
-    backgroundColor: '#F0F0F4',
-    padding: 12,
+    marginTop: 16,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  planCardFeatured: { backgroundColor: '#4A78D0' },
+  planCardActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 6,
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   bestValue: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.22)',
     borderRadius: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 3,
+    marginBottom: 4,
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 9,
     lineHeight: 12,
     color: '#F6F8FF',
   },
-  planTitle: { marginTop: 8, fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, lineHeight: 26, color: '#17224A' },
-  planTitleFeatured: { color: '#F6F8FF' },
+  planTitle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 20, color: '#1E293B' },
+  planTitleActive: { color: '#FFFFFF' },
+  planPriceCol: { alignItems: 'flex-end' },
   planPriceRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
-  planPrice: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 36, lineHeight: 42, color: '#17224A' },
-  planPriceFeatured: { color: '#F6F8FF' },
-  planCurrency: { marginLeft: 3, marginBottom: 4, fontFamily: 'PlusJakartaSans-Medium', fontSize: 16, lineHeight: 20, color: '#687086' },
-  planCurrencyFeatured: { color: '#DCE7FF' },
-  planFeatures: { marginTop: 10 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  featureText: { marginLeft: 6, fontFamily: 'PlusJakartaSans-Medium', fontSize: 11, lineHeight: 16, color: '#EAF0FF' },
+  planPrice: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 32, color: '#1E293B' },
+  planPriceActive: { color: '#FFFFFF' },
+  planCurrency: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#64748B' },
+  planCurrencyActive: { color: '#BFDBFE' },
+  planFeatures: { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 16 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  featureText: { marginLeft: 10, fontFamily: 'PlusJakartaSans-Medium', fontSize: 13, color: '#E0E7FF' },
   startNowBtn: {
-    marginTop: 10,
-    height: 38,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
+    marginTop: 20,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  startNowText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, lineHeight: 16, color: '#1B1F2B' },
+  startNowBtnActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  startNowText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: '#2563EB' },
+  startNowTextActive: { color: '#2563EB' },
   customPlanCard: {
     marginTop: 14,
     borderRadius: 12,
@@ -904,17 +1005,22 @@ const styles = StyleSheet.create({
   standardDaily: { marginLeft: 12, flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#252A35' },
   amountBlue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#4A78D0' },
 
-  methodsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  methodsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   methodCard: {
     width: '31.4%',
-    borderRadius: 8,
-    backgroundColor: '#ECECF0',
-    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  methodCardActive: { borderColor: '#1F2B54', backgroundColor: '#F7F7FA' },
+  methodCardActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
   methodIconWrap: {
     width: 42,
     height: 42,
@@ -927,20 +1033,28 @@ const styles = StyleSheet.create({
   methodLabel: { marginTop: 6, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, lineHeight: 14, color: '#4F5564' },
   checkDot: { position: 'absolute', top: 6, right: 6, width: 14, height: 14, borderRadius: 7, backgroundColor: '#1F2B54', alignItems: 'center', justifyContent: 'center' },
 
-  detailsCard: { borderRadius: 10, backgroundColor: '#F0F0F3', padding: 12 },
-  inputLabel: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 18, color: '#4F5564', marginBottom: 8 },
-  inputLabelSpacing: { marginTop: 10 },
+  detailsCard: { 
+    borderRadius: 20, 
+    backgroundColor: '#FFFFFF', 
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2, 
+  },
+  inputLabel: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputLabelSpacing: { marginTop: 14 },
   inputField: {
-    height: 42,
-    borderRadius: 4,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E1E2E8',
-    backgroundColor: '#F5F6F8',
-    paddingHorizontal: 10,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#434956',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 14,
+    color: '#1E293B',
   },
   cardRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' },
   cardCol: { width: '48%' },
@@ -968,55 +1082,70 @@ const styles = StyleSheet.create({
   },
 
   payNowBtn: {
-    marginTop: 16,
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: '#4A78D0',
+    marginTop: 24,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  payNowText: { marginLeft: 6, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#F6F8FF' },
-  secureInfo: { marginTop: 12, textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 11, lineHeight: 16, color: '#6E7482' },
+  payNowText: { marginLeft: 8, fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, color: '#FFFFFF' },
+  secureInfo: { marginTop: 16, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#94A3B8' },
 
   successSquare: {
-    marginTop: 16,
+    marginTop: 24,
     alignSelf: 'center',
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    backgroundColor: '#4A78D0',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#4A78D0',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
-    elevation: 3,
+    elevation: 4,
   },
-  successTitle: { marginTop: 18, textAlign: 'center', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 20, lineHeight: 28, color: '#4A78D0' },
-  successSubtitle: { marginTop: 8, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, lineHeight: 20, color: '#5E6472' },
+  successTitle: { marginTop: 24, textAlign: 'center', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 24, color: '#1E293B' },
+  successSubtitle: { marginTop: 8, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
 
-  confirmationCard: { marginTop: 18, borderRadius: 10, backgroundColor: '#ECECF0', padding: 14 },
-  confirmHeader: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, lineHeight: 20, color: '#4E5464' },
-  activePill: { borderRadius: 11, backgroundColor: '#4A78D0', paddingHorizontal: 10, paddingVertical: 3 },
-  activePillText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, lineHeight: 14, color: '#F6F8FF' },
-  confirmRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  confirmKey: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, lineHeight: 20, color: '#5B6170' },
-  confirmValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#2D3444' },
+  confirmationCard: { 
+    marginTop: 24, 
+    borderRadius: 20, 
+    backgroundColor: '#FFFFFF', 
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  confirmHeader: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: '#475569' },
+  activePill: { borderRadius: 12, backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 4 },
+  activePillText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 10, color: '#FFFFFF' },
+  confirmRow: { marginTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  confirmKey: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
+  confirmValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#1E293B' },
 
   startExamOutline: {
     marginTop: 12,
-    height: 54,
-    borderRadius: 8,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 2,
-    borderColor: '#B5BDD0',
+    borderColor: '#E2E8F0',
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  startExamOutlineText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#4A78D0' },
-  receiptNote: { marginTop: 12, textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 11, lineHeight: 16, color: '#7B818F' },
+  startExamOutlineText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, color: '#475569' },
+  receiptNote: { marginTop: 20, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#94A3B8' },
 
   tabs: {
     position: 'absolute',

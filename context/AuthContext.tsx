@@ -154,9 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (fullName: string, phoneRaw: string, password: string) => {
       const phoneDigits = phoneForSignupApi(phoneRaw);
       await signupRequest(fullName, phoneDigits, password.trim(), contentLanguage);
-      await login(phoneRaw, password.trim());
     },
-    [contentLanguage, login],
+    [contentLanguage],
   );
 
   const logout = useCallback(async () => {

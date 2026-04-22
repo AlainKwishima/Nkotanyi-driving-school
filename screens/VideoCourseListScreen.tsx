@@ -121,9 +121,9 @@ export function VideoCourseListScreen({ navigation }: Props) {
   if (!languageAccessGranted) {
     return (
       <ScreenColumn backgroundColor="#4A78D0">
-        <View style={styles.body}>
+        <View style={styles.bodyWrap}>
           <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color="#4A78D0" />
+            <ActivityIndicator size="large" color="#2563EB" />
             <Text style={styles.loadingText}>{t('video.loading')}</Text>
           </View>
         </View>
@@ -134,19 +134,23 @@ export function VideoCourseListScreen({ navigation }: Props) {
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('video.listTitle')}</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('video.listTitle')}</Text>
+          <View style={styles.headerRight}>
+            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
+          </View>
+        </View>
       </View>
 
       {/* Body */}
-      <View style={styles.body}>
+      <View style={styles.bodyWrap}>
         {loading ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color="#4A78D0" />
+            <ActivityIndicator size="large" color="#2563EB" />
             <Text style={styles.loadingText}>{t('video.loading')}</Text>
           </View>
         ) : error ? (
@@ -230,7 +234,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color="#B0BAC8" />
+                  <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
                 </TouchableOpacity>
               );
             })}
@@ -244,31 +248,48 @@ export function VideoCourseListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 100,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  headerBlue: {
+    backgroundColor: '#4A78D0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
+  topRow: {
+    minHeight: 64,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#F7F9FE',
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
-  body: {
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
+    color: '#F5F7FC',
+    textAlign: 'center',
+  },
+  bodyWrap: {
     flex: 1,
-    backgroundColor: '#CBD3E0',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     overflow: 'hidden',
+    marginTop: -20,
   },
   centerBox: {
     flex: 1,
@@ -280,23 +301,28 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
-    color: '#5A6170',
+    color: '#64748B',
     marginTop: 8,
   },
   errorText: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#4A4F5C',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#475569',
     textAlign: 'center',
     marginTop: 4,
   },
   retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#4A78D0',
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   retryText: {
     fontFamily: 'PlusJakartaSans-Bold',
@@ -304,32 +330,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   listPad: {
-    padding: 14,
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
   countLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#5C6474',
-    marginBottom: 10,
-    letterSpacing: 0.4,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: '#94A3B8',
+    marginBottom: 16,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: 12,
-    backgroundColor: '#F2F3F6',
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    marginBottom: 12,
-    gap: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   thumbWrap: {
     position: 'relative',
-    width: 100,
-    height: 66,
-    borderRadius: 8,
+    width: 110,
+    height: 74,
+    borderRadius: 14,
     overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
   },
   thumb: {
     width: '100%',
@@ -337,39 +369,38 @@ const styles = StyleSheet.create({
   },
   playBadge: {
     position: 'absolute',
-    top: 4,
-    left: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74,120,208,0.88)',
+    top: 6,
+    left: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(37,99,235,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   durBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(15,23,42,0.7)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   durText: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 10,
-    lineHeight: 14,
     color: '#FFFFFF',
   },
   cardText: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   cardTitle: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#2E3345',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1E293B',
   },
   cardMeta: {
     flexDirection: 'row',
@@ -378,8 +409,7 @@ const styles = StyleSheet.create({
   },
   cardMetaText: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#6A748A',
+    fontSize: 13,
+    color: '#64748B',
   },
 });

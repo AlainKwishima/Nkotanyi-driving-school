@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
@@ -8,9 +8,13 @@ import { RootStackParamList } from '../navigation/types';
 import { AuthButton } from '../components/AuthButton';
 import { AuthInputField } from '../components/AuthInputField';
 import { useMobile } from '../hooks/useMobile';
-import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth, getMessageFromUnknownError } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
+import {
+  clearRememberedCredentials,
+  loadRememberedCredentials,
+  saveRememberedCredentials,
+} from '../services/rememberedCredentials';
 import {
   isValidRwandaAccountPhone,
   validateName,
@@ -24,7 +28,7 @@ type CreateAccountProps = NativeStackScreenProps<RootStackParamList, 'CreateAcco
 type ForgotPasswordProps = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 type ResetPasswordProps = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
-function LogoHeader({ showTitle }: { showTitle: boolean }) {
+function LogoHeader({ showTitle, showTagline = false }: { showTitle: boolean; showTagline?: boolean }) {
   const m = useMobile();
   const { t } = useI18n();
 
@@ -32,19 +36,78 @@ function LogoHeader({ showTitle }: { showTitle: boolean }) {
     <View style={styles.logoHeader}>
       <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(94), height: m.scale(94) }]} resizeMode="contain" />
       {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22) }]}>{t('language.brand')}</Text> : null}
+      {showTagline ? <Text style={[styles.taglineText, { marginTop: m.verticalScale(2), fontSize: m.fontScale(11), lineHeight: m.fontScale(16) }]}>{t('auth.tagline')}</Text> : null}
     </View>
   );
 }
 
-export function LoginScreen({ navigation }: LoginProps) {
+function RememberMeRow({
+  checked,
+  onToggle,
+  label,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  return (
+    <Pressable style={styles.rememberRow} onPress={onToggle} hitSlop={8}>
+      <MaterialCommunityIcons
+        name={checked ? 'checkbox-marked' : 'checkbox-blank-outline'}
+        size={20}
+        color={checked ? '#2563EB' : '#CBD5E1'}
+      />
+      <Text style={styles.rememberText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export function LoginScreen({ navigation, route }: LoginProps) {
   const m = useMobile();
   const { t } = useI18n();
   const { login } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const signupBannerShown = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const remembered = await loadRememberedCredentials();
+      if (!active) return;
+      if (remembered) {
+        setPhone(remembered.phone);
+        setPassword(remembered.password);
+        setRememberMe(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const prefill = route.params?.prefill;
+    if (!prefill) return;
+
+    if (typeof prefill.phone === 'string') setPhone(prefill.phone);
+    if (typeof prefill.password === 'string') setPassword(prefill.password);
+
+    if (!signupBannerShown.current && route.params?.showSignupSuccess && (prefill.name || prefill.phone)) {
+      signupBannerShown.current = true;
+      const displayName = prefill.name?.trim() || t('auth.welcomeBack');
+      const displayPhone = prefill.phone?.trim() || '';
+      Alert.alert(
+        t('auth.signupSuccessTitle'),
+        t('auth.signupSuccessMessage', { name: displayName, phone: displayPhone }),
+      );
+      navigation.setParams({ showSignupSuccess: false });
+    }
+  }, [navigation, route.params, t]);
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
@@ -86,10 +149,7 @@ export function LoginScreen({ navigation }: LoginProps) {
           />
         </View>
 
-        <Pressable style={styles.rememberRow}>
-          <View style={styles.checkbox} />
-          <Text style={styles.rememberText}>{t('auth.rememberMe')}</Text>
-        </Pressable>
+        <RememberMeRow checked={rememberMe} onToggle={() => setRememberMe((prev) => !prev)} label={t('auth.rememberMe')} />
 
         <AuthButton
           label={t('auth.signIn')}
@@ -106,6 +166,11 @@ export function LoginScreen({ navigation }: LoginProps) {
             setBusy(true);
             try {
               await login(phone.trim(), password);
+              if (rememberMe) {
+                await saveRememberedCredentials({ phone: phone.trim(), password });
+              } else {
+                await clearRememberedCredentials();
+              }
               navigation.replace('HomeNative');
             } catch (e) {
               Alert.alert(t('auth.signInFailed'), getMessageFromUnknownError(e));
@@ -138,11 +203,11 @@ export function LoginScreen({ navigation }: LoginProps) {
 export function CreateAccountScreen({ navigation }: CreateAccountProps) {
   const m = useMobile();
   const { t } = useI18n();
-  const { setHasUsedFreeTrial, setHasSubscription, setCanChangeLanguage } = useAppFlow();
   const { signup } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -199,6 +264,8 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
           />
         </View>
 
+        <RememberMeRow checked={rememberMe} onToggle={() => setRememberMe((prev) => !prev)} label={t('auth.rememberMe')} />
+
         <AuthButton
           label={t('auth.create')}
           onPress={async () => {
@@ -215,10 +282,15 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
             setBusy(true);
             try {
               await signup(name.trim(), phone.trim(), password);
-              await setHasUsedFreeTrial(false);
-              await setHasSubscription(false);
-              await setCanChangeLanguage(false);
-              navigation.replace('HomeNative');
+              if (rememberMe) {
+                await saveRememberedCredentials({ phone: phone.trim(), password, name: name.trim() });
+              } else {
+                await clearRememberedCredentials();
+              }
+              navigation.replace('Login', {
+                prefill: { name: name.trim(), phone: phone.trim(), password },
+                showSignupSuccess: true,
+              });
             } catch (e) {
               Alert.alert(t('auth.createFailed'), getMessageFromUnknownError(e));
             } finally {
@@ -240,72 +312,71 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
   const m = useMobile();
   const { t } = useI18n();
-  const [phone, setPhone] = useState('');
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const handleWhatsApp = () => {
+    Linking.openURL('https://wa.me/0780211466').catch(() => {
+      Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
+    });
+  };
 
   return (
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
-        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
+        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topBar}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Feather name="arrow-left" size={22} color="#23335F" />
-          </Pressable>
-          <Text style={styles.topBarTitle}>{t('auth.resetTitle')}</Text>
-          <View style={styles.backButton} />
-        </View>
-
-        <View style={styles.resetIconBadge}>
-          <MaterialCommunityIcons name="lock-reset" size={28} color="#F5F9FF" />
-        </View>
-
-        <Text style={styles.secondaryTitle}>{t('auth.forgotTitle')}</Text>
-        <Text style={styles.secondarySubtitle}>{t('auth.forgotBody')}</Text>
-
-        <View style={styles.secondaryFormGroup}>
-          <AuthInputField
-            label={t('auth.phone')}
-            placeholder={t('auth.phonePh')}
-            leftIcon="phone"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={(v) => {
-              setPhone(v);
-              setPhoneError(null);
-            }}
-            error={phoneError}
-          />
-        </View>
-
-        <AuthButton
-          label={t('auth.sendReset')}
-          withArrow
-          onPress={() => {
-            if (!phone.trim()) {
-              setPhoneError(t('validate.phoneRequired'));
-              return;
-            }
-            if (!isValidRwandaAccountPhone(phone)) {
-              setPhoneError(t('validate.phoneInvalid'));
-              return;
-            }
-            Alert.alert(t('auth.resetSelfServiceTitle'), t('auth.resetSelfServiceBody'), [{ text: t('common.ok') }]);
-          }}
-        />
-
-        <Pressable style={styles.backSignInWrap} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backSignInText}>{t('auth.backSignIn')}</Text>
+        <Pressable 
+          onPress={() => navigation.goBack()} 
+          style={({ pressed }) => [styles.forgotBackButton, pressed && { opacity: 0.7 }]}
+          hitSlop={10}
+        >
+          <Feather name="arrow-left" size={m.scale(24)} color="#17224A" />
         </Pressable>
 
-        <View style={styles.helpCard}>
-          <View>
-            <Text style={styles.helpTitle}>{t('auth.helpTitle')}</Text>
-            <Text style={styles.helpSubtitle}>{t('auth.helpSubtitle')}</Text>
+        <LogoHeader showTitle showTagline />
+
+        <Text style={[styles.secondaryTitle, { marginTop: m.verticalScale(22), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
+          {t('auth.contactAdminTitle')}
+        </Text>
+        <Text style={[styles.secondarySubtitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22), paddingHorizontal: m.scale(10) }]}>
+          {t('auth.contactAdminMessage')}
+        </Text>
+
+        <View style={[styles.contactInfoCard, { marginTop: m.verticalScale(24), padding: m.scale(20) }]}>
+          <View style={styles.contactItem}>
+            <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
+              <Feather name="mail" size={m.scale(20)} color="#2563EB" />
+            </View>
+            <View style={styles.contactTextContent}>
+              <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</Text>
+              <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolEmail')}</Text>
+            </View>
           </View>
-          <MaterialCommunityIcons name="face-agent" size={42} color="#D7DAE3" />
+
+          <View style={[styles.contactItem, { marginTop: m.verticalScale(20) }]}>
+            <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
+              <Feather name="phone" size={m.scale(20)} color="#2563EB" />
+            </View>
+            <View style={styles.contactTextContent}>
+              <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</Text>
+              <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolPhone')}</Text>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={handleWhatsApp}
+            style={({ pressed }) => [
+              styles.whatsappBtn,
+              { marginTop: m.verticalScale(22), height: m.verticalScale(48), borderRadius: m.scale(12) },
+              pressed && { opacity: 0.85 }
+            ]}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={m.scale(20)} color="#FFFFFF" />
+            <Text style={[styles.whatsappBtnText, { marginLeft: m.scale(8), fontSize: m.fontScale(14) }]}>
+              {t('auth.whatsappUs')}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -409,11 +480,11 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F5F4F8',
+    backgroundColor: '#F3F5FA',
   },
   authScroll: {
     paddingTop: 18,
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 22,
     alignItems: 'center',
   },
@@ -425,269 +496,343 @@ const styles = StyleSheet.create({
     height: 94,
   },
   brandTitle: {
-    marginTop: 8,
-    fontFamily: 'Poppins-ExtraBold',
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#111E4A',
+    marginTop: 12,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#1E293B',
     textAlign: 'center',
   },
+  taglineText: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748B',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
   authTitle: {
-    marginTop: 10,
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    lineHeight: 32,
-    color: '#20232B',
+    marginTop: 16,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 26,
+    lineHeight: 34,
+    color: '#1E293B',
     textAlign: 'center',
   },
   authSubtitle: {
     marginTop: 6,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
     lineHeight: 22,
-    color: '#8C909C',
+    color: '#64748B',
     textAlign: 'center',
   },
   formGroup: {
-    marginTop: 16,
+    marginTop: 24,
     width: '100%',
-    rowGap: 12,
+    rowGap: 14,
   },
   rememberRow: {
     width: '100%',
-    marginTop: 10,
-    marginBottom: 12,
+    marginTop: 12,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   checkbox: {
-    width: 14,
-    height: 14,
+    width: 16,
+    height: 16,
     borderWidth: 1,
-    borderColor: '#D3D3DB',
-    backgroundColor: '#F8F8FA',
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
   },
   rememberText: {
-    marginLeft: 8,
-    fontFamily: 'Poppins-Medium',
+    marginLeft: 10,
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#5A5F6C',
+    color: '#475569',
   },
   forgotLinkWrap: {
-    marginTop: 14,
+    marginTop: 16,
   },
   forgotLink: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#4C7DDD',
+    color: '#2563EB',
   },
   separatorRow: {
     width: '100%',
-    marginTop: 8,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E3E5ED',
+    backgroundColor: '#E2E8F0',
   },
   separatorText: {
-    marginHorizontal: 12,
-    fontFamily: 'Poppins-SemiBold',
+    marginHorizontal: 14,
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#B1B5C2',
+    color: '#94A3B8',
   },
   bottomLinkRow: {
-    marginTop: 8,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   bottomLinkRowCreate: {
-    marginTop: 12,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   bottomLinkHint: {
-    fontFamily: 'Poppins-Regular',
+    fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 20,
-    color: '#858A97',
+    color: '#64748B',
   },
   bottomLinkAction: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#4C7DDD',
+    color: '#2563EB',
   },
   secondaryScroll: {
-    paddingTop: 14,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   topBar: {
-    height: 30,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 24,
-    height: 24,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   topBarTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 17,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
     lineHeight: 24,
-    color: '#1F2E57',
+    color: '#1E293B',
   },
   resetIconBadge: {
-    marginTop: 18,
+    marginTop: 20,
     alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: '#4C7DDD',
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryTitle: {
-    marginTop: 20,
+    marginTop: 24,
     textAlign: 'center',
-    fontFamily: 'Poppins-Bold',
-    fontSize: 22,
-    lineHeight: 30,
-    color: '#1E2028',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 24,
+    lineHeight: 32,
+    color: '#1E293B',
   },
+  forgotBackButton: {
+    position: 'absolute',
+    top: 18,
+    left: 0,
+    zIndex: 10,
+    padding: 8,
+  },
+
   secondarySubtitle: {
-    marginTop: 6,
+    marginTop: 8,
     textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
     lineHeight: 24,
-    color: '#737888',
+    color: '#64748B',
   },
   secondaryFormGroup: {
-    marginTop: 16,
-    rowGap: 12,
+    marginTop: 24,
+    rowGap: 14,
   },
   backSignInWrap: {
-    marginTop: 16,
+    marginTop: 20,
     alignSelf: 'center',
   },
   backSignInText: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 16,
     lineHeight: 24,
-    color: '#222F58',
+    color: '#2563EB',
+  },
+  contactInfoCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contactIconBox: {
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactTextContent: {
+    marginLeft: 16,
+  },
+  contactLabel: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#94A3B8',
+    marginBottom: 4,
+  },
+  contactValue: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 15,
+    color: '#1E293B',
+  },
+  whatsappBtn: {
+    width: '100%',
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  whatsappBtnText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   helpCard: {
-    marginTop: 20,
-    borderRadius: 18,
-    backgroundColor: '#EFEFF3',
-    minHeight: 82,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    marginTop: 24,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    minHeight: 88,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   helpTitle: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 18,
     lineHeight: 24,
-    color: '#2B3558',
+    color: '#1E293B',
   },
   helpSubtitle: {
-    marginTop: 2,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 11,
-    lineHeight: 16,
-    color: '#666D7D',
+    marginTop: 4,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#64748B',
   },
   lockBadge: {
     alignSelf: 'center',
-    marginTop: 10,
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: '#4C7DDD',
+    marginTop: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resetTitle: {
-    marginTop: 16,
+    marginTop: 20,
     textAlign: 'center',
-    fontFamily: 'Poppins-ExtraBold',
-    fontSize: 20,
-    lineHeight: 28,
-    color: '#0F1E4A',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 22,
+    lineHeight: 30,
+    color: '#1E293B',
   },
   resetSubtitle: {
-    marginTop: 6,
+    marginTop: 8,
     textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
     lineHeight: 24,
-    color: '#7A7F8D',
+    color: '#64748B',
   },
   requirementsCard: {
-    marginTop: 8,
-    marginBottom: 14,
-    borderRadius: 10,
-    backgroundColor: '#F0F0F4',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    marginTop: 12,
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   requirementsHeading: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 11,
-    lineHeight: 16,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 12,
+    lineHeight: 18,
     textTransform: 'uppercase',
-    color: '#9B9FAA',
-    marginBottom: 8,
-    letterSpacing: 0.3,
+    color: '#94A3B8',
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   reqDone: {
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#2B3451',
+    color: '#10B981',
     marginBottom: 6,
   },
   reqTodo: {
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 15,
     lineHeight: 22,
-    color: '#666D7C',
+    color: '#64748B',
     marginBottom: 4,
   },
   footerLines: {
-    marginTop: 12,
+    marginTop: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   footerLine: {
-    width: '44%',
+    width: '45%',
     height: 1,
-    backgroundColor: '#E1E3EC',
+    backgroundColor: '#E2E8F0',
   },
   supportText: {
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
-    lineHeight: 20,
-    color: '#9A9EAA',
+    lineHeight: 22,
+    color: '#64748B',
   },
   supportAction: {
-    color: '#2A3558',
-    fontFamily: 'Poppins-SemiBold',
+    color: '#2563EB',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
   },
 });

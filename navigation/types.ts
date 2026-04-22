@@ -4,7 +4,16 @@ export type RootStackParamList = {
   Splash: undefined;
   LanguageSelection: { changeOnly?: boolean } | undefined;
   LanguageSettings: undefined;
-  Login: undefined;
+  Login:
+    | {
+        prefill?: {
+          phone?: string;
+          password?: string;
+          name?: string;
+        };
+        showSignupSuccess?: boolean;
+      }
+    | undefined;
   CreateAccount: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;

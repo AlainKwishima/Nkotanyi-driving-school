@@ -1,5 +1,5 @@
-import React from 'react';
-import { KeyboardTypeOptions, StyleProp, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { KeyboardTypeOptions, Pressable, StyleProp, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
@@ -39,6 +39,11 @@ export function AuthInputField({
   const m = useMobile();
   const outline = variant === 'outline';
   const hasError = Boolean(error);
+  const [isSecure, setIsSecure] = useState(secureTextEntry);
+
+  useEffect(() => {
+    setIsSecure(secureTextEntry);
+  }, [secureTextEntry]);
 
   return (
     <View style={style}>
@@ -55,13 +60,28 @@ export function AuthInputField({
         <TextInput
           placeholder={placeholder}
           placeholderTextColor="#A8AAB4"
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={secureTextEntry ? isSecure : false}
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
           style={[styles.input, { marginHorizontal: m.scale(10), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }, inputStyle]}
         />
-        {rightIcon ? <Feather name={rightIcon} size={m.scale(17)} color="#BCBEC7" /> : null}
+        {rightIcon ? (
+          <Pressable
+            hitSlop={8}
+            onPress={() => {
+              if (secureTextEntry) setIsSecure((prev) => !prev);
+            }}
+            accessibilityRole={secureTextEntry ? 'button' : undefined}
+            accessibilityLabel={secureTextEntry ? (isSecure ? 'Show password' : 'Hide password') : undefined}
+          >
+            <Feather
+              name={secureTextEntry ? (isSecure ? rightIcon : 'eye-off') : rightIcon}
+              size={m.scale(17)}
+              color="#BCBEC7"
+            />
+          </Pressable>
+        ) : null}
       </View>
       {error ? (
         <Text style={[styles.errorText, { marginTop: m.verticalScale(6), fontSize: m.fontScale(12), lineHeight: m.fontScale(17) }]}>{error}</Text>
@@ -73,44 +93,44 @@ export function AuthInputField({
 const styles = StyleSheet.create({
   label: {
     marginBottom: 8,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 12,
     lineHeight: 20,
-    letterSpacing: 0.2,
-    color: '#5E6272',
+    letterSpacing: 0.5,
+    color: '#64748B',
     textTransform: 'uppercase',
   },
   inputWrap: {
     width: '100%',
     height: 48,
-    borderRadius: 11,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
     alignItems: 'center',
     flexDirection: 'row',
   },
   inputWrapFilled: {
-    borderColor: '#DDDDE5',
-    backgroundColor: '#F5F5F8',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
   inputWrapOutline: {
-    borderColor: '#A6ABBB',
-    backgroundColor: '#F6F5F9',
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
   },
   inputWrapError: {
-    borderColor: '#D64B4B',
+    borderColor: '#EF4444',
   },
   errorText: {
-    fontFamily: 'Poppins-Medium',
-    color: '#C23A3A',
+    fontFamily: 'PlusJakartaSans-Medium',
+    color: '#EF4444',
   },
   input: {
     flex: 1,
     marginHorizontal: 10,
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#252B3A',
+    color: '#1E293B',
     paddingVertical: 0,
   },
 });
