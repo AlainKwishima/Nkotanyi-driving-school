@@ -14,6 +14,24 @@ export type LiveSubscriptionPlan = {
 
 const PLAN_ORDER: SubscriptionType[] = ['monthly', 'two-weekly', 'weekly', 'daily', 'five-exams', 'two-exams'];
 
+const FALLBACK_PRICING_MATRIX: BackendPricingMatrix = {
+  rw: {
+    'two-exams': 300,
+    'five-exams': 500,
+    daily: 2000,
+    weekly: 5000,
+    'two-weekly': 8000,
+    monthly: 10000,
+  },
+  en_fr: {
+    'five-exams': 1000,
+    daily: 2000,
+    weekly: 6000,
+    'two-weekly': 10000,
+    monthly: 15000,
+  },
+};
+
 function backendBaseUrl(): string {
   return API_BASE_URL.replace(/\/+$/, '');
 }
@@ -115,20 +133,26 @@ function parsePricingMatrix(chunkSource: string): BackendPricingMatrix {
 }
 
 export async function fetchBackendPricingMatrix(): Promise<BackendPricingMatrix> {
-  const html = await fetchText(`${backendBaseUrl()}/`);
-  const scriptSrc = extractFirstScriptSrc(html);
-  if (!scriptSrc) {
-    throw new Error('Backend script not found');
-  }
+  try {
+    const html = await fetchText(`${backendBaseUrl()}/`);
+    const scriptSrc = extractFirstScriptSrc(html);
+    if (!scriptSrc) {
+      throw new Error('Backend script not found');
+    }
 
-  const indexBundle = await fetchText(scriptSrc.startsWith('http') ? scriptSrc : `${backendBaseUrl()}${scriptSrc.startsWith('/') ? '' : '/'}${scriptSrc}`);
-  const paymentChunkSrc = extractPaymentChunkSrc(indexBundle);
-  if (!paymentChunkSrc) {
-    throw new Error('Payment pricing chunk not found');
-  }
+    const indexBundle = await fetchText(scriptSrc.startsWith('http') ? scriptSrc : `${backendBaseUrl()}${scriptSrc.startsWith('/') ? '' : '/'}${scriptSrc}`);
+    const paymentChunkSrc = extractPaymentChunkSrc(indexBundle);
+    if (!paymentChunkSrc) {
+      throw new Error('Payment pricing chunk not found');
+    }
 
-  const paymentChunk = await fetchText(paymentChunkSrc.startsWith('http') ? paymentChunkSrc : `${backendBaseUrl()}${paymentChunkSrc.startsWith('/') ? '' : '/'}${paymentChunkSrc}`);
-  return parsePricingMatrix(paymentChunk);
+    const paymentChunk = await fetchText(paymentChunkSrc.startsWith('http') ? paymentChunkSrc : `${backendBaseUrl()}${paymentChunkSrc.startsWith('/') ? '' : '/'}${paymentChunkSrc}`);
+    return parsePricingMatrix(paymentChunk);
+  } catch {
+    // Web previews can be blocked by cross-origin restrictions when the app is served from localhost.
+    // Fall back to the last confirmed live matrix so the UI still renders pricing instead of failing.
+    return FALLBACK_PRICING_MATRIX;
+  }
 }
 
 function languageBucket(lang: ContentLanguageCode): keyof BackendPricingMatrix {
@@ -148,4 +172,3 @@ export async function fetchLiveSubscriptionPlans(
     return { subscriptionType, amountRwf };
   }).filter((item): item is LiveSubscriptionPlan => item !== null);
 }
-

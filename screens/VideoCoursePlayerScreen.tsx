@@ -238,17 +238,21 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   return (
     <ScreenColumn backgroundColor="#4A78D0">
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {t('video.playerTitle')}
-        </Text>
-        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {t('video.playerTitle')}
+          </Text>
+          <View style={styles.headerRight}>
+            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
+          </View>
+        </View>
       </View>
 
-      <View style={styles.body}>
+      <View style={styles.bodyWrap}>
         {/* ── Smart Player area ──────────────────────────────────────── */}
         {playerError ? (
           <View style={styles.errorOverlay}>
@@ -323,7 +327,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                     )}
                   </View>
                   <View style={styles.cardText}>
-                    <Text style={styles.cardTitle} numberOfLines={2}>
+                    <Text style={[styles.cardTitle, isActive && styles.cardTitleActive]} numberOfLines={2}>
                       {v.title ?? t('video.lessonFallback', { n: realIdx + 1 })}
                     </Text>
                     <Text style={[styles.cardSub, isActive && styles.cardSubActive]}>
@@ -332,8 +336,8 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                   </View>
                   <Ionicons
                     name={isActive ? 'pause-circle-outline' : 'play-circle-outline'}
-                    size={22}
-                    color={isActive ? '#4A78D0' : '#A8B2C2'}
+                    size={24}
+                    color={isActive ? '#2563EB' : '#CBD5E1'}
                   />
                 </TouchableOpacity>
               );
@@ -352,34 +356,49 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 100,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  headerBlue: {
+    backgroundColor: '#4A78D0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
+  topRow: {
+    minHeight: 64,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#F7F9FE',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 8,
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
-  body: {
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
+    color: '#F5F7FC',
+    textAlign: 'center',
+    maxWidth: '70%',
+  },
+  bodyWrap: {
     flex: 1,
-    backgroundColor: '#1A1E2A',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     overflow: 'hidden',
+    marginTop: -20,
   },
   centeredGate: {
     flex: 1,
@@ -396,8 +415,8 @@ const styles = StyleSheet.create({
   // Player
   heroWrap: {
     width: '100%',
-    height: 210,
-    backgroundColor: '#0D0F18',
+    height: 240,
+    backgroundColor: '#000000',
     position: 'relative',
   },
   hero: {
@@ -406,7 +425,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,12,22,0.42)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   playCircle: {
     position: 'absolute',
@@ -416,36 +435,35 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(74,120,208,0.92)',
+    backgroundColor: 'rgba(37,99,235,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#4A78D0',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
   },
 
   // Title block
   titleBlock: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
-    backgroundColor: '#1A1E2A',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    borderBottomColor: '#E2E8F0',
   },
   videoTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#E8ECFA',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    color: '#1E293B',
   },
   noUrl: {
-    marginTop: 4,
+    marginTop: 8,
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    color: '#E07070',
+    fontSize: 14,
+    color: '#EF4444',
   },
   openRow: {
     flexDirection: 'row',
@@ -462,38 +480,44 @@ const styles = StyleSheet.create({
 
   // Playlist
   listPad: {
-    padding: 14,
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
   upNextLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#7A8299',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 10,
+    marginBottom: 16,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: '#252A3A',
-    padding: 10,
-    marginBottom: 10,
-    gap: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    marginBottom: 16,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   cardActive: {
-    backgroundColor: '#1F2F52',
-    borderWidth: 1,
-    borderColor: '#4A78D0',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
   },
   thumbWrap: {
-    width: 90,
-    height: 58,
-    borderRadius: 7,
+    width: 110,
+    height: 74,
+    borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#0D0F18',
+    backgroundColor: '#F8FAFC',
   },
   thumb: {
     width: '100%',
@@ -501,44 +525,47 @@ const styles = StyleSheet.create({
   },
   thumbPlay: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(74,120,208,0.85)',
+    bottom: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(37,99,235,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   nowPlayingDot: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255,107,77,0.9)',
+    bottom: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10B981', // Success green for now playing
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardText: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   cardTitle: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#D0D6E8',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1E293B',
+  },
+  cardTitleActive: {
+    color: '#1E40AF',
   },
   cardSub: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    lineHeight: 15,
-    color: '#6B748C',
+    fontSize: 13,
+    color: '#64748B',
   },
   cardSubActive: {
-    color: '#FF6B4D',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: '#10B981',
   },
 
   emptyPlaylist: {
@@ -549,49 +576,49 @@ const styles = StyleSheet.create({
   },
   emptyPlaylistText: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    color: '#5A6170',
+    fontSize: 14,
+    color: '#64748B',
     textAlign: 'center',
   },
 
   // Loading & Error states
   playerLoader: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0D0F18',
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   errorOverlay: {
-    height: 210,
-    backgroundColor: '#161A24',
+    height: 240,
+    backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   errorTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 16,
-    color: '#FF6B6B',
+    color: '#EF4444',
     marginTop: 12,
   },
   errorSub: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    color: '#A0A8BC',
+    fontSize: 14,
+    color: '#94A3B8',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 6,
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 20,
   },
   retryText: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 13,
+    fontSize: 14,
     color: '#FFFFFF',
   },
 });

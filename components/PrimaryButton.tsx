@@ -17,7 +17,7 @@ export function PrimaryButton({ label, onPress }: PrimaryButtonProps) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { width: m.contentWidth - m.scale(48), height: m.verticalScale(52), borderRadius: m.scale(8) },
+        { width: '100%', height: m.verticalScale(56), borderRadius: m.scale(28) },
         pressed && styles.buttonPressed,
       ]}
     >
@@ -29,33 +29,34 @@ export function PrimaryButton({ label, onPress }: PrimaryButtonProps) {
 
 const styles = StyleSheet.create({
   button: {
-    width: 342,
-    height: 52,
-    borderRadius: 8,
-    backgroundColor: '#4378DB',
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1B264F',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 32,
-    elevation: 5,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonPressed: {
     opacity: 0.95,
   },
   label: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 14,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
     lineHeight: 20,
     color: '#FFFFFF',
     textAlign: 'center',
   },
   icon: {
     marginLeft: 8,
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
+    tintColor: '#FFFFFF',
   },
 });
 

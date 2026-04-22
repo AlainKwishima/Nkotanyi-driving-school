@@ -50,12 +50,16 @@ export function ProfileNativeScreen({ navigation }: Props) {
 
   return (
     <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={14} />
+      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+          <View style={styles.headerRight}>
+            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
+          </View>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -129,99 +133,123 @@ export function ProfileNativeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 100,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  headerBlue: {
+    backgroundColor: '#4A78D0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
+  topRow: {
+    minHeight: 64,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 33 / 2,
-    lineHeight: 24,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
     color: '#F7F9FE',
+    textAlign: 'center',
   },
   body: {
     flex: 1,
-    backgroundColor: '#CBD3E0',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    marginTop: -20,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
   sectionHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 42 / 2,
-    lineHeight: 52 / 2,
-    color: '#1F2431',
+    fontSize: 18,
+    color: '#1E293B',
   },
   sectionLink: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#23305C',
+    fontSize: 14,
+    color: '#2563EB',
     textDecorationLine: 'underline',
   },
   accountCard: {
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   accountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   accountIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    backgroundColor: '#DEE0F4',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   accountTextWrap: {
-    marginLeft: 12,
+    marginLeft: 16,
     flex: 1,
   },
   accountLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 10,
-    lineHeight: 12,
-    letterSpacing: 1,
-    color: '#A1A7B5',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#64748B',
   },
   accountValue: {
     marginTop: 4,
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 16,
-    lineHeight: 21,
-    color: '#232833',
+    color: '#1E293B',
   },
   paymentHead: {
-    marginTop: 12,
+    marginTop: 20,
   },
   paymentCard: {
-    borderRadius: 12,
-    backgroundColor: '#24306A',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: 24,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   paymentTop: {
     flexDirection: 'row',
@@ -229,21 +257,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   paymentLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 10,
-    lineHeight: 12,
-    letterSpacing: 1,
-    color: '#8F9DCD',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#BFDBFE',
   },
   paymentPlan: {
     marginTop: 6,
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 34 / 2,
-    lineHeight: 44 / 2,
-    color: '#F6F8FF',
+    fontSize: 20,
+    color: '#FFFFFF',
   },
   paymentBottom: {
-    marginTop: 20,
+    marginTop: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
@@ -251,9 +277,8 @@ const styles = StyleSheet.create({
   paymentValue: {
     marginTop: 6,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#F6F8FF',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
   paidRow: {
     marginTop: 6,
@@ -261,27 +286,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   paidText: {
-    marginLeft: 4,
+    marginLeft: 6,
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 32 / 2,
-    lineHeight: 40 / 2,
-    color: '#31D17B',
+    fontSize: 16,
+    color: '#10B981',
   },
   signOutBtn: {
-    marginTop: 16,
-    height: 74,
-    borderRadius: 10,
-    backgroundColor: '#ECE9F0',
+    marginTop: 24,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    borderWidth: 2,
+    borderColor: '#FCA5A5',
   },
   signOutText: {
     marginLeft: 8,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 36 / 2,
-    lineHeight: 46 / 2,
-    color: '#D43737',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 16,
+    color: '#EF4444',
   },
   tabs: {
     position: 'absolute',

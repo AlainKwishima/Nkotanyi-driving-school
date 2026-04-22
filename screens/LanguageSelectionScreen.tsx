@@ -128,13 +128,13 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FBF8FD',
+    backgroundColor: '#F3F5FA',
     alignItems: 'center',
   },
   phoneFrame: {
     width: '100%',
     minHeight: '100%',
-    backgroundColor: '#FBF8FD',
+    backgroundColor: '#F3F5FA',
     alignItems: 'center',
   },
   header: {
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   brandTitle: {
     width: 266.22,
     textAlign: 'center',
-    color: '#04103A',
-    fontFamily: 'Poppins-ExtraBold',
+    color: '#1E293B',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 20,
     lineHeight: 32,
     letterSpacing: -0.6,
@@ -177,18 +177,18 @@ const styles = StyleSheet.create({
   },
   heading: {
     textAlign: 'center',
-    color: '#1B1B1E',
-    fontFamily: 'Poppins-Bold',
-    fontSize: 18,
-    lineHeight: 28,
+    color: '#1E293B',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 22,
+    lineHeight: 32,
   },
   subHeading: {
     marginTop: 8,
     textAlign: 'center',
-    color: 'rgba(69, 70, 78, 0.7)',
-    fontFamily: 'Poppins-Medium',
+    color: '#64748B',
+    fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   languageList: {
     width: '100%',
@@ -205,8 +205,8 @@ const styles = StyleSheet.create({
   copyright: {
     marginTop: 24,
     textAlign: 'center',
-    color: 'rgba(69, 70, 78, 0.5)',
-    fontFamily: 'Poppins-Regular',
+    color: '#94A3B8',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 10,
     lineHeight: 15,
     letterSpacing: 0.5,

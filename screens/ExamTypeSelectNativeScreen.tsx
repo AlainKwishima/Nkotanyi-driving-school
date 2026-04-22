@@ -94,18 +94,20 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
       <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
         <View style={styles.topRow}>
           <TouchableOpacity
-            style={styles.backTap}
+            style={styles.headerLeft}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="chevron-back" size={24} color="#F6F8FE" />
+            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Hitamo Ikizamini</Text>
-          <HeaderMenu
-            navigation={navigation}
-            iconColor="#F6F8FE"
-            topOffset={56}
-            rightOffset={14}
-          />
+          <View style={styles.headerRight}>
+            <HeaderMenu
+              navigation={navigation}
+              iconColor="#F6F8FE"
+              topOffset={56}
+              rightOffset={20}
+            />
+          </View>
         </View>
         {/* Subtitle strip */}
         <View style={styles.headerSubStrip}>
@@ -218,159 +220,167 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   headerBlue: {
     backgroundColor: '#4A78D0',
-    paddingHorizontal: 14,
+    paddingHorizontal: 20,
   },
   topRow: {
-    minHeight: 72,
+    minHeight: 64,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backTap: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerLeft: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
     color: '#F7F9FE',
+    textAlign: 'center',
   },
   headerSubStrip: {
-    paddingBottom: 14,
+    paddingBottom: 24,
     alignItems: 'center',
   },
   headerSub: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: 'rgba(246,248,254,0.72)',
+    fontSize: 14,
+    color: 'rgba(246,248,254,0.8)',
     textAlign: 'center',
   },
 
   body: {
     flex: 1,
-    backgroundColor: '#CBD2DE',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#F3F5FA',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     overflow: 'hidden',
+    marginTop: -20,
   },
   scrollPad: {
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
 
   infoBadge: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#E6EDF9',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    gap: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 24,
+    gap: 12,
   },
   infoBadgeText: {
     flex: 1,
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 17,
-    color: '#3A5080',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#1E40AF',
   },
 
   card: {
-    backgroundColor: '#DDE3EF',
-    borderRadius: 16,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    marginBottom: 20,
     flexDirection: 'row',
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#1A2744',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
   },
   cardBar: {
-    width: 5,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    width: 6,
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
   },
   cardContent: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 14,
   },
   iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
   },
   badgeText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 11,
-    lineHeight: 14,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 12,
   },
   cardTitle: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#222843',
-    marginBottom: 2,
+    fontSize: 20,
+    color: '#1E293B',
+    marginBottom: 4,
   },
   cardSubtitle: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#6B748C',
-    marginBottom: 8,
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 10,
   },
   cardDesc: {
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: '#4A5068',
-    marginBottom: 14,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#475569',
+    marginBottom: 18,
   },
   startRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   startLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 13,
-    lineHeight: 18,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 14,
   },
 
   hintRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
-    marginTop: 4,
+    gap: 8,
+    marginTop: 8,
     paddingHorizontal: 4,
   },
   hintText: {
     flex: 1,
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    lineHeight: 16,
-    color: '#7A8499',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#94A3B8',
   },
 });
