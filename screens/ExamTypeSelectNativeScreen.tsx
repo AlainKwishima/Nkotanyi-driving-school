@@ -17,7 +17,7 @@ import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
-import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamTypeSelectNative'>;
 
@@ -58,26 +58,33 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
   const {
     hasSubscription,
     hasUsedFreeTrial,
-    canChangeLanguage,
-    subscriptionLanguage,
-    contentLanguage,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const { insets, tabScrollBottomPad } = useResponsiveLayout();
-  const languageAccessGranted = hasLanguageAccess({
-    hasSubscription,
-    canChangeLanguage,
-    subscriptionLanguage,
-    contentLanguage,
-  });
+  const { t } = useI18n();
+
+  const EXAM_TYPES: ExamType[] = [
+    {
+      mode: 'traffic',
+      title: t('examType.mixed.title'),
+      subtitle: t('examType.mixed.subtitle'),
+      description: t('examType.mixed.desc'),
+      icon: 'file-question-outline',
+      accentColor: '#4A78D0',
+      badgeText: t('examType.mixed.badge'),
+    },
+    {
+      mode: 'signs',
+      title: t('examType.signs.title'),
+      subtitle: t('examType.signs.subtitle'),
+      description: t('examType.signs.desc'),
+      icon: 'sign-caution',
+      accentColor: '#E07B2D',
+      badgeText: t('examType.signs.badge'),
+    },
+  ];
 
   const handleSelectType = (mode: 'traffic' | 'signs') => {
-    if (hasSubscription && !languageAccessGranted) {
-      openGateModal('subscription_exam', () =>
-        navigation.navigate('SubscriptionNative'),
-      );
-      return;
-    }
     const requiresSubscription = !hasSubscription && hasUsedFreeTrial;
     if (requiresSubscription) {
       openGateModal('subscription_exam', () =>
@@ -99,7 +106,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
           >
             <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Hitamo Ikizamini</Text>
+          <Text style={styles.headerTitle}>{t('examType.title')}</Text>
           <View style={styles.headerRight}>
             <HeaderMenu
               navigation={navigation}
@@ -111,9 +118,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
         </View>
         {/* Subtitle strip */}
         <View style={styles.headerSubStrip}>
-          <Text style={styles.headerSub}>
-            Hitamo ubwoko bw'ikizamini ushaka gukora
-          </Text>
+          <Text style={styles.headerSub}>{t('examType.subtitle')}</Text>
         </View>
       </View>
 
@@ -133,9 +138,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
               size={15}
               color="#4A78D0"
             />
-            <Text style={styles.infoBadgeText}>
-              Ikizamini gikubiyemo ibyapa, amategeko n'uburyo bwo gutwara
-            </Text>
+            <Text style={styles.infoBadgeText}>{t('examType.info')}</Text>
           </View>
 
           {/* Exam type cards */}
@@ -190,7 +193,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
                   <Text
                     style={[styles.startLabel, { color: type.accentColor }]}
                   >
-                    Tangira ikizamini
+                    {t('examType.start')}
                   </Text>
                   <Ionicons
                     name="arrow-forward"
@@ -205,9 +208,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
           {/* Bottom hint */}
           <View style={styles.hintRow}>
             <Ionicons name="shield-checkmark-outline" size={14} color="#7A8499" />
-            <Text style={styles.hintText}>
-              Ikizamini gitangwa mu gihe cy'iminota 30. Ugomba gutunga 60% kugirango utsinde.
-            </Text>
+            <Text style={styles.hintText}>{t('examType.hint')}</Text>
           </View>
         </ScrollView>
       </View>

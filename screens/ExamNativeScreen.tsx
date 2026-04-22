@@ -14,8 +14,7 @@ import { getExamQuestions, getSignQuestions, type TrafficQuestion } from '../ser
 import { appendLocalExamRecord } from '../services/examHistoryStorage';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
-import { useGateModal } from '../context/GateModalContext';
-import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { resolveExamLanguage } from '../utils/subscriptionAccess';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
 
@@ -33,27 +32,18 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     hasSubscription,
     hasUsedFreeTrial,
     setHasUsedFreeTrial,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   } = useAppFlow();
   const { accessToken } = useAuth();
-  const { openGateModal } = useGateModal();
   const { insets } = useResponsiveLayout();
   const { t } = useI18n();
   const mode = route.params?.mode ?? 'traffic';
-  const languageAccessGranted = hasLanguageAccess({
+  const examLanguage = resolveExamLanguage({
     hasSubscription,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   });
-
-  useEffect(() => {
-    if (hasSubscription && !languageAccessGranted) {
-      openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
-    }
-  }, [hasSubscription, languageAccessGranted, navigation, openGateModal]);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -86,10 +76,6 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (hasSubscription && !languageAccessGranted) {
-        setLoading(false);
-        return;
-      }
       if (!accessToken) {
         setLoadError(t('exam.needSignIn'));
         setLoading(false);
@@ -98,7 +84,9 @@ export function ExamNativeScreen({ navigation, route }: Props) {
       setLoading(true);
       setLoadError(null);
       try {
-        const data = mode === 'signs' ? await getSignQuestions(accessToken) : await getExamQuestions(accessToken);
+        const data = mode === 'signs' 
+          ? await getSignQuestions(accessToken, examLanguage) 
+          : await getExamQuestions(accessToken, examLanguage);
         if (!cancelled) {
           setQuestions(data);
         }
@@ -114,7 +102,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, contentLanguage, hasSubscription, languageAccessGranted, mode, t]);
+  }, [accessToken, examLanguage, mode, t]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -233,17 +221,6 @@ export function ExamNativeScreen({ navigation, route }: Props) {
 
   const imageUri = current.question.imageURLs?.[0];
   const selectedId = selectedByQuestion[questionIndex];
-
-  if (hasSubscription && !languageAccessGranted) {
-    return (
-      <ScreenColumn backgroundColor="#4A78D0">
-        <View style={[styles.centered, { paddingTop: insets.top, flex: 1 }]}>
-          <ActivityIndicator size="large" color="#F5F7FC" />
-          <Text style={styles.loadingText}>{t('exam.loading')}</Text>
-        </View>
-      </ScreenColumn>
-    );
-  }
 
   return (
     <ScreenColumn backgroundColor="#4A78D0">

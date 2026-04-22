@@ -370,6 +370,10 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
             </Text>
           </Pressable>
         </View>
+
+        <Pressable style={styles.backSignInWrap} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.backSignInText}>{t('auth.backSignIn')}</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );

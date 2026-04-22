@@ -19,40 +19,26 @@ type BottomNavBarProps = {
   onPressTab?: (tab: TabKey) => void;
 };
 
-function resolveActive(routeName: string): TabKey {
+function resolveActive(routeName: string): TabKey | null {
+  // Exam flow should remain highlighted throughout as requested
   const examRoutes = new Set([
     'ExamNative',
     'ExamInstructionsNative',
+    'ExamTypeSelectNative',
     'StartExamNative',
     'PracticeNoSelectedNative',
     'PracticeSelectedNative',
     'TestFailedNative',
     'TestPassedNative',
   ]);
-  const readRoutes = new Set([
-    'ReadingNative',
-    'RoadSignsListNative',
-    'RoadSignsDetailNative',
-    'RoadSignsCategories',
-    'HelpCenterNative',
-    'HelpCenter',
-  ]);
-  const watchRoutes = new Set(['VideoCourseList', 'VideoCoursePlayer']);
-  const performanceRoutes = new Set([
-    'PerformanceNative',
-    'PerformanceDetailNative',
-    'PerformanceReviewNative',
-    'ProfileNative',
-    'SubscriptionNative',
-    'PaymentNative',
-    'PaymentConfirmationNative',
-  ]);
 
   if (examRoutes.has(routeName)) return 'exam';
-  if (readRoutes.has(routeName)) return 'read';
-  if (watchRoutes.has(routeName)) return 'watch';
-  if (performanceRoutes.has(routeName)) return 'performance';
-  return 'home';
+  if (routeName === 'HomeNative') return 'home';
+  if (routeName === 'ReadingNative' || routeName === 'RoadSignsListNative') return 'read';
+  if (routeName === 'VideoCourseList') return 'watch';
+  if (routeName === 'PerformanceNative') return 'performance';
+
+  return null;
 }
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
