@@ -70,6 +70,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
     canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
+    isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const [loading, setLoading] = useState(true);
@@ -83,15 +84,15 @@ export function VideoCourseListScreen({ navigation }: Props) {
   });
 
   useEffect(() => {
-    if (!languageAccessGranted) {
+    if (!languageAccessGranted && !isSigningOut) {
       openGateModal('subscription_watch', () => navigation.navigate('SubscriptionNative'));
     }
-  }, [hasSubscription, languageAccessGranted, navigation, openGateModal]);
+  }, [hasSubscription, isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!languageAccessGranted) {
+      if (!languageAccessGranted || isSigningOut) {
         setLoading(false);
         return;
       }
@@ -116,7 +117,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
     };
     void run();
     return () => { cancelled = true; };
-  }, [accessToken, contentLanguage, languageAccessGranted, t]);
+  }, [accessToken, contentLanguage, isSigningOut, languageAccessGranted, t]);
 
   if (!languageAccessGranted) {
     return (

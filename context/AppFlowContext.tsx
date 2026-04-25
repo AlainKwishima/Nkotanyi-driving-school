@@ -15,6 +15,7 @@ type AppFlowState = {
 
 type AppFlowContextValue = AppFlowState & {
   hydrated: boolean;
+  isSigningOut: boolean;
   setLanguageChosen: (chosen: boolean) => Promise<void>;
   setSignedIn: (signedIn: boolean) => Promise<void>;
   setHasUsedFreeTrial: (used: boolean) => Promise<void>;
@@ -22,6 +23,7 @@ type AppFlowContextValue = AppFlowState & {
   setCanChangeLanguage: (allowed: boolean) => Promise<void>;
   setSubscriptionLanguage: (lang: ContentLanguageCode | null) => Promise<void>;
   setContentLanguage: (lang: ContentLanguageCode) => Promise<void>;
+  setSigningOut: (signingOut: boolean) => void;
   /** First-run language: one persist so sequential updates cannot clobber each other. */
   commitLanguageSelection: (lang: ContentLanguageCode) => Promise<void>;
   resetFlow: () => Promise<void>;
@@ -44,6 +46,7 @@ const AppFlowContext = createContext<AppFlowContextValue | null>(null);
 export function AppFlowProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppFlowState>(defaultState);
   const [hydrated, setHydrated] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   /** Latest flow state for sequential updates (setters must not read a stale `state` closure). */
   const stateRef = useRef<AppFlowState>(defaultState);
 
@@ -105,6 +108,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
     [persistPatch],
   );
   const setContentLanguage = useCallback((lang: ContentLanguageCode) => persistPatch({ contentLanguage: lang }), [persistPatch]);
+  const setSigningOut = useCallback((signingOut: boolean) => setIsSigningOut(signingOut), []);
   const commitLanguageSelection = useCallback(
     (lang: ContentLanguageCode) => persistPatch({ contentLanguage: lang, hasChosenLanguage: true }),
     [persistPatch]
@@ -119,6 +123,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       hydrated,
+      isSigningOut,
       setLanguageChosen,
       setSignedIn,
       setHasUsedFreeTrial,
@@ -126,11 +131,13 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       setCanChangeLanguage,
       setSubscriptionLanguage,
       setContentLanguage,
+      setSigningOut,
       commitLanguageSelection,
       resetFlow,
     }),
     [
       hydrated,
+      isSigningOut,
       state,
       setLanguageChosen,
       setSignedIn,
@@ -139,6 +146,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       setCanChangeLanguage,
       setSubscriptionLanguage,
       setContentLanguage,
+      setSigningOut,
       commitLanguageSelection,
       resetFlow,
     ],

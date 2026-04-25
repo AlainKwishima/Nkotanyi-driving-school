@@ -13,6 +13,7 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
   const {
     hasSubscription,
     hasUsedFreeTrial,
+    isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
 
@@ -35,26 +36,28 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
             ? 'subscription_exam'
             : 'exam_ready';
 
-    openGateModal(
-      kind,
-      () => {
-        if (kind === 'subscription_exam' || kind === 'subscription_read' || kind === 'subscription_watch') {
-          navigation.replace('SubscriptionNative');
-          return;
-        }
-        if (gateFor === 'read') {
-          navigation.replace('ReadingNative');
-          return;
-        }
-        if (gateFor === 'watch') {
-          navigation.replace('VideoCourseList');
-          return;
-        }
-        navigation.replace('ExamInstructionsNative');
-      },
-      () => navigation.goBack(),
-    );
-  }, [hasSubscription, hasUsedFreeTrial, navigation, openGateModal, route.params?.gateFor]);
+    if (!isSigningOut) {
+      openGateModal(
+        kind,
+        () => {
+          if (kind === 'subscription_exam' || kind === 'subscription_read' || kind === 'subscription_watch') {
+            navigation.replace('SubscriptionNative');
+            return;
+          }
+          if (gateFor === 'read') {
+            navigation.replace('ReadingNative');
+            return;
+          }
+          if (gateFor === 'watch') {
+            navigation.replace('VideoCourseList');
+            return;
+          }
+          navigation.replace('ExamInstructionsNative');
+        },
+        () => navigation.goBack(),
+      );
+    }
+  }, [hasSubscription, hasUsedFreeTrial, isSigningOut, navigation, openGateModal, route.params?.gateFor]);
 
   return <View style={styles.blank} />;
 }

@@ -70,7 +70,7 @@ function getInitials(name?: string | null) {
 }
 
 export function HomeNativeScreen({ navigation }: Props) {
-  const { hasUsedFreeTrial, hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage } = useAppFlow();
+  const { hasUsedFreeTrial, hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
   const { insets, tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
@@ -85,7 +85,7 @@ export function HomeNativeScreen({ navigation }: Props) {
   const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
   const handleQuickAction = (route: QuickAction['route']) => {
     if (route === 'ExamInstructionsNative') {
-      if (hasSubscription && !languageAccessGranted) {
+      if (!isSigningOut && hasSubscription && !languageAccessGranted) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
         return;
       }
@@ -96,7 +96,7 @@ export function HomeNativeScreen({ navigation }: Props) {
     const needsReadGate = route === 'ReadingNative';
     const needsWatchGate = route === 'VideoCourseList';
 
-    if ((needsReadGate || needsWatchGate) && !languageAccessGranted) {
+    if ((needsReadGate || needsWatchGate) && !languageAccessGranted && !isSigningOut) {
       openGateModal(needsReadGate ? 'subscription_read' : 'subscription_watch', () => navigation.navigate('SubscriptionNative'));
       return;
     }

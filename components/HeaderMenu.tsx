@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CommonActions, NavigationProp } from '@react-navigation/native';
+import { NavigationProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
@@ -53,7 +53,6 @@ export function HeaderMenu({
     }
     if (route === null) {
       await logout();
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }));
       return;
     }
     navigation.navigate(route as never);

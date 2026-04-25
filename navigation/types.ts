@@ -63,6 +63,7 @@ export type RootStackParamList = {
       }
     | undefined;
   ReadingNative: undefined;
+  RoadSignsNative: undefined;
   HelpCenterNative: undefined;
   SubscriptionNative: undefined;
   PaymentNative:

@@ -18,9 +18,8 @@ export function useI18n() {
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
-      const dict = dictionaries[lang] ?? dictionaries.en;
-      const fallback = dictionaries.en[key];
-      const raw = dict[key] ?? fallback ?? key;
+      const dict = dictionaries[lang];
+      const raw = dict?.[key] ?? key;
       return interpolate(raw, vars);
     },
     [lang],

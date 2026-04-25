@@ -179,6 +179,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
     canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
+    isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const languageAccessGranted = hasLanguageAccess({
@@ -219,10 +220,10 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   const playlist = allVideos.filter((_, i) => i !== currentIndex);
 
   useEffect(() => {
-    if (!languageAccessGranted) {
+    if (!languageAccessGranted && !isSigningOut) {
       openGateModal('subscription_watch', () => navigation.navigate('SubscriptionNative'));
     }
-  }, [languageAccessGranted, navigation, openGateModal]);
+  }, [isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
   if (!languageAccessGranted) {
     return (

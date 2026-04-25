@@ -24,6 +24,7 @@ export function ScreensHubScreen({ navigation }: Props) {
     subscriptionLanguage,
     contentLanguage,
     hasUsedFreeTrial,
+    isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const languageAccessGranted = hasLanguageAccess({
@@ -35,7 +36,7 @@ export function ScreensHubScreen({ navigation }: Props) {
 
   const gateIfNeeded = (kind: 'exam' | 'read' | 'watch', next: () => void) => {
     if (kind === 'exam') {
-      if ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial)) {
+      if (!isSigningOut && ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial))) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
         return;
       }
@@ -43,7 +44,7 @@ export function ScreensHubScreen({ navigation }: Props) {
       return;
     }
 
-    if (!languageAccessGranted) {
+    if (!languageAccessGranted && !isSigningOut) {
       openGateModal(kind === 'read' ? 'subscription_read' : 'subscription_watch', () => navigation.navigate('SubscriptionNative'));
       return;
     }

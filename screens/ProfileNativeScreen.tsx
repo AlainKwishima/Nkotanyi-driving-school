@@ -118,7 +118,6 @@ export function ProfileNativeScreen({ navigation }: Props) {
             style={styles.signOutBtn}
             onPress={async () => {
               await logout();
-              navigation.replace('Login');
             }}
           >
             <MaterialCommunityIcons name="logout-variant" size={18} color="#D43737" />
@@ -334,5 +333,4 @@ const styles = StyleSheet.create({
   },
   tabTextActive: { color: '#4A78D0' },
 });
-
 

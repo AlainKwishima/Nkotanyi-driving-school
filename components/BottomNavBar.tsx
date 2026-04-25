@@ -45,7 +45,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const route = useRoute();
   const { shortSide } = useResponsiveLayout();
   const { t } = useI18n();
-  const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage } = useAppFlow();
+  const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
   const activeKey = active ?? resolveActive(route.name);
   const isCompact = shortSide <= 360;
@@ -76,7 +76,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
       return;
     }
     if (navigation) {
-      if (tab === 'exam' && hasSubscription && !languageAccessGranted) {
+      if (tab === 'exam' && hasSubscription && !languageAccessGranted && !isSigningOut) {
         openGateModal('subscription_exam', () => (navigation as any).navigate('SubscriptionNative'));
         return;
       }
@@ -86,7 +86,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
         return;
       }
 
-      if ((tab === 'read' || tab === 'watch') && !languageAccessGranted) {
+      if ((tab === 'read' || tab === 'watch') && !languageAccessGranted && !isSigningOut) {
         openGateModal(tab === 'read' ? 'subscription_read' : 'subscription_watch', () => (navigation as any).navigate('SubscriptionNative'));
         return;
       }

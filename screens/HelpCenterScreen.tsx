@@ -5,42 +5,39 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { RootStackParamList } from '../navigation/types';
+import { useI18n } from '../i18n/useI18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HelpCenter'>;
 
-const FAQS = [
-  'How do I book practical driving lessons?',
-  'Can I switch between Kinyarwanda and English in the app?',
-  'How can I track my learning performance?',
-  'Where can I find support if the app is not working?',
-];
-
 export function HelpCenterScreen({ navigation }: Props) {
+  const { t } = useI18n();
+  const faqs = [t('help.faq1'), t('help.faq2'), t('help.faq3'), t('help.faq4')];
+
   return (
     <View style={styles.root}>
-      <ScreenHeader title="help center" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('help.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Direct Contact</Text>
+        <Text style={styles.sectionTitle}>{t('help.directContact')}</Text>
         <View style={styles.contactCard}>
           <View style={styles.contactRow}>
             <View style={styles.iconCircle} />
             <View>
-              <Text style={styles.contactLabel}>Email Support</Text>
+              <Text style={styles.contactLabel}>{t('help.emailSupport')}</Text>
               <Text style={styles.contactValue}>support@nkotanyi.rw</Text>
             </View>
           </View>
           <View style={styles.contactRow}>
             <View style={styles.iconCircle} />
             <View>
-              <Text style={styles.contactLabel}>Phone Number</Text>
+              <Text style={styles.contactLabel}>{t('help.phoneNumber')}</Text>
               <Text style={styles.contactValue}>+250 788 123 456</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
-        {FAQS.map((question) => (
+        <Text style={styles.sectionTitle}>{t('help.faqTitle')}</Text>
+        {faqs.map((question) => (
           <Pressable key={question} style={styles.faqItem}>
             <Text style={styles.faqText}>{question}</Text>
             <Text style={styles.chevron}>⌄</Text>
@@ -118,23 +115,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 18,
-    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
   },
   faqText: {
-    maxWidth: 256,
+    flex: 1,
+    marginRight: 12,
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     color: '#1B1B1E',
   },
   chevron: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
+    fontSize: 20,
     lineHeight: 20,
-    color: '#6E6F76',
+    color: '#8D8E98',
   },
 });
-

@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setHasUsedFreeTrial,
     setCanChangeLanguage,
     setSubscriptionLanguage,
+    setSigningOut,
     contentLanguage,
   } = useAppFlow();
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -108,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserId(parsed.userId);
           setName(parsed.name ?? null);
           setPhone(parsed.phone ?? null);
+          setSigningOut(false);
           await setSignedIn(true);
           try {
             await applyProfile(parsed.accessToken, parsed.userId);
@@ -143,11 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserId(uid);
       setName(data.name);
       setPhone(data.phone);
+      setSigningOut(false);
       await persistAuth({ accessToken: token, userId: uid, name: data.name, phone: data.phone });
       await setSignedIn(true);
       await applyProfile(token, uid);
     },
-    [applyProfile, setSignedIn],
+    [applyProfile, setSignedIn, setSigningOut],
   );
 
   const signup = useCallback(
@@ -161,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const t = accessToken;
+    setSigningOut(true);
     setAccessToken(null);
     setUserId(null);
     setName(null);
@@ -169,6 +173,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setSignedIn(false);
     await setCanChangeLanguage(false);
     await setSubscriptionLanguage(null);
+    if (navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+    }
     if (t) {
       try {
         await logoutRequest(t);
@@ -176,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
     }
-  }, [accessToken, setCanChangeLanguage, setSignedIn, setSubscriptionLanguage]);
+  }, [accessToken, setCanChangeLanguage, setSignedIn, setSigningOut, setSubscriptionLanguage]);
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener('AUTH_EXPIRED', () => {
@@ -221,4 +228,3 @@ export function useAuth() {
 }
 
 export { getMessageFromUnknownError };
-

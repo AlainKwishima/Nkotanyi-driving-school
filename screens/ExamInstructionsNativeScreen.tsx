@@ -34,6 +34,7 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
   const {
     hasSubscription,
     hasUsedFreeTrial,
+    isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const { insets, tabScrollBottomPad } = useResponsiveLayout();
@@ -74,6 +75,9 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
             style={styles.startBtn}
             onPress={() => {
               if (!hasSubscription && hasUsedFreeTrial) {
+                if (isSigningOut) {
+                  return;
+                }
                 openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
                 return;
               }
