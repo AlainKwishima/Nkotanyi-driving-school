@@ -12,6 +12,7 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
+import { SignOutConfirmationModal } from '../components/SignOutConfirmationModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileNative'>;
 
@@ -47,6 +48,7 @@ export function ProfileNativeScreen({ navigation }: Props) {
   const { t } = useI18n();
   const langLabel = t(`profile.lang.${contentLanguage}`);
   const { name, phone, logout } = useAuth();
+  const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
 
   return (
     <ScreenColumn backgroundColor="#4A78D0">
@@ -117,7 +119,7 @@ export function ProfileNativeScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.signOutBtn}
             onPress={async () => {
-              await logout();
+              setShowSignOutConfirm(true);
             }}
           >
             <MaterialCommunityIcons name="logout-variant" size={18} color="#D43737" />
@@ -127,6 +129,15 @@ export function ProfileNativeScreen({ navigation }: Props) {
       </View>
 
       <BottomTabs navigation={navigation} />
+
+      <SignOutConfirmationModal
+        visible={showSignOutConfirm}
+        onCancel={() => setShowSignOutConfirm(false)}
+        onConfirm={async () => {
+          setShowSignOutConfirm(false);
+          await logout();
+        }}
+      />
     </ScreenColumn>
   );
 }

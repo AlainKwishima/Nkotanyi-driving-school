@@ -1,4 +1,4 @@
-﻿import type { ContentLanguageCode } from '../context/AppFlowContext';
+import type { ContentLanguageCode } from '../context/AppFlowContext';
 
 /** Flat keys; use dot convention e.g. `auth.welcomeBack` */
 const en: Record<string, string> = {
@@ -101,12 +101,17 @@ const en: Record<string, string> = {
   'auth.whatsappUs': 'WhatsApp Admin',
   'auth.tagline': 'Master the road with confidence',
   'auth.goHome': 'Go Home',
+  'auth.signOutConfirmTitle': 'Sign out',
+  'auth.signOutConfirmMessage': 'Are you sure you want to sign out from your account?',
+  'auth.signOutConfirmYes': 'Yes, sign out',
+
   'common.ok': 'OK',
   'common.of': 'of',
   'common.na': 'N/A',
   'common.minShort': 'min',
   'common.error': 'Error',
   'common.retry': 'Retry',
+  'common.cancel': 'Cancel',
 
   'validate.phoneRequired': 'Enter your phone number.',
   'validate.phoneInvalid': 'Use a valid Rwanda number (078, 079, 072, or 073) or full 250… format.',
@@ -568,12 +573,17 @@ const rw: Record<string, string> = {
   'auth.whatsappUs': 'WhatsApp Ubuyobozi',
   'auth.tagline': 'Ubumenyi buhamye mu gutwara ibinyabiziga',
   'auth.goHome': 'Subira Ahabanza',
+  'auth.signOutConfirmTitle': 'Sohoka',
+  'auth.signOutConfirmMessage': 'Ese wizeye neza ko ushaka gusohoka muri konti yawe?',
+  'auth.signOutConfirmYes': 'Yego, sohoka',
+
   'common.ok': 'Sawa',
   'common.of': 'kuri',
   'common.na': 'N/A',
   'common.minShort': 'min',
   'common.error': 'Ikosa',
   'common.retry': 'Gerageza nanone',
+  'common.cancel': 'Hagarika',
 
   'validate.phoneRequired': 'Andika nimero ya telefoni.',
   'validate.phoneInvalid': 'Koresha nimero ya Rwanda (078, 079, 072, 073) cyangwa 250… yuzuye.',
@@ -1026,12 +1036,17 @@ const fr: Record<string, string> = {
   'auth.confirmPasswordField': 'Confirmer le mot de passe',
   'auth.supportNeed': 'Besoin d’aide ?',
   'auth.supportContact': 'Contacter le support',
+  'auth.signOutConfirmTitle': 'Déconnexion',
+  'auth.signOutConfirmMessage': 'Êtes-vous sûr de vouloir vous déconnecter de votre compte ?',
+  'auth.signOutConfirmYes': 'Oui, déconnexion',
+
   'common.ok': 'OK',
   'common.of': 'sur',
   'common.na': 'N/A',
   'common.minShort': 'min',
   'common.error': 'Erreur',
   'common.retry': 'Réessayer',
+  'common.cancel': 'Annuler',
 
   'validate.phoneRequired': 'Saisissez votre numéro de téléphone.',
   'validate.phoneInvalid': 'Numéro Rwanda valide requis (078, 079, 072, 073) ou format 250… complet.',

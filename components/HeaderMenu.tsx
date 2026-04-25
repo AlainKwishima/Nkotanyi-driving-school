@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { SignOutConfirmationModal } from './SignOutConfirmationModal';
 
 type HeaderMenuProps = {
   navigation: NavigationProp<RootStackParamList>;
@@ -25,6 +26,7 @@ export function HeaderMenu({
   rightOffset = 14,
 }: HeaderMenuProps) {
   const [open, setOpen] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const { shortSide } = useResponsiveLayout();
   const { logout } = useAuth();
@@ -52,7 +54,7 @@ export function HeaderMenu({
       return;
     }
     if (route === null) {
-      await logout();
+      setShowSignOutConfirm(true);
       return;
     }
     navigation.navigate(route as never);
@@ -88,6 +90,15 @@ export function HeaderMenu({
           </View>
         </Pressable>
       </Modal>
+
+      <SignOutConfirmationModal
+        visible={showSignOutConfirm}
+        onCancel={() => setShowSignOutConfirm(false)}
+        onConfirm={async () => {
+          setShowSignOutConfirm(false);
+          await logout();
+        }}
+      />
     </>
   );
 }
