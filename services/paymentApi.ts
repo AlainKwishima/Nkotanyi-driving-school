@@ -1,18 +1,30 @@
 import { apiRequest, unwrapApiPayload } from './api/client';
 import type { SubscriptionType } from './api/subscriptionTypes';
 import { toIntlRwandaPhone, toLocalRwandaPhone } from '../utils/phone';
+import type { ContentLanguageCode } from '../context/AppFlowContext';
 
 export type MomoPaymentBody = {
   amount: number;
   payment_method: 'momo' | 'airtel' | 'card';
   phone: string;
   subscription_type: SubscriptionType;
+  language?: ContentLanguageCode;
+  lang?: ContentLanguageCode;
+};
+
+export type CardPaymentBody = Omit<MomoPaymentBody, 'phone'> & {
+  phone?: string;
+  card_number: string;
+  card_name: string;
+  card_cvc: string;
+  card_expdate: string;
 };
 
 function buildCompatiblePaymentBody(body: MomoPaymentBody) {
   const paymentMethod = body.payment_method.toUpperCase();
   const localPhone = toLocalRwandaPhone(body.phone) ?? body.phone;
   const intlPhone = toIntlRwandaPhone(body.phone) ?? (localPhone ? `250${localPhone.slice(1)}` : body.phone);
+  const language = body.language ?? body.lang;
   return {
     ...body,
     phone: localPhone,
@@ -30,6 +42,8 @@ function buildCompatiblePaymentBody(body: MomoPaymentBody) {
     phone_number_intl: intlPhone,
     phoneNumber: localPhone,
     phoneIntl: intlPhone,
+    language,
+    lang: language,
   };
 }
 
@@ -60,10 +74,11 @@ export async function initiateAirtelPayment(body: MomoPaymentBody, accessToken: 
 }
 
 export async function initiateCardPayment(
-  body: Omit<MomoPaymentBody, 'phone'> & { phone?: string },
+  body: CardPaymentBody,
   accessToken: string,
 ): Promise<unknown> {
   const phone = body.phone ?? '';
+  const language = body.language ?? body.lang;
   const json = await apiRequest<unknown>(`/api/payment/card-payment`, {
     method: 'POST',
     body: {
@@ -82,6 +97,8 @@ export async function initiateCardPayment(
       phone_number_intl: toIntlRwandaPhone(phone) ?? phone,
       phoneNumber: phone,
       phoneIntl: toIntlRwandaPhone(phone) ?? phone,
+      language,
+      lang: language,
     },
     accessToken,
   });

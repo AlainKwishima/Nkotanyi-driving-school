@@ -71,6 +71,7 @@ export type RootStackParamList = {
         planTitle?: string;
         amountRwf?: number;
         subscriptionType?: string;
+        paymentLanguage?: 'en' | 'rw' | 'fr';
       }
     | undefined;
   PaymentConfirmationNative:
