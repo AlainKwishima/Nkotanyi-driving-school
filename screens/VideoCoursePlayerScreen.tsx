@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Linking } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useIsFocused } from '@react-navigation/native';
 import {
@@ -11,8 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useEvent } from 'expo';
 import YouTubePlayer from '../components/YouTubePlayer';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -56,7 +56,13 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
   const [loading, setLoading] = useState(true);
   const ytId = getYoutubeId(url);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const nativeVideoRef = useRef<Video | null>(null);
+  const player = useVideoPlayer(ytId || !url ? null : { uri: url }, (p) => {
+    p.loop = false;
+    if (active) {
+      p.play();
+    }
+  });
+  const statusEvent = useEvent(player, 'statusChange', { status: player.status });
 
   const clearTimer = () => {
     if (timeoutRef.current) {
@@ -79,12 +85,29 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
   }, [url]);
 
   useEffect(() => {
-    // Pause/stop any active native video when screen is blurred/unmounted.
-    if (!active && nativeVideoRef.current) {
-      void nativeVideoRef.current.pauseAsync().catch(() => { });
-      void nativeVideoRef.current.setPositionAsync(0).catch(() => { });
+    if (!url || ytId) return;
+    if (active) {
+      player.play();
+    } else {
+      player.pause();
+      player.currentTime = 0;
     }
-  }, [active]);
+  }, [active, player, url, ytId]);
+
+  useEffect(() => {
+    if (statusEvent.status === 'loading') {
+      setLoading(true);
+      return;
+    }
+    if (statusEvent.status === 'readyToPlay') {
+      setLoading(false);
+      return;
+    }
+    if (statusEvent.status === 'error') {
+      setLoading(false);
+      onError('Playback Error: Unable to load this video.');
+    }
+  }, [onError, statusEvent.status]);
 
   const handleReady = () => {
     clearTimer();
@@ -94,13 +117,8 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
   const handleError = useCallback((msg: string) => {
     clearTimer();
     setLoading(false);
-    // YouTube error 150, 152, 153 = embedding disabled by video owner
-    const isEmbedDisabled = /15[023]/.test(msg);
-    onError(isEmbedDisabled
-      ? 'This video cannot be played here because the owner has disabled embedding. Tap below to watch it on YouTube.'
-      : msg,
-      isEmbedDisabled
-    );
+    const isEmbedDisabled = /disabled embedding|embedded players|error 101|error 150|error 153/i.test(msg);
+    onError(msg, isEmbedDisabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -143,27 +161,11 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
           onError={(msg: string) => handleError(msg)}
         />
       ) : (
-        <Video
-          ref={nativeVideoRef}
-          source={{ uri: url }}
+        <VideoView
           style={styles.hero}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={active}
-          onLoadStart={() => setLoading(true)}
-          onLoad={handleReady}
-          onError={(e) => handleError(`Playback Error: ${e}`)}
-          onPlaybackStatusUpdate={(status) => {
-            if (status.isLoaded) {
-              if (status.isBuffering) {
-                setLoading(true);
-              } else {
-                setLoading(false);
-              }
-            } else if (status.error) {
-              handleError(`Playback Error: ${status.error}`);
-            }
-          }}
+          player={player}
+          nativeControls
+          contentFit="contain"
         />
       )}
     </View>
@@ -193,7 +195,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   const initialIndex = route.params?.currentIndex ?? 0;
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const [embedDisabled, setEmbedDisabled] = useState(false);
+  const [unavailableInApp, setUnavailableInApp] = useState(false);
 
   // Current video — prefer allVideos entry (updated as user switches), fall back to route params
   const current: VideoEntry =
@@ -212,7 +214,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
     const target = allVideos[idx];
     if (!target) return;
     setPlayerError(null);
-    setEmbedDisabled(false);
+    setUnavailableInApp(false);
     setCurrentIndex(idx);
   };
 
@@ -257,21 +259,22 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
         {/* ── Smart Player area ──────────────────────────────────────── */}
         {playerError ? (
           <View style={styles.errorOverlay}>
-            <Ionicons name={embedDisabled ? 'logo-youtube' : 'alert-circle-outline'} size={48} color={embedDisabled ? '#FF0000' : '#FF6B6B'} />
-            <Text style={styles.errorTitle}>{embedDisabled ? 'Not Available Here' : 'Playback Error'}</Text>
+            <Ionicons
+              name={unavailableInApp ? 'alert-circle-outline' : 'alert-circle-outline'}
+              size={48}
+              color={unavailableInApp ? '#F59E0B' : '#FF6B6B'}
+            />
+            <Text style={styles.errorTitle}>{unavailableInApp ? 'Playback unavailable in-app' : 'Playback Error'}</Text>
             <Text style={styles.errorSub}>{playerError}</Text>
-            {embedDisabled && videoUrl ? (
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: '#FF0000' }]}
-                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${getYoutubeId(videoUrl)}`)}
-              >
-                <Text style={styles.retryText}>Watch on YouTube</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.retryButton} onPress={() => { setPlayerError(null); setEmbedDisabled(false); }}>
-                <Text style={styles.retryText}>{t('common.retry') ?? 'Retry'}</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                setPlayerError(null);
+                setUnavailableInApp(false);
+              }}
+            >
+              <Text style={styles.retryText}>{t('common.retry') ?? 'Retry'}</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <SmartVideoPlayer
@@ -279,7 +282,10 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
             thumbUri={thumbUri}
             title={title}
             active={isFocused}
-            onError={(msg, isEmbed) => { setPlayerError(msg); setEmbedDisabled(!!isEmbed); }}
+            onError={(msg, isEmbed) => {
+              setPlayerError(msg);
+              setUnavailableInApp(!!isEmbed);
+            }}
           />
         )}
 

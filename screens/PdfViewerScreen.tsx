@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,125 +8,331 @@ import { RootStackParamList } from '../navigation/types';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PdfViewer'>;
-type ViewerMode = 'direct' | 'google';
+type PreviewState = 'loading' | 'ready' | 'error';
 
-const VIEWER_MODE_CACHE = new Map<string, ViewerMode>();
-const LOAD_TIMEOUT_MS = 30000;
-const FALLBACK_TIMEOUT_MS = 12000;
+const PDF_JS_VERSION = '3.11.174';
 
-function googleViewerUrl(url: string): string {
-  return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+function buildSecurePreviewHtml(fileUrl: string, title: string) {
+  const safeUrl = JSON.stringify(fileUrl);
+  const safeTitle = JSON.stringify(title);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>${title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+    <style>
+      :root {
+        color-scheme: light only;
+        --page-bg: #f3f5fa;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --watermark: rgba(107, 114, 128, 0.22);
+        --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--page-bg);
+        color: var(--text-main);
+        font-family: Arial, Helvetica, sans-serif;
+        overscroll-behavior: none;
+      }
+      body {
+        min-height: 100vh;
+      }
+      #app {
+        width: 100%;
+        min-height: 100vh;
+        padding: 16px 12px 28px;
+      }
+      #status {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 24px;
+      }
+      #statusTitle {
+        margin-top: 12px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      #statusBody {
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-muted);
+        max-width: 420px;
+      }
+      #pages {
+        display: none;
+      }
+      .page-shell {
+        position: relative;
+        width: 100%;
+        margin: 0 auto 18px;
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .page-frame {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .watermark {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .watermark span {
+        display: block;
+        width: 130%;
+        text-align: center;
+        color: var(--watermark);
+        font-size: 28px;
+        font-style: oblique;
+        font-weight: 700;
+        letter-spacing: 4px;
+        transform: rotate(-24deg);
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .page-meta {
+        margin-top: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-align: right;
+      }
+      .spinner {
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        border: 4px solid rgba(74, 120, 208, 0.18);
+        border-top-color: #4a78d0;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="status">
+        <div class="spinner"></div>
+        <div id="statusTitle">Opening secure preview</div>
+        <div id="statusBody">Preparing the document in-app. Please wait...</div>
+      </div>
+      <div id="pages" aria-label="Secure document preview"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js"></script>
+    <script>
+      (function () {
+        var fileUrl = ${safeUrl};
+        var title = ${safeTitle};
+        var status = document.getElementById('status');
+        var statusTitle = document.getElementById('statusTitle');
+        var statusBody = document.getElementById('statusBody');
+        var pagesRoot = document.getElementById('pages');
+        var pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js';
+
+        function post(type, payload) {
+          if (!window.ReactNativeWebView || !window.ReactNativeWebView.postMessage) return;
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, payload: payload || null }));
+        }
+
+        function showError(message) {
+          status.style.display = 'flex';
+          pagesRoot.style.display = 'none';
+          statusTitle.textContent = 'Preview unavailable';
+          statusBody.textContent = message;
+          post('error', { message: message });
+        }
+
+        function preventExtraction() {
+          document.addEventListener('contextmenu', function (event) {
+            event.preventDefault();
+          });
+          document.addEventListener('dragstart', function (event) {
+            event.preventDefault();
+          });
+          document.addEventListener('copy', function (event) {
+            event.preventDefault();
+          });
+          document.addEventListener('cut', function (event) {
+            event.preventDefault();
+          });
+          document.addEventListener('keydown', function (event) {
+            var key = (event.key || '').toLowerCase();
+            if ((event.ctrlKey || event.metaKey) && (key === 's' || key === 'p' || key === 'u' || key === 'c')) {
+              event.preventDefault();
+            }
+          });
+        }
+
+        async function renderDocument() {
+          try {
+            preventExtraction();
+            var loadingTask = pdfjsLib.getDocument({
+              url: fileUrl,
+              withCredentials: false,
+              disableAutoFetch: true,
+              disableStream: false,
+              disableRange: false,
+              stopAtErrors: true,
+            });
+
+            var pdf = await loadingTask.promise;
+            pagesRoot.innerHTML = '';
+            pagesRoot.style.display = 'block';
+            status.style.display = 'none';
+
+            for (var pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+              var page = await pdf.getPage(pageNumber);
+              var viewport = page.getViewport({ scale: 1 });
+              var availableWidth = Math.max(window.innerWidth - 52, 320);
+              var scale = availableWidth / viewport.width;
+              var scaledViewport = page.getViewport({ scale: scale });
+
+              var shell = document.createElement('section');
+              shell.className = 'page-shell';
+
+              var frame = document.createElement('div');
+              frame.className = 'page-frame';
+
+              var canvas = document.createElement('canvas');
+              var context = canvas.getContext('2d', { alpha: false });
+
+              var outputScale = window.devicePixelRatio || 1;
+              canvas.width = Math.floor(scaledViewport.width * outputScale);
+              canvas.height = Math.floor(scaledViewport.height * outputScale);
+              canvas.style.width = scaledViewport.width + 'px';
+              canvas.style.height = scaledViewport.height + 'px';
+
+              context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+              await page.render({
+                canvasContext: context,
+                viewport: scaledViewport,
+              }).promise;
+
+              var watermark = document.createElement('div');
+              watermark.className = 'watermark';
+              var watermarkText = document.createElement('span');
+              watermarkText.textContent = 'NKOTANYI DRIVING SCHOOL';
+              watermark.appendChild(watermarkText);
+
+              var meta = document.createElement('div');
+              meta.className = 'page-meta';
+              meta.textContent = title + '  Page ' + pageNumber + ' of ' + pdf.numPages;
+
+              frame.appendChild(canvas);
+              frame.appendChild(watermark);
+              shell.appendChild(frame);
+              shell.appendChild(meta);
+              pagesRoot.appendChild(shell);
+
+              post('progress', { page: pageNumber, total: pdf.numPages });
+            }
+
+            post('ready', { totalPages: pdf.numPages });
+          } catch (error) {
+            var message =
+              error && error.message
+                ? error.message
+                : 'Unable to prepare this document for secure preview.';
+            showError(message);
+          }
+        }
+
+        renderDocument();
+      })();
+    </script>
+  </body>
+</html>`;
 }
 
 export function PdfViewerScreen({ navigation, route }: Props) {
   const { title, url } = route.params;
   const { insets } = useResponsiveLayout();
-  const isWeb = Platform.OS === 'web';
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const webViewRef = useRef<WebView>(null);
+  const [previewState, setPreviewState] = useState<PreviewState>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [viewerMode, setViewerMode] = useState<ViewerMode>(() => VIEWER_MODE_CACHE.get(url) ?? 'direct');
+  const [progressLabel, setProgressLabel] = useState('Preparing document...');
   const [loadVersion, setLoadVersion] = useState(0);
-  const [progress, setProgress] = useState(0);
 
-  const viewerUrl = useMemo(() => {
-    return viewerMode === 'direct' ? url : googleViewerUrl(url);
-  }, [url, viewerMode]);
-
-  const clearTimeoutHandle = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-
-  const startLoadTimer = () => {
-    clearTimeoutHandle();
-    if (isWeb) {
-      setLoading(false);
-      setError(null);
-      setProgress(0);
-      return;
-    }
-    timeoutRef.current = setTimeout(() => {
-      if (viewerMode === 'direct') {
-        VIEWER_MODE_CACHE.set(url, 'google');
-        setViewerMode('google');
-        setLoadVersion((v) => v + 1);
-        setLoading(true);
-        setError(null);
-        setProgress(0);
-        return;
-      }
-      setLoading(false);
-      setError('The document is taking too long to load. Please retry.');
-    }, viewerMode === 'direct' ? FALLBACK_TIMEOUT_MS : LOAD_TIMEOUT_MS);
-  };
-
-  useEffect(() => {
-    if (isWeb) {
-      setLoading(false);
-      setError(null);
-      setProgress(0);
-      clearTimeoutHandle();
-      return () => clearTimeoutHandle();
-    }
-    setLoading(true);
-    setError(null);
-    setProgress(0);
-    startLoadTimer();
-    return clearTimeoutHandle;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewerMode, loadVersion, url]);
+  const sourceHtml = useMemo(() => buildSecurePreviewHtml(url, title || 'Document'), [title, url]);
 
   const handleRetry = () => {
-    clearTimeoutHandle();
-    VIEWER_MODE_CACHE.delete(url);
-    setViewerMode('direct');
-    setLoadVersion((v) => v + 1);
-    setLoading(true);
+    setPreviewState('loading');
     setError(null);
-    setProgress(0);
+    setProgressLabel('Preparing document...');
+    setLoadVersion((version) => version + 1);
   };
 
-  const openExternally = async () => {
+  const handleMessage = (event: { nativeEvent: { data?: string } }) => {
     try {
-      await Linking.openURL(viewerMode === 'direct' ? url : viewerUrl);
+      const payload = JSON.parse(event.nativeEvent.data ?? '{}') as {
+        type?: string;
+        payload?: { page?: number; total?: number; totalPages?: number; message?: string } | null;
+      };
+
+      if (payload.type === 'progress' && payload.payload?.page && payload.payload?.total) {
+        setPreviewState('loading');
+        setProgressLabel(`Rendering page ${payload.payload.page} of ${payload.payload.total}...`);
+        return;
+      }
+
+      if (payload.type === 'ready') {
+        setPreviewState('ready');
+        setError(null);
+        return;
+      }
+
+      if (payload.type === 'error') {
+        setPreviewState('error');
+        setError(payload.payload?.message ?? 'Unable to preview this document securely.');
+      }
     } catch {
-      await Linking.openURL(url);
+      setPreviewState('error');
+      setError('Unable to preview this document securely.');
     }
-  };
-
-  const handleLoadProgress = (event: any) => {
-    const value = event?.nativeEvent?.progress ?? 0;
-    setProgress(value);
-    if (value >= 0.18) {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadEnd = () => {
-    clearTimeoutHandle();
-    VIEWER_MODE_CACHE.set(url, viewerMode);
-    setLoading(false);
-    setProgress(1);
-  };
-
-  const handleError = (event: any) => {
-    clearTimeoutHandle();
-    if (viewerMode === 'direct') {
-      VIEWER_MODE_CACHE.set(url, 'google');
-      setViewerMode('google');
-      setLoadVersion((v) => v + 1);
-      setLoading(true);
-      setError(null);
-      setProgress(0);
-      return;
-    }
-
-    const message = event?.nativeEvent?.description || 'Failed to load document. Please retry.';
-    setLoading(false);
-    setError(message);
   };
 
   return (
@@ -144,81 +350,58 @@ export function PdfViewerScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.bodyWrap}>
-        {isWeb ? (
-          <View style={styles.webFallback}>
-            <Ionicons name="document-text-outline" size={38} color="#4A78D0" />
-            <Text style={styles.errorTitle}>Document preview unavailable in web mode</Text>
-            <Text style={styles.errorBody}>
-              The in-app PDF viewer runs natively on mobile. Open the document externally to view it in your browser.
+        <WebView
+          key={`${url}:${loadVersion}`}
+          ref={webViewRef}
+          source={{ html: sourceHtml, baseUrl: 'https://localhost/' }}
+          style={styles.webview}
+          originWhitelist={['https://*', 'http://*', 'about:blank']}
+          javaScriptEnabled
+          domStorageEnabled
+          cacheEnabled={false}
+          startInLoadingState={false}
+          setSupportMultipleWindows={false}
+          allowsFullscreenVideo={false}
+          allowFileAccess={false}
+          allowFileAccessFromFileURLs={false}
+          allowUniversalAccessFromFileURLs={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          onMessage={handleMessage}
+          onShouldStartLoadWithRequest={(request) => {
+            const nextUrl = request.url || '';
+            return (
+              nextUrl === 'about:blank' ||
+              nextUrl.startsWith('https://localhost/') ||
+              nextUrl.startsWith('data:text/html')
+            );
+          }}
+          onError={() => {
+            setPreviewState('error');
+            setError('Unable to preview this document securely.');
+          }}
+        />
+
+        {previewState === 'loading' ? (
+          <View style={styles.overlayCard}>
+            <ActivityIndicator size="large" color="#4A78D0" />
+            <Text style={styles.overlayTitle}>Opening secure preview</Text>
+            <Text style={styles.overlayBody}>{progressLabel}</Text>
+          </View>
+        ) : null}
+
+        {previewState === 'error' ? (
+          <View style={styles.overlayCard}>
+            <Ionicons name="alert-circle-outline" size={36} color="#C05A5A" />
+            <Text style={styles.overlayTitle}>Unable to preview document</Text>
+            <Text style={styles.overlayBody}>
+              {error ?? 'The secure in-app preview could not be prepared.'}
             </Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={openExternally}>
-              <Text style={styles.retryText}>Open externally</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+              <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <>
-            {loading ? (
-              <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#4A78D0" />
-                <Text style={styles.loaderText}>
-                  {viewerMode === 'direct' ? 'Opening document...' : 'Loading document...'}
-                </Text>
-                <Text style={styles.loaderSubText}>
-                  {progress > 0 ? `${Math.round(progress * 100)}%` : 'Please wait'}
-                </Text>
-              </View>
-            ) : null}
-
-            {error ? (
-              <View style={styles.errorLayer}>
-                <Ionicons name="alert-circle-outline" size={36} color="#C05A5A" />
-                <Text style={styles.errorTitle}>Unable to open document</Text>
-                <Text style={styles.errorBody}>{error}</Text>
-                <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-                  <Text style={styles.retryText}>Retry</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.retryBtn, styles.secondaryBtn]} onPress={openExternally}>
-                  <Text style={styles.secondaryText}>Open externally</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            <WebView
-              key={`${url}:${viewerMode}:${loadVersion}`}
-              source={{ uri: viewerUrl }}
-              style={styles.webview}
-              originWhitelist={['*']}
-              cacheEnabled
-              domStorageEnabled
-              javaScriptEnabled
-              startInLoadingState={false}
-              mixedContentMode="always"
-              setSupportMultipleWindows={false}
-              allowsFullscreenVideo={false}
-              onLoadStart={() => {
-                setLoading(true);
-                setError(null);
-              }}
-              onLoadProgress={handleLoadProgress}
-              onLoadEnd={handleLoadEnd}
-              onError={handleError}
-            />
-
-            <View pointerEvents="none" style={styles.watermarkLayer}>
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <Text
-                  key={`wm-${idx}`}
-                  style={[
-                    styles.watermarkText,
-                    idx % 2 === 0 ? styles.watermarkTextAlt : styles.watermarkTextMuted,
-                  ]}
-                >
-                  NKOTANYI DRIVING SCHOOL
-                </Text>
-              ))}
-            </View>
-          </>
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -273,78 +456,24 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F3F5FA',
   },
-  watermarkLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 2,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    flexDirection: 'row',
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    opacity: 0.1,
-    transform: [{ rotate: '-22deg' }],
-  },
-  watermarkText: {
-    width: '48%',
-    textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    letterSpacing: 2,
-    color: '#4A78D0',
-  },
-  watermarkTextAlt: {
-    opacity: 0.28,
-  },
-  watermarkTextMuted: {
-    opacity: 0.18,
-  },
-  loader: {
+  overlayCard: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F5FA',
-    zIndex: 10,
     paddingHorizontal: 24,
+    backgroundColor: '#F3F5FA',
+    zIndex: 5,
   },
-  loaderText: {
+  overlayTitle: {
     marginTop: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#4A4F5C',
-  },
-  loaderSubText: {
-    marginTop: 4,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    color: '#8A8D9F',
-  },
-  errorLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3F5FA',
-    paddingHorizontal: 24,
-  },
-  webFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#F3F5FA',
-  },
-  errorTitle: {
-    marginTop: 10,
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 18,
     color: '#1E293B',
     textAlign: 'center',
   },
-  errorBody: {
+  overlayBody: {
     marginTop: 8,
     textAlign: 'center',
     fontFamily: 'PlusJakartaSans-Medium',
@@ -353,7 +482,7 @@ const styles = StyleSheet.create({
     color: '#5C6474',
   },
   retryBtn: {
-    marginTop: 16,
+    marginTop: 18,
     minHeight: 52,
     minWidth: 140,
     paddingHorizontal: 24,
@@ -371,14 +500,5 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
     color: '#FFFFFF',
-  },
-  secondaryBtn: {
-    marginTop: 10,
-    backgroundColor: '#EEF3FF',
-  },
-  secondaryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    color: '#4A78D0',
   },
 });

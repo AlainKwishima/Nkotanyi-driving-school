@@ -6,7 +6,6 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "scheme": "nkotanyi",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -41,6 +40,6 @@
       "display": "standalone",
       "orientation": "any"
     },
-    "plugins": ["expo-font"]
+    "plugins": ["expo-font", "expo-video"]
   }
 }
