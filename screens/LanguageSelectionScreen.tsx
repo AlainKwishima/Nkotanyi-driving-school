@@ -112,7 +112,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
                   return;
                 }
                 await commitLanguageSelection(lang);
-                navigation.replace('CreateAccount');
+                navigation.navigate('CreateAccount');
               }}
             />
             <Text style={[styles.copyright, { marginTop: m.verticalScale(24), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     width: 266.22,
     textAlign: 'center',
     color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 20,
     lineHeight: 32,
     letterSpacing: -0.6,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   heading: {
     textAlign: 'center',
     color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 22,
     lineHeight: 32,
   },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     textAlign: 'center',
     color: '#94A3B8',
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 10,
     lineHeight: 15,
     letterSpacing: 0.5,

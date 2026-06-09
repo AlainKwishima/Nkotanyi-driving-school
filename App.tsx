@@ -1,10 +1,17 @@
 import React from 'react';
 import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 
 import { HelpCenterScreen } from './screens/HelpCenterScreen';
@@ -46,10 +53,24 @@ const navTheme = {
   },
 };
 
+const stackScreenOptions: NativeStackNavigationOptions = {
+  headerShown: false,
+  animation: Platform.OS === 'ios' ? 'default' : 'slide_from_right',
+  animationTypeForReplace: 'push',
+  animationMatchesGesture: true,
+  fullScreenGestureEnabled: true,
+  gestureEnabled: true,
+  freezeOnBlur: true,
+  contentStyle: {
+    backgroundColor: '#FBF8FD',
+  },
+};
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'PlusJakartaSans-Regular': PlusJakartaSans_400Regular,
     'PlusJakartaSans-Medium': PlusJakartaSans_500Medium,
+    'PlusJakartaSans-SemiBold': PlusJakartaSans_600SemiBold,
     'PlusJakartaSans-Bold': PlusJakartaSans_700Bold,
     'PlusJakartaSans-ExtraBold': PlusJakartaSans_800ExtraBold,
     'Poppins-Regular': Poppins_400Regular,
@@ -74,7 +95,7 @@ export default function App() {
         <AuthProvider>
           <GateModalProvider>
             <NavigationContainer theme={navTheme} ref={navigationRef}>
-          <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+          <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="Splash">
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="LanguageSettings" component={LanguageSettingsScreen} />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { RootStackParamList } from '../navigation/types';
@@ -27,6 +28,28 @@ type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type CreateAccountProps = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
 type ForgotPasswordProps = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 type ResetPasswordProps = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
+type AuthNavigation = {
+  navigate: (screen: 'LanguageSelection', params?: { changeOnly?: boolean }) => void;
+};
+
+function AuthBackButton({ navigation }: { navigation: AuthNavigation }) {
+  const m = useMobile();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.authBackRow, { paddingTop: Math.max(insets.top, m.verticalScale(10)) }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to language selection"
+        onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}
+        style={({ pressed }) => [styles.authBackBtn, pressed && styles.authBackBtnPressed]}
+        hitSlop={10}
+      >
+        <Feather name="chevron-left" size={m.scale(22)} color="#1E293B" />
+      </Pressable>
+    </View>
+  );
+}
 
 function LogoHeader({ showTitle, showTagline = false }: { showTitle: boolean; showTagline?: boolean }) {
   const m = useMobile();
@@ -116,6 +139,7 @@ export function LoginScreen({ navigation, route }: LoginProps) {
         contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
+        <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle={false} />
 
         <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.welcomeBack')}</Text>
@@ -220,6 +244,7 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
         contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
+        <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle />
 
         <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.createTitle')}</Text>
@@ -326,6 +351,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
         contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
+        <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle showTagline />
 
         <Text style={[styles.secondaryTitle, { marginTop: m.verticalScale(22), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
@@ -394,6 +420,7 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
         contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
+        <AuthBackButton navigation={navigation} />
         <View style={styles.lockBadge}>
           <MaterialCommunityIcons name="lock-reset" size={24} color="#F0F6FF" />
         </View>
@@ -484,6 +511,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     alignItems: 'center',
   },
+  authBackRow: {
+    width: '100%',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  authBackBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  authBackBtnPressed: {
+    opacity: 0.88,
+  },
   logoHeader: {
     alignItems: 'center',
   },
@@ -493,7 +541,7 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     marginTop: 12,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 16,
     lineHeight: 24,
     color: '#1E293B',
@@ -509,8 +557,8 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     marginTop: 16,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 26,
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontSize: 24,
     lineHeight: 34,
     color: '#1E293B',
     textAlign: 'center',
@@ -544,7 +592,7 @@ const styles = StyleSheet.create({
   },
   rememberText: {
     marginLeft: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: '#475569',
@@ -553,7 +601,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   forgotLink: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     lineHeight: 22,
     color: '#2563EB',
@@ -571,7 +619,7 @@ const styles = StyleSheet.create({
   },
   separatorText: {
     marginHorizontal: 14,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: '#94A3B8',
@@ -593,7 +641,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   bottomLinkAction: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: '#2563EB',
@@ -617,7 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topBarTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 18,
     lineHeight: 24,
     color: '#1E293B',
@@ -635,8 +683,8 @@ const styles = StyleSheet.create({
   secondaryTitle: {
     marginTop: 24,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 24,
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontSize: 22,
     lineHeight: 32,
     color: '#1E293B',
   },
@@ -657,7 +705,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   backSignInText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 16,
     lineHeight: 24,
     color: '#2563EB',
@@ -685,14 +733,14 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   contactLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 11,
     letterSpacing: 0.5,
     color: '#94A3B8',
     marginBottom: 4,
   },
   contactValue: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     color: '#1E293B',
   },
@@ -709,7 +757,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   whatsappBtnText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     color: '#FFFFFF',
   },
@@ -730,7 +778,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   helpTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 18,
     lineHeight: 24,
     color: '#1E293B',
@@ -755,7 +803,7 @@ const styles = StyleSheet.create({
   resetTitle: {
     marginTop: 20,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 22,
     lineHeight: 30,
     color: '#1E293B',
@@ -779,7 +827,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   requirementsHeading: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 12,
     lineHeight: 18,
     textTransform: 'uppercase',
@@ -788,7 +836,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   reqDone: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     lineHeight: 22,
     color: '#10B981',
@@ -821,6 +869,6 @@ const styles = StyleSheet.create({
   },
   supportAction: {
     color: '#2563EB',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
 });

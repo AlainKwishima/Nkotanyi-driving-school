@@ -1,6 +1,9 @@
 import { DeviceEventEmitter } from 'react-native';
 import { API_BASE_URL } from '../../config/api';
+import { decodeJwtExpiry, formatTokenExpiry, isTokenExpired, type AuthExpiredReason, logAuthEvent, shouldForceLogout } from './authSession';
 import { ApiError, type StandardResponse } from './types';
+
+export const AUTH_EXPIRED_EVENT = 'AUTH_EXPIRED';
 
 const REQUEST_TIMEOUT_MS = 45_000;
 
@@ -100,6 +103,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   const payload = json as StandardResponse<T> & { message?: string; error?: string };
+  const tokenExpiry = accessToken ? decodeJwtExpiry(accessToken) : null;
+  const tokenExpired = isTokenExpired(accessToken, 0);
 
   if (!res.ok) {
     const msg =
@@ -109,8 +114,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
           ? (payload as { error: string }).error
           : `Request failed (${res.status})`;
 
-    if (res.status === 401 && !skipAuthExpiredHandling) {
-      DeviceEventEmitter.emit('AUTH_EXPIRED');
+    if (!skipAuthExpiredHandling && shouldForceLogout(res.status, payload, accessToken)) {
+      const reason: AuthExpiredReason = {
+        path,
+        httpStatus: res.status,
+        message: msg,
+        errorCode: typeof payload?.error === 'string' ? payload.error : undefined,
+        tokenExpiry: tokenExpiry ? tokenExpiry.toISOString() : null,
+        tokenExpired,
+      };
+      logAuthEvent('session_invalid', reason);
+      DeviceEventEmitter.emit(AUTH_EXPIRED_EVENT, reason);
+    } else if ((res.status === 401 || res.status === 403) && !skipAuthExpiredHandling) {
+      logAuthEvent('auth_error_nonfatal', {
+        path,
+        status: res.status,
+        message: msg,
+        error: payload?.error,
+        tokenExpiry: tokenExpiry ? tokenExpiry.toISOString() : null,
+        tokenExpired,
+        tokenExpiryLabel: formatTokenExpiry(accessToken),
+      });
     }
 
     throw new ApiError(msg, res.status, payload?.error, payload);
@@ -127,8 +151,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const statusVal = (payload as { status: number }).status;
     const msg = typeof payload.message === 'string' ? payload.message : 'Request failed';
 
-    if (statusVal === 401 && !skipAuthExpiredHandling) {
-      DeviceEventEmitter.emit('AUTH_EXPIRED');
+    if (!skipAuthExpiredHandling && shouldForceLogout(statusVal, payload, accessToken)) {
+      const reason: AuthExpiredReason = {
+        path,
+        httpStatus: statusVal,
+        message: msg,
+        errorCode: typeof payload.error === 'string' ? payload.error : undefined,
+        tokenExpiry: tokenExpiry ? tokenExpiry.toISOString() : null,
+        tokenExpired,
+      };
+      logAuthEvent('session_invalid', reason);
+      DeviceEventEmitter.emit(AUTH_EXPIRED_EVENT, reason);
+    } else if ((statusVal === 401 || statusVal === 403) && !skipAuthExpiredHandling) {
+      logAuthEvent('auth_error_nonfatal', {
+        path,
+        status: statusVal,
+        message: msg,
+        error: payload.error,
+        tokenExpiry: tokenExpiry ? tokenExpiry.toISOString() : null,
+        tokenExpired,
+        tokenExpiryLabel: formatTokenExpiry(accessToken),
+      });
     }
 
     throw new ApiError(msg, statusVal, payload.error, payload);
