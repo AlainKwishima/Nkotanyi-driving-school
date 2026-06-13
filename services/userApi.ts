@@ -27,6 +27,21 @@ export type UserAndPayment = {
   payment: unknown[];
 };
 
+export const PRIVILEGED_ROLES = new Set([
+  'admin',
+  'administrator',
+  'superadmin',
+  'super_admin',
+  'tester',
+  'test',
+  'staff',
+  'moderator',
+]);
+
+export function profileHasPrivilegedAccess(profile: UserAndPayment): boolean {
+  return Boolean(profile.user.role && PRIVILEGED_ROLES.has(String(profile.user.role).toLowerCase().trim()));
+}
+
 function normalizeLanguageCode(raw: unknown): ContentLanguageCode | null {
   const value = String(raw ?? '').toLowerCase().trim();
   if (!value) return null;
@@ -171,18 +186,6 @@ export function paymentsIndicateActiveSubscription(payments: unknown): boolean {
   });
 }
 
-/** Privileged roles that always receive full, unlimited access. */
-const PRIVILEGED_ROLES = new Set([
-  'admin',
-  'administrator',
-  'superadmin',
-  'super_admin',
-  'tester',
-  'test',
-  'staff',
-  'moderator',
-]);
-
 /**
  * Master subscription check: inspects BOTH the user object and the payment
  * array.  Web-based subscriptions often leave a flag directly on the user
@@ -198,7 +201,7 @@ export function profileIndicatesActiveSubscription(profile: UserAndPayment): boo
   const u = profile.user;
 
   // 1. Privileged roles always get full access
-  if (u.role && PRIVILEGED_ROLES.has(String(u.role).toLowerCase().trim())) {
+  if (profileHasPrivilegedAccess(profile)) {
     return true;
   }
 
@@ -238,6 +241,10 @@ export function profileIndicatesActiveSubscription(profile: UserAndPayment): boo
  * only "monthly" (or equivalent plan naming) is allowed.
  */
 export function profileHasHighestSubscription(profile: UserAndPayment): boolean {
+  if (profileHasPrivilegedAccess(profile)) {
+    return true;
+  }
+
   const userPlanRaw = String(profile.user.planName ?? profile.user.plan ?? '').toLowerCase();
   const userLooksMonthly =
     userPlanRaw.includes('monthly') ||
@@ -253,6 +260,37 @@ export function profileHasHighestSubscription(profile: UserAndPayment): boolean 
     if (subType === 'monthly') return true;
     const planName = String(o.planName ?? o.plan ?? '').toLowerCase();
     return planName.includes('monthly') || planName.includes('one month') || planName.includes('month');
+  });
+}
+
+/**
+ * Determines whether the active subscription is time-based rather than a
+ * permanently privileged account.
+ */
+export function profileHasTimeBasedSubscription(profile: UserAndPayment): boolean {
+  if (profileHasPrivilegedAccess(profile)) {
+    return true;
+  }
+
+  const userExpiry = profile.user.subscriptionExpiry ?? profile.user.subscriptionExpiresAt ?? profile.user.expiresAt;
+  if (userExpiry != null) {
+    return expiryIsValid(userExpiry);
+  }
+
+  if (!Array.isArray(profile.payment)) return false;
+  return profile.payment.some((p) => {
+    if (!p || typeof p !== 'object') return false;
+    const o = p as Record<string, unknown>;
+    const hasExpiry =
+      o.subscriptionEnd != null ||
+      o.subscriptionExpiry != null ||
+      o.subscriptionExpiresAt != null ||
+      o.expiresAt != null ||
+      o.expiry != null ||
+      o.validUntil != null ||
+      o.endDate != null ||
+      o.end_date != null;
+    return hasExpiry && paymentNotExpired(o);
   });
 }
 

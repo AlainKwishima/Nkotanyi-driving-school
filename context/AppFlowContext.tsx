@@ -8,6 +8,7 @@ type AppFlowState = {
   isSignedIn: boolean;
   hasUsedFreeTrial: boolean;
   hasSubscription: boolean;
+  hasTimeBasedSubscription: boolean;
   canChangeLanguage: boolean;
   subscriptionLanguage: ContentLanguageCode | null;
   contentLanguage: ContentLanguageCode;
@@ -20,6 +21,7 @@ type AppFlowContextValue = AppFlowState & {
   setSignedIn: (signedIn: boolean) => Promise<void>;
   setHasUsedFreeTrial: (used: boolean) => Promise<void>;
   setHasSubscription: (subscribed: boolean) => Promise<void>;
+  setHasTimeBasedSubscription: (subscribed: boolean) => Promise<void>;
   setCanChangeLanguage: (allowed: boolean) => Promise<void>;
   setSubscriptionLanguage: (lang: ContentLanguageCode | null) => Promise<void>;
   setContentLanguage: (lang: ContentLanguageCode) => Promise<void>;
@@ -36,6 +38,7 @@ const defaultState: AppFlowState = {
   isSignedIn: false,
   hasUsedFreeTrial: false,
   hasSubscription: false,
+  hasTimeBasedSubscription: false,
   canChangeLanguage: false,
   subscriptionLanguage: null,
   contentLanguage: 'en',
@@ -72,6 +75,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
             isSignedIn: Boolean(parsed.isSignedIn),
             hasUsedFreeTrial: Boolean(parsed.hasUsedFreeTrial),
             hasSubscription: Boolean(parsed.hasSubscription),
+            hasTimeBasedSubscription: Boolean(parsed.hasTimeBasedSubscription),
             canChangeLanguage: Boolean(parsed.canChangeLanguage),
             subscriptionLanguage:
               parsed.subscriptionLanguage === 'rw' || parsed.subscriptionLanguage === 'fr' || parsed.subscriptionLanguage === 'en'
@@ -102,6 +106,10 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       ),
     [persistPatch],
   );
+  const setHasTimeBasedSubscription = useCallback(
+    (subscribed: boolean) => persistPatch({ hasTimeBasedSubscription: subscribed }),
+    [persistPatch],
+  );
   const setCanChangeLanguage = useCallback((allowed: boolean) => persistPatch({ canChangeLanguage: allowed }), [persistPatch]);
   const setSubscriptionLanguage = useCallback(
     (lang: ContentLanguageCode | null) => persistPatch({ subscriptionLanguage: lang }),
@@ -128,6 +136,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       setSignedIn,
       setHasUsedFreeTrial,
       setHasSubscription,
+      setHasTimeBasedSubscription,
       setCanChangeLanguage,
       setSubscriptionLanguage,
       setContentLanguage,
@@ -143,6 +152,7 @@ export function AppFlowProvider({ children }: { children: React.ReactNode }) {
       setSignedIn,
       setHasUsedFreeTrial,
       setHasSubscription,
+      setHasTimeBasedSubscription,
       setCanChangeLanguage,
       setSubscriptionLanguage,
       setContentLanguage,

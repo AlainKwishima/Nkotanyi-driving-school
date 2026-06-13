@@ -38,14 +38,12 @@ export async function getExamQuestions(
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * Exam-only sign questions. Road-sign study content lives in `roadSignsApi.ts`.
+ */
 export async function getSignQuestions(
   accessToken: string,
   language?: ContentLanguageCode,
 ): Promise<TrafficQuestion[]> {
-  const json = await apiRequest<unknown>(withLanguageQuery(`/api/traffic/get-sign-questions`, language), {
-    method: 'GET',
-    accessToken,
-  });
-  const data = unwrapApiPayload<TrafficQuestion[] | unknown>(json);
-  return Array.isArray(data) ? data : [];
+  return getExamQuestions(accessToken, language);
 }
