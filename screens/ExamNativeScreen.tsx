@@ -17,7 +17,8 @@ import { colors, radii, shadows, spacing, typography } from '../constants/theme'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
 
-const EXAM_DURATION_SEC = 30 * 60;
+const EXAM_DURATION_SEC = 20 * 60;
+const EXAM_QUESTION_LIMIT = 20;
 const PASS_PERCENT = 60;
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -79,7 +80,13 @@ export function ExamNativeScreen({ navigation, route }: Props) {
           mode === 'signs'
             ? await getSignQuestions(accessToken, examLanguage)
             : await getExamQuestions(accessToken, examLanguage);
-        if (!cancelled) setQuestions(data);
+        if (!cancelled) {
+          setQuestions(data.slice(0, EXAM_QUESTION_LIMIT));
+          setQuestionIndex(0);
+          setSecondsLeft(EXAM_DURATION_SEC);
+          setSelectedByQuestion({});
+          startedAtRef.current = new Date().toISOString();
+        }
       } catch (error) {
         if (!cancelled) setLoadError(getMessageFromUnknownError(error));
       } finally {

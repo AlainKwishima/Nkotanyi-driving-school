@@ -9,14 +9,25 @@ export type VideoItem = {
   title?: string;
   name?: string;
   videoURL?: string;
+  videoUrl?: string;
   url?: string;
   video?: string;
   link?: string;
+  videoLink?: string;
+  video_link?: string;
+  youtubeUrl?: string;
+  youtubeURL?: string;
+  embedUrl?: string;
+  embedURL?: string;
+  fileUrl?: string;
+  fileURL?: string;
   duration?: string;
   durationMinutes?: number;
   thumbnail?: string;
   thumbnailURL?: string;
+  thumbnailUrl?: string;
   imageURL?: string;
+  imageUrl?: string;
 };
 
 export type PdfItem = {

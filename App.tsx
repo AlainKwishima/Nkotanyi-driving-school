@@ -36,7 +36,6 @@ import { VideoCoursePlayerScreen } from './screens/VideoCoursePlayerScreen';
 import { PdfViewerScreen } from './screens/PdfViewerScreen';
 import { SplashScreen } from './screens/SplashScreen';
 import { ReadingNativeScreen } from './screens/LearningNativeScreens';
-import { RoadSignsNativeScreen } from './screens/RoadSignsNativeScreen';
 import { AppFlowProvider } from './context/AppFlowContext';
 import { AuthProvider } from './context/AuthContext';
 import { GateModalProvider } from './context/GateModalContext';
@@ -118,7 +117,6 @@ export default function App() {
             <Stack.Screen name="PerformanceDetailNative" component={PerformanceDetailNativeScreen} />
             <Stack.Screen name="PerformanceReviewNative" component={PerformanceReviewNativeScreen} />
             <Stack.Screen name="ReadingNative" component={ReadingNativeScreen} />
-            <Stack.Screen name="RoadSignsNative" component={RoadSignsNativeScreen} />
             <Stack.Screen name="HelpCenterNative" component={HelpCenterNativeScreen} />
             <Stack.Screen name="SubscriptionNative" component={SubscriptionNativeScreen} />
             <Stack.Screen name="PaymentNative" component={PaymentNativeScreen} />

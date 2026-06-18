@@ -35,9 +35,7 @@ function resolveActive(routeName: string): TabKey | null {
 
   if (examRoutes.has(routeName)) return 'exam';
   if (routeName === 'HomeNative') return 'home';
-  if (routeName === 'ReadingNative' || routeName === 'RoadSignsNative' || routeName === 'RoadSignsListNative') {
-    return 'read';
-  }
+  if (routeName === 'ReadingNative') return 'read';
   if (routeName === 'VideoCourseList') return 'watch';
   if (routeName === 'PerformanceNative') return 'performance';
 

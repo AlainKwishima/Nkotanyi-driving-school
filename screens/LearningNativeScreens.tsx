@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-  ActivityIndicator,
   Alert,
+  Image,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,6 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
+import { ReadSectionTabs } from '../components/ReadSectionTabs';
 import { SectionHeading } from '../components/SectionHeading';
 import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
@@ -23,6 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { getPdfsWithFallback, type PdfItem } from '../services/contentApi';
+import { getRoadSigns, markRoadSignViewed, type RoadSignStudyItem } from '../services/roadSignsApi';
 import { ApiError } from '../services/api/types';
 import { useI18n } from '../i18n/useI18n';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
@@ -30,6 +34,7 @@ import { colors, radii, shadows, spacing, typography } from '../constants/theme'
 
 type ReadProps = NativeStackScreenProps<RootStackParamList, 'ReadingNative'>;
 type HelpProps = NativeStackScreenProps<RootStackParamList, 'HelpCenterNative'>;
+type ReadTab = 'documents' | 'signs';
 
 function pdfOpenUrl(item: PdfItem): string | undefined {
   const value = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl;
@@ -49,10 +54,10 @@ function pdfExtension(item: PdfItem): 'PDF' | 'DOC' | 'PPT' | 'FILE' {
 }
 
 const FILE_TONES = {
-  PDF: { color: '#B84E35', background: '#FAEBE6' },
+  PDF: { color: colors.brandStrong, background: colors.brandSoft },
   DOC: { color: colors.brandStrong, background: colors.brandSoft },
-  PPT: { color: '#A55F1D', background: colors.amberSoft },
-  FILE: { color: colors.inkMuted, background: '#EDF0EC' },
+  PPT: { color: colors.brand, background: colors.brandSoft },
+  FILE: { color: colors.inkMuted, background: colors.surfaceAlt },
 };
 
 function DocumentCard({
@@ -101,7 +106,172 @@ function DocumentCard({
   );
 }
 
-export function ReadingNativeScreen({ navigation }: ReadProps) {
+function InlineRoadSignCard({
+  item,
+  imageFailed,
+  onImageError,
+  onPress,
+}: {
+  item: RoadSignStudyItem;
+  imageFailed: boolean;
+  onImageError: () => void;
+  onPress: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <TouchableOpacity style={styles.inlineSignCard} onPress={onPress} activeOpacity={0.84}>
+      <View style={styles.inlineSignImageFrame}>
+        {imageFailed ? (
+          <View style={styles.inlineSignImageError}>
+            <Ionicons name="image-outline" size={22} color={colors.inkSoft} />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.inlineSignImage}
+            resizeMode="contain"
+            onError={onImageError}
+            accessibilityLabel={item.name}
+          />
+        )}
+      </View>
+      <View style={styles.inlineSignCopy}>
+        <Text style={styles.inlineSignTitle} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.inlineSignBody} numberOfLines={2}>{item.description}</Text>
+        <View style={styles.documentMeta}>
+          <View style={[styles.extensionPill, item.viewed ? styles.signStatusViewed : styles.signStatusStudy]}>
+            <Text style={[styles.extensionText, item.viewed ? styles.signStatusViewedText : styles.signStatusStudyText]}>
+              {item.viewed ? t('roadsigns.viewed') : t('roadsigns.studyLabel')}
+            </Text>
+          </View>
+          <Text style={styles.openText}>{t('roadsigns.viewDetails')}</Text>
+        </View>
+      </View>
+      <View style={styles.cardArrow}>
+        <Ionicons name="arrow-forward" size={17} color={colors.inkSoft} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function RoadSignDetailModal({
+  visible,
+  item,
+  current,
+  total,
+  imageFailed,
+  onClose,
+  onImageError,
+  onPrevious,
+  onNext,
+}: {
+  visible: boolean;
+  item: RoadSignStudyItem | null;
+  current: number;
+  total: number;
+  imageFailed: boolean;
+  onClose: () => void;
+  onImageError: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const { t } = useI18n();
+  const touchStartX = useRef<number | null>(null);
+  if (!item) return null;
+
+  const canGoPrevious = current > 1;
+  const canGoNext = current < total;
+  const handleSwipeEnd = (x: number) => {
+    const start = touchStartX.current;
+    touchStartX.current = null;
+    if (start == null) return;
+    const delta = x - start;
+    if (Math.abs(delta) < 44) return;
+    if (delta < 0 && canGoNext) onNext();
+    if (delta > 0 && canGoPrevious) onPrevious();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View
+          style={styles.detailSheet}
+          onTouchStart={(event) => {
+            touchStartX.current = event.nativeEvent.pageX;
+          }}
+          onTouchEnd={(event) => handleSwipeEnd(event.nativeEvent.pageX)}
+        >
+          <View style={styles.detailHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose} accessibilityLabel={t('common.cancel')}>
+              <Ionicons name="close" size={22} color={colors.inkMuted} />
+            </TouchableOpacity>
+            <Text style={styles.detailCounter}>{t('roadsigns.positionShort', { current, total })}</Text>
+            <View style={styles.closeButtonSpacer} />
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
+            <View style={styles.detailBadgeRow}>
+              <Text style={styles.detailEyebrow}>{t('roadsigns.studyLabel')}</Text>
+              <View style={[styles.detailViewedBadge, item.viewed ? styles.detailViewedBadgeDone : styles.detailViewedBadgeTodo]}>
+                <Ionicons
+                  name={item.viewed ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={13}
+                  color={item.viewed ? colors.success : colors.brand}
+                />
+                <Text style={[styles.detailViewedText, item.viewed ? styles.detailViewedTextDone : styles.detailViewedTextTodo]}>
+                  {item.viewed ? t('roadsigns.viewed') : t('roadsigns.studyLabel')}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.detailTitle}>{item.name}</Text>
+
+            <View style={styles.detailImageFrame}>
+              {imageFailed ? (
+                <View style={styles.detailImageError}>
+                  <Ionicons name="image-outline" size={34} color={colors.inkSoft} />
+                  <Text style={styles.imageErrorText}>{t('roadsigns.imageError')}</Text>
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.detailImage}
+                  resizeMode="contain"
+                  onError={onImageError}
+                  accessibilityLabel={item.name}
+                />
+              )}
+            </View>
+
+            <View style={styles.descriptionCard}>
+              <Text style={styles.meaningLabel}>{t('roadsigns.meaning')}</Text>
+              <Text style={styles.description}>{item.description}</Text>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.floatingNavButton, styles.floatingNavLeft, !canGoPrevious && styles.floatingNavDisabled]}
+            onPress={onPrevious}
+            disabled={!canGoPrevious}
+            accessibilityLabel={t('roadsigns.previous')}
+          >
+            <Ionicons name="chevron-back" size={24} color={canGoPrevious ? colors.brand : colors.inkSoft} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.floatingNavButton, styles.floatingNavRight, !canGoNext && styles.floatingNavDisabled]}
+            onPress={onNext}
+            disabled={!canGoNext}
+            accessibilityLabel={t('roadsigns.next')}
+          >
+            <Ionicons name="chevron-forward" size={24} color={canGoNext ? colors.brand : colors.inkSoft} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+export function ReadingNativeScreen({ navigation, route }: ReadProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
   const { accessToken } = useAuth();
@@ -113,9 +283,16 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
     isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
+  const [activeTab, setActiveTab] = useState<ReadTab>(route.params?.initialTab ?? 'documents');
   const [pdfs, setPdfs] = useState<PdfItem[]>([]);
   const [pdfSourceLanguage, setPdfSourceLanguage] = useState<typeof contentLanguage | null>(null);
   const [usedPdfFallback, setUsedPdfFallback] = useState(false);
+  const [roadSigns, setRoadSigns] = useState<RoadSignStudyItem[]>([]);
+  const [roadSignsLoading, setRoadSignsLoading] = useState(false);
+  const [roadSignsError, setRoadSignsError] = useState<string | null>(null);
+  const [failedRoadSignImages, setFailedRoadSignImages] = useState<Record<string, boolean>>({});
+  const [selectedRoadSignIndex, setSelectedRoadSignIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,9 +331,33 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
     }
   }, [accessToken, contentLanguage, subscriptionLanguage, t]);
 
+  const loadRoadSigns = useCallback(async () => {
+    if (!accessToken) return;
+    setRoadSignsLoading(true);
+    setRoadSignsError(null);
+    try {
+      const result = await getRoadSigns(
+        accessToken,
+        contentLanguage,
+        subscriptionLanguage && subscriptionLanguage !== contentLanguage ? [subscriptionLanguage] : [],
+      );
+      setRoadSigns(result.items);
+      setSelectedRoadSignIndex(null);
+      setFailedRoadSignImages({});
+    } catch (loadError) {
+      if (__DEV__) console.warn('[Reading] road signs load failed', loadError);
+      setRoadSignsError(t('roadsigns.loadError'));
+    } finally {
+      setRoadSignsLoading(false);
+    }
+  }, [accessToken, contentLanguage, subscriptionLanguage, t]);
+
   useEffect(() => {
-    if (languageAccessGranted && accessToken) void loadPdfs();
-  }, [accessToken, languageAccessGranted, loadPdfs]);
+    if (languageAccessGranted && accessToken) {
+      void loadPdfs();
+      void loadRoadSigns();
+    }
+  }, [accessToken, languageAccessGranted, loadPdfs, loadRoadSigns]);
 
   useEffect(() => {
     if (!languageAccessGranted && !isSigningOut) {
@@ -164,9 +365,62 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
     }
   }, [isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+      setSearchQuery('');
+    }
+  }, [route.params?.initialTab]);
+
   const languageDocuments = useMemo(() => pdfs, [pdfs]);
+  const filteredDocuments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return languageDocuments;
+    return languageDocuments.filter((item, index) => {
+      const title = pdfLabel(item, index, t('reading.documentFallback')).toLowerCase();
+      const extension = pdfExtension(item).toLowerCase();
+      return title.includes(query) || extension.includes(query);
+    });
+  }, [languageDocuments, searchQuery, t]);
+  const filteredRoadSigns = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return roadSigns;
+    return roadSigns.filter((item) => item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
+  }, [roadSigns, searchQuery]);
   const languageLabel = t(`profile.lang.${contentLanguage}`);
   const sourceLanguageLabel = pdfSourceLanguage ? t(`profile.lang.${pdfSourceLanguage}`) : languageLabel;
+  const activeSearchPlaceholder = activeTab === 'documents' ? t('reading.searchDocuments') : t('reading.searchRoadSigns');
+  const selectedRoadSign = selectedRoadSignIndex === null ? null : roadSigns[selectedRoadSignIndex] ?? null;
+
+  const markRoadSignAsViewed = useCallback(
+    (item: RoadSignStudyItem | undefined) => {
+      if (!accessToken || !item || item.viewed) return;
+      setRoadSigns((current) => current.map((sign) => (sign.id === item.id ? { ...sign, viewed: true } : sign)));
+      void markRoadSignViewed(accessToken, item.id).catch(() => {
+        setRoadSigns((current) => current.map((sign) => (sign.id === item.id ? { ...sign, viewed: false } : sign)));
+      });
+    },
+    [accessToken],
+  );
+
+  const openRoadSign = useCallback(
+    (item: RoadSignStudyItem) => {
+      const index = roadSigns.findIndex((sign) => sign.id === item.id);
+      if (index < 0) return;
+      setSelectedRoadSignIndex(index);
+      markRoadSignAsViewed(roadSigns[index]);
+    },
+    [markRoadSignAsViewed, roadSigns],
+  );
+
+  const goToRoadSign = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= roadSigns.length) return;
+      setSelectedRoadSignIndex(index);
+      markRoadSignAsViewed(roadSigns[index]);
+    },
+    [markRoadSignAsViewed, roadSigns],
+  );
 
   return (
     <ScreenColumn backgroundColor={colors.brandStrong}>
@@ -182,47 +436,59 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <View style={styles.introRow}>
-            <View style={styles.introCopy}>
-              <Text style={styles.pageTitle}>{t('reading.libraryTitle')}</Text>
-              <Text style={styles.pageSubtitle}>{t('reading.librarySubtitle')}</Text>
-            </View>
-            <View style={styles.languageBadge}>
-              <Ionicons name="language-outline" size={16} color={colors.brandStrong} />
-              <Text style={styles.languageText}>{languageLabel}</Text>
-            </View>
+          <View style={styles.tabsWrap}>
+            <ReadSectionTabs
+              active={activeTab}
+              documentsLabel={t('reading.pdfSection')}
+              signsLabel={t('reading.roadSigns')}
+              documentsCount={languageDocuments.length}
+              signsCount={roadSigns.length}
+              onDocumentsPress={() => {
+                setActiveTab('documents');
+                setSearchQuery('');
+              }}
+              onSignsPress={() => {
+                setActiveTab('signs');
+                setSearchQuery('');
+              }}
+            />
           </View>
 
-          <TouchableOpacity
-            style={styles.featureCard}
-            onPress={() => navigation.navigate('RoadSignsNative')}
-            activeOpacity={0.86}
-          >
-            <View style={styles.featureIcon}>
-              <Ionicons name="warning-outline" size={28} color={colors.amber} />
-            </View>
-            <View style={styles.featureCopy}>
-              <Text style={styles.featureEyebrow}>{t('reading.study')}</Text>
-              <Text style={styles.featureTitle}>{t('reading.roadSigns')}</Text>
-              <Text style={styles.featureBody}>{t('reading.roadSignsSubtitle')}</Text>
-            </View>
-            <View style={styles.featureArrow}>
-              <Ionicons name="arrow-forward" size={19} color={colors.ink} />
-            </View>
-          </TouchableOpacity>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={17} color={colors.inkSoft} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={activeSearchPlaceholder}
+              placeholderTextColor={colors.inkSoft}
+              style={styles.searchInput}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {searchQuery.trim() ? (
+              <TouchableOpacity style={styles.clearSearch} onPress={() => setSearchQuery('')} accessibilityLabel={t('common.cancel')}>
+                <Ionicons name="close" size={16} color={colors.inkMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
           <View style={styles.section}>
-            <SectionHeading title={t('reading.pdfSection')} />
+            <SectionHeading title={activeTab === 'documents' ? t('reading.pdfSection') : t('reading.roadSigns')} />
             <Text style={styles.sectionSupport}>
-              {t('reading.documentCount', {
-                count: error ? 0 : languageDocuments.length,
-                label:
-                  !error && languageDocuments.length === 1
-                    ? t('reading.documentSingular')
-                    : t('reading.documentPlural'),
-              })}
+              {activeTab === 'documents'
+                ? t('reading.documentCount', {
+                    count: error ? 0 : filteredDocuments.length,
+                    label:
+                      !error && filteredDocuments.length === 1
+                        ? t('reading.documentSingular')
+                        : t('reading.documentPlural'),
+                  })
+                : t('roadsigns.signCount', {
+                    count: roadSignsError ? 0 : filteredRoadSigns.length,
+                    label: filteredRoadSigns.length === 1 ? t('roadsigns.signSingular') : t('roadsigns.signPlural'),
+                  })}
             </Text>
-            {!loading && !error && usedPdfFallback ? (
+            {activeTab === 'documents' && !loading && !error && usedPdfFallback ? (
               <Text style={styles.fallbackNotice}>
                 {t('reading.languageFallback', {
                   requested: languageLabel,
@@ -232,22 +498,27 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
             ) : null}
           </View>
 
-          {loading ? (
+          {activeTab === 'documents' && loading ? (
             <LoadingState message={t('reading.loadingDocuments')} />
-          ) : error ? (
+          ) : activeTab === 'documents' && error ? (
             <InlineErrorState
               title={t('reading.languageUnavailableTitle')}
               message={error}
               onRetry={() => void loadPdfs()}
             />
-          ) : languageDocuments.length === 0 ? (
+          ) : activeTab === 'documents' && languageDocuments.length === 0 ? (
             <EmptyState
               title={t('reading.pdfEmpty')}
               message={t('reading.libraryEmptyHint')}
             />
-          ) : (
+          ) : activeTab === 'documents' && filteredDocuments.length === 0 ? (
+            <EmptyState
+              title={t('reading.searchEmptyTitle')}
+              message={t('reading.searchEmptyBody')}
+            />
+          ) : activeTab === 'documents' ? (
             <View style={styles.documentList}>
-              {languageDocuments.map((document, index) => (
+              {filteredDocuments.map((document, index) => (
                 <DocumentCard
                   key={document._id ?? `document-${index}`}
                   item={document}
@@ -267,8 +538,47 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
                 />
               ))}
             </View>
+          ) : roadSignsLoading ? (
+            <LoadingState message={t('roadsigns.loading')} />
+          ) : roadSignsError ? (
+            <InlineErrorState
+              title={t('roadsigns.errorTitle')}
+              message={roadSignsError}
+              onRetry={() => void loadRoadSigns()}
+            />
+          ) : roadSigns.length === 0 ? (
+            <EmptyState title={t('roadsigns.emptyTitle')} message={t('roadsigns.emptyBody')} />
+          ) : filteredRoadSigns.length === 0 ? (
+            <EmptyState title={t('reading.searchEmptyTitle')} message={t('reading.searchEmptyBody')} />
+          ) : (
+            <View style={styles.inlineSignsGrid}>
+              {filteredRoadSigns.map((item) => (
+                <InlineRoadSignCard
+                  key={item.id}
+                  item={item}
+                  imageFailed={failedRoadSignImages[item.id] === true}
+                  onImageError={() => setFailedRoadSignImages((current) => ({ ...current, [item.id]: true }))}
+                  onPress={() => openRoadSign(item)}
+                />
+              ))}
+            </View>
           )}
         </ScrollView>
+
+        <RoadSignDetailModal
+          visible={selectedRoadSign !== null}
+          item={selectedRoadSign}
+          current={(selectedRoadSignIndex ?? 0) + 1}
+          total={roadSigns.length}
+          imageFailed={selectedRoadSign ? failedRoadSignImages[selectedRoadSign.id] === true : false}
+          onClose={() => setSelectedRoadSignIndex(null)}
+          onImageError={() => {
+            if (!selectedRoadSign) return;
+            setFailedRoadSignImages((current) => ({ ...current, [selectedRoadSign.id]: true }));
+          }}
+          onPrevious={() => goToRoadSign((selectedRoadSignIndex ?? 0) - 1)}
+          onNext={() => goToRoadSign((selectedRoadSignIndex ?? 0) + 1)}
+        />
       </View>
 
       <BottomNavBar navigation={navigation} />
@@ -354,14 +664,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxl,
     paddingHorizontal: spacing.xl,
   },
-  introRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  introCopy: {
-    flex: 1,
-  },
   pageTitle: {
     ...typography.heading,
     color: colors.ink,
@@ -371,68 +673,38 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     color: colors.inkMuted,
   },
-  languageBadge: {
-    minHeight: 36,
+  tabsWrap: {
+    marginTop: 0,
+  },
+  searchBox: {
+    minHeight: 48,
+    marginTop: spacing.md,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.brandSoft,
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  languageText: {
-    ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: colors.brandStrong,
-  },
-  featureCard: {
-    minHeight: 150,
-    marginTop: spacing.xxl,
-    padding: spacing.xl,
-    overflow: 'hidden',
-    borderRadius: radii.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.ink,
-    ...shadows.card,
-  },
-  featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-  featureCopy: {
+  searchInput: {
+    ...typography.body,
     flex: 1,
-    marginHorizontal: spacing.lg,
+    minHeight: 44,
+    color: colors.ink,
+    padding: 0,
   },
-  featureEyebrow: {
-    ...typography.eyebrow,
-    color: colors.amber,
-    textTransform: 'uppercase',
-  },
-  featureTitle: {
-    ...typography.title,
-    marginTop: spacing.xs,
-    color: colors.white,
-  },
-  featureBody: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-    color: '#C4CEDD',
-  },
-  featureArrow: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  clearSearch: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.amber,
+    backgroundColor: colors.surfaceAlt,
   },
   section: {
-    marginTop: spacing.xxxl,
+    marginTop: spacing.xl,
   },
   sectionSupport: {
     ...typography.caption,
@@ -450,8 +722,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   documentCard: {
-    minHeight: 92,
-    padding: spacing.md,
+    minHeight: 90,
+    padding: spacing.lg,
     borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,9 +732,9 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   fileIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 50,
+    height: 50,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -503,6 +775,214 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceAlt,
+  },
+  inlineSignsGrid: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  inlineSignCard: {
+    minHeight: 98,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  inlineSignImageFrame: {
+    width: 58,
+    height: 58,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  inlineSignImage: {
+    width: '92%',
+    height: '92%',
+  },
+  inlineSignImageError: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineSignCopy: {
+    flex: 1,
+    marginHorizontal: spacing.md,
+  },
+  inlineSignTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  inlineSignBody: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+  },
+  signStatusViewed: {
+    backgroundColor: colors.successSoft,
+  },
+  signStatusStudy: {
+    backgroundColor: colors.brandSoft,
+  },
+  signStatusViewedText: {
+    color: colors.success,
+  },
+  signStatusStudyText: {
+    color: colors.brand,
+  },
+  modalBackdrop: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(23, 34, 56, 0.46)',
+  },
+  detailSheet: {
+    maxHeight: '86%',
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    overflow: 'visible',
+  },
+  detailHeader: {
+    height: 52,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonSpacer: {
+    width: 40,
+    height: 40,
+  },
+  detailCounter: {
+    ...typography.bodyStrong,
+    color: colors.inkMuted,
+  },
+  detailContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  detailBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailEyebrow: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  detailViewedBadge: {
+    minHeight: 24,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailViewedBadgeDone: {
+    backgroundColor: colors.successSoft,
+  },
+  detailViewedBadgeTodo: {
+    backgroundColor: colors.brandSoft,
+  },
+  detailViewedText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 10,
+  },
+  detailViewedTextDone: {
+    color: colors.success,
+  },
+  detailViewedTextTodo: {
+    color: colors.brand,
+  },
+  detailTitle: {
+    marginTop: spacing.sm,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 20,
+    lineHeight: 27,
+    color: colors.ink,
+  },
+  detailImageFrame: {
+    height: 260,
+    marginTop: spacing.md,
+    borderRadius: radii.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceAlt,
+  },
+  detailImage: {
+    width: '92%',
+    height: '92%',
+  },
+  detailImageError: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  imageErrorText: {
+    marginTop: spacing.sm,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    color: colors.inkMuted,
+    textAlign: 'center',
+  },
+  descriptionCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  meaningLabel: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 10,
+    color: colors.brand,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  description: {
+    marginTop: spacing.sm,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.inkMuted,
+  },
+  floatingNavButton: {
+    position: 'absolute',
+    top: '45%',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  floatingNavLeft: {
+    left: -16,
+  },
+  floatingNavRight: {
+    right: -16,
+  },
+  floatingNavDisabled: {
+    opacity: 0.45,
   },
   stateCard: {
     minHeight: 200,

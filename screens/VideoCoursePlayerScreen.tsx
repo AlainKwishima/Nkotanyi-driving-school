@@ -4,6 +4,7 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +25,7 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { extractYouTubeId } from '../utils/videoLinks';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VideoCoursePlayer'>;
@@ -35,12 +37,6 @@ type VideoEntry = {
   thumbUri?: string;
   duration?: string;
 };
-
-function getYoutubeId(url: string | undefined): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^"&?/\s]{11})/i);
-  return match?.[1] ?? null;
-}
 
 type SmartPlayerProps = {
   url: string | undefined;
@@ -62,7 +58,7 @@ function MediaPlaceholder({ compact = false }: { compact?: boolean }) {
 
 function SmartVideoPlayer({ url, thumbUri, active, onError }: SmartPlayerProps) {
   const [loading, setLoading] = useState(Boolean(url));
-  const ytId = getYoutubeId(url);
+  const ytId = extractYouTubeId(url);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useVideoPlayer(ytId || !url ? null : { uri: url }, (instance) => {
     instance.loop = false;
@@ -156,7 +152,7 @@ function SmartVideoPlayer({ url, thumbUri, active, onError }: SmartPlayerProps) 
           }}
           onChangeState={(state: string) => {
             if (state === 'buffering') setLoading(true);
-            if (state === 'playing') {
+            if (state === 'playing' || state === 'paused' || state === 'video_cued') {
               clearTimer();
               setLoading(false);
             }
@@ -199,6 +195,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
       ? allVideos[currentIndex] ?? allVideos[0]
       : { title: route.params?.title, videoUrl: route.params?.videoUrl };
   const title = current.title ?? t('video.playerTitle');
+  const playerKey = `${current._id ?? current.videoUrl ?? title}:${currentIndex}`;
   const playlist = allVideos
     .map((video, index) => ({ video, index }))
     .filter(({ index }) => index !== currentIndex);
@@ -268,9 +265,22 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                   <Ionicons name="refresh" size={17} color={colors.white} />
                   <Text style={styles.retryText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
+                {unavailableInApp && current.videoUrl ? (
+                  <TouchableOpacity
+                    style={[styles.retryButton, styles.externalButton]}
+                    onPress={() => {
+                      Linking.openURL(current.videoUrl ?? '').catch(() => undefined);
+                    }}
+                    activeOpacity={0.82}
+                  >
+                    <Ionicons name="open-outline" size={17} color={colors.white} />
+                    <Text style={styles.retryText}>{t('video.openExternal')}</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ) : (
               <SmartVideoPlayer
+                key={playerKey}
                 url={current.videoUrl}
                 thumbUri={current.thumbUri}
                 active={isFocused}
@@ -507,6 +517,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.brand,
+  },
+  externalButton: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.inkMuted,
   },
   retryText: {
     ...typography.bodyStrong,

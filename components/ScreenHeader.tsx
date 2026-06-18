@@ -15,11 +15,14 @@ export function ScreenHeader({ title, onBack }: ScreenHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
-      <Pressable onPress={onBack} style={styles.back} disabled={!onBack} hitSlop={8}>
-        {onBack ? <Ionicons name="chevron-back" size={24} color={colors.ink} /> : null}
-      </Pressable>
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.backSpacer} />
+      <View style={styles.row}>
+        <Pressable onPress={onBack} style={styles.back} disabled={!onBack} hitSlop={8}>
+          {onBack ? <Ionicons name="chevron-back" size={24} color={colors.white} /> : null}
+        </Pressable>
+        <Text style={styles.title}>{title}</Text>
+        <View style={styles.backSpacer} />
+      </View>
+      <View style={styles.curveOverlay} />
     </View>
   );
 }
@@ -29,10 +32,21 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 52,
     paddingHorizontal: spacing.lg,
-    paddingBottom: 8,
+    backgroundColor: colors.brandStrong,
+  },
+  row: {
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingBottom: spacing.xs,
+  },
+  curveOverlay: {
+    height: 30,
+    marginHorizontal: -spacing.lg,
+    marginTop: spacing.xs,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     backgroundColor: colors.canvas,
   },
   back: {
@@ -48,7 +62,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.title,
     fontSize: 17,
-    color: colors.ink,
+    color: colors.white,
     textTransform: 'capitalize',
   },
 });

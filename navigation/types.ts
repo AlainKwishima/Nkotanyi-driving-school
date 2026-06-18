@@ -62,8 +62,7 @@ export type RootStackParamList = {
         }>;
       }
     | undefined;
-  ReadingNative: undefined;
-  RoadSignsNative: undefined;
+  ReadingNative: { initialTab?: 'documents' | 'signs' } | undefined;
   HelpCenterNative: undefined;
   SubscriptionNative: undefined;
   PaymentNative:

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
@@ -11,7 +11,7 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { useI18n } from '../i18n/useI18n';
-import { colors, radii, shadows, spacing, typography } from '../constants/theme';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamTypeSelectNative'>;
 
@@ -28,7 +28,6 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
       subtitle: t('examType.mixed.subtitle'),
       description: t('examType.mixed.desc'),
       badge: t('examType.mixed.badge'),
-      icon: 'file-question-outline' as const,
       color: colors.brand,
       background: colors.brandSoft,
     },
@@ -38,9 +37,8 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
       subtitle: t('examType.signs.subtitle'),
       description: t('examType.signs.desc'),
       badge: t('examType.signs.badge'),
-      icon: 'sign-caution' as const,
-      color: '#A55F1D',
-      background: colors.amberSoft,
+      color: colors.success,
+      background: colors.successSoft,
     },
   ];
 
@@ -68,44 +66,40 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <View style={styles.infoCard}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.brandStrong} />
-            <Text style={styles.infoText}>{t('examType.info')}</Text>
-          </View>
+          <View style={styles.selectorPanel}>
+            <View style={styles.panelHeader}>
+              <Text style={styles.panelTitle}>{t('examType.subtitle')}</Text>
+              <Text style={styles.panelBody}>{t('examType.info')}</Text>
+            </View>
 
-          {examTypes.map((type) => (
-            <TouchableOpacity
-              key={type.mode}
-              style={styles.examCard}
-              onPress={() => selectExam(type.mode)}
-              activeOpacity={0.86}
-            >
-              <View style={[styles.accent, { backgroundColor: type.color }]} />
-              <View style={styles.cardContent}>
-                <View style={styles.cardTop}>
-                  <View style={[styles.typeIcon, { backgroundColor: type.background }]}>
-                    <MaterialCommunityIcons name={type.icon} size={28} color={type.color} />
+            <View style={styles.choiceList}>
+              {examTypes.map((type, index) => (
+                <TouchableOpacity
+                  key={type.mode}
+                  style={[styles.choiceRow, index === 0 ? styles.choiceRowPrimary : styles.choiceRowSecondary]}
+                  onPress={() => selectExam(type.mode)}
+                  activeOpacity={0.86}
+                >
+                  <View style={styles.choiceMain}>
+                    <View style={styles.choiceTitleLine}>
+                      <Text style={[styles.choiceTitle, index === 0 && styles.choiceTitlePrimary]}>{type.title}</Text>
+                      <Text style={[styles.choiceBadge, { color: type.color, backgroundColor: type.background }]}>
+                        {type.badge}
+                      </Text>
+                    </View>
+                    <Text style={[styles.choiceSubtitle, index === 0 && styles.choiceTextOnPrimary]}>{type.subtitle}</Text>
+                    <Text style={[styles.choiceDescription, index === 0 && styles.choiceTextOnPrimary]}>
+                      {type.description}
+                    </Text>
                   </View>
-                  <View style={[styles.badge, { backgroundColor: type.background }]}>
-                    <Text style={[styles.badgeText, { color: type.color }]}>{type.badge}</Text>
-                  </View>
-                </View>
-                <Text style={styles.cardTitle}>{type.title}</Text>
-                <Text style={styles.cardSubtitle}>{type.subtitle}</Text>
-                <Text style={styles.cardBody}>{type.description}</Text>
-                <View style={styles.startRow}>
-                  <Text style={[styles.startText, { color: type.color }]}>{t('examType.start')}</Text>
-                  <View style={[styles.startArrow, { backgroundColor: type.background }]}>
-                    <Ionicons name="arrow-forward" size={17} color={type.color} />
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+                  <Ionicons name="arrow-forward" size={19} color={index === 0 ? colors.white : colors.brandStrong} />
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          <View style={styles.hint}>
-            <Ionicons name="shield-checkmark-outline" size={17} color={colors.green} />
-            <Text style={styles.hintText}>{t('examType.hint')}</Text>
+            <View style={styles.footerNote}>
+              <Text style={styles.footerText}>{hasSubscription ? t('examType.subtitle') : t('examType.hint')}</Text>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -120,103 +114,99 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
   },
-  infoCard: {
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    backgroundColor: colors.brandSoft,
-  },
-  infoText: {
-    ...typography.body,
-    flex: 1,
-    color: colors.brandStrong,
-  },
-  examCard: {
-    minHeight: 245,
-    marginTop: spacing.xl,
+  selectorPanel: {
     overflow: 'hidden',
     borderRadius: radii.xl,
-    flexDirection: 'row',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    ...shadows.card,
   },
-  accent: {
-    width: 6,
+  panelHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.brand,
   },
-  cardContent: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  typeIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-  },
-  badgeText: {
-    ...typography.caption,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-  },
-  cardTitle: {
+  panelTitle: {
     ...typography.title,
-    marginTop: spacing.lg,
-    color: colors.ink,
+    color: colors.white,
   },
-  cardSubtitle: {
+  panelBody: {
     ...typography.caption,
-    marginTop: 2,
-    color: colors.inkSoft,
+    marginTop: spacing.xs,
+    color: '#DCE8FF',
   },
-  cardBody: {
-    ...typography.body,
-    marginTop: spacing.md,
-    color: colors.inkMuted,
+  choiceList: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
-  startRow: {
-    marginTop: 'auto',
-    paddingTop: spacing.lg,
+  choiceRow: {
+    minHeight: 132,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
+    borderWidth: 1,
   },
-  startText: {
-    ...typography.bodyStrong,
+  choiceRowPrimary: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
-  startArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  choiceRowSecondary: {
+    backgroundColor: colors.white,
+    borderColor: colors.line,
   },
-  hint: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.sm,
+  choiceMain: {
+    flex: 1,
+  },
+  choiceTitleLine: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
-  hintText: {
-    ...typography.caption,
+  choiceTitle: {
+    ...typography.title,
     flex: 1,
+    color: colors.ink,
+  },
+  choiceTitlePrimary: {
+    color: colors.white,
+  },
+  choiceBadge: {
+    ...typography.caption,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+  },
+  choiceSubtitle: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkSoft,
+  },
+  choiceDescription: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: colors.inkMuted,
+  },
+  choiceTextOnPrimary: {
+    color: '#DCE8FF',
+  },
+  footerNote: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  footerText: {
+    ...typography.caption,
     color: colors.inkMuted,
   },
 });

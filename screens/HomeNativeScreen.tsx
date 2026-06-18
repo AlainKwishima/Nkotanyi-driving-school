@@ -23,7 +23,7 @@ import { getPdfs, getVideos, type PdfItem, type VideoItem } from '../services/co
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HomeNative'>;
-type LearningRoute = 'ExamInstructionsNative' | 'ReadingNative' | 'RoadSignsNative' | 'VideoCourseList';
+type LearningRoute = 'ExamInstructionsNative' | 'ReadingNative' | 'RoadSigns' | 'VideoCourseList';
 
 type LearningPath = {
   route: LearningRoute;
@@ -52,7 +52,7 @@ const LEARNING_PATHS: LearningPath[] = [
     background: colors.amberSoft,
   },
   {
-    route: 'RoadSignsNative',
+    route: 'RoadSigns',
     titleKey: 'home.action.roadSigns',
     subtitleKey: 'home.action.roadSignsSub',
     icon: 'sign-caution',
@@ -165,6 +165,10 @@ export function HomeNativeScreen({ navigation }: Props) {
       openGateModal(route === 'VideoCourseList' ? 'subscription_watch' : 'subscription_read', () =>
         navigation.navigate('SubscriptionNative'),
       );
+      return;
+    }
+    if (route === 'RoadSigns') {
+      navigation.navigate('ReadingNative', { initialTab: 'signs' });
       return;
     }
     navigation.navigate(route);

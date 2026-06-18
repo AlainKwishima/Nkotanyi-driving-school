@@ -15,9 +15,10 @@ type AppHeaderProps = {
   eyebrow?: string;
   left?: React.ReactNode;
   right?: React.ReactNode;
+  curveColor?: string;
 };
 
-export function AppHeader({ title, navigation, onBack, left, right }: AppHeaderProps) {
+export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas }: AppHeaderProps) {
   const { insets } = useResponsiveLayout();
 
   return (
@@ -43,6 +44,7 @@ export function AppHeader({ title, navigation, onBack, left, right }: AppHeaderP
           {right ?? (navigation ? <HeaderMenu navigation={navigation} iconColor={colors.white} topOffset={52} rightOffset={18} /> : null)}
         </View>
       </View>
+      <View style={[styles.curveOverlay, { backgroundColor: curveColor }]} />
     </View>
   );
 }
@@ -50,13 +52,20 @@ export function AppHeader({ title, navigation, onBack, left, right }: AppHeaderP
 const styles = StyleSheet.create({
   root: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
     backgroundColor: colors.brandStrong,
   },
   row: {
     minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingBottom: spacing.xs,
+  },
+  curveOverlay: {
+    height: 30,
+    marginHorizontal: -spacing.lg,
+    marginTop: spacing.xs,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
   },
   side: {
     width: 44,

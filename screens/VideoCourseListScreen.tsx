@@ -17,13 +17,27 @@ import { getVideos, type VideoItem } from '../services/contentApi';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { normalizeHttpUrl, youtubeThumbnailUrl } from '../utils/videoLinks';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VideoCourseList'>;
 
 function videoUrlFromItem(video: VideoItem): string | undefined {
-  const value = video.video ?? video.videoURL ?? video.url ?? video.link;
-  return typeof value === 'string' && value.startsWith('http') ? value : undefined;
+  return normalizeHttpUrl(
+    video.video ??
+      video.videoURL ??
+      video.videoUrl ??
+      video.url ??
+      video.link ??
+      video.videoLink ??
+      video.video_link ??
+      video.youtubeUrl ??
+      video.youtubeURL ??
+      video.embedUrl ??
+      video.embedURL ??
+      video.fileUrl ??
+      video.fileURL,
+  );
 }
 
 function titleFromItem(
@@ -35,11 +49,9 @@ function titleFromItem(
 }
 
 function thumbnailFromItem(video: VideoItem): string | undefined {
-  const value = video.thumbnail ?? video.thumbnailURL ?? video.imageURL;
-  if (typeof value === 'string' && value.startsWith('http')) return value;
-  const source = video.video ?? video.videoURL ?? video.url ?? video.link ?? '';
-  const match = source.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^"&?/\s]{11})/i);
-  return match?.[1] ? `https://i.ytimg.com/vi/${match[1]}/hqdefault.jpg` : undefined;
+  const value = normalizeHttpUrl(video.thumbnail ?? video.thumbnailURL ?? video.thumbnailUrl ?? video.imageURL ?? video.imageUrl);
+  if (value) return value;
+  return youtubeThumbnailUrl(videoUrlFromItem(video));
 }
 
 function durationFromItem(video: VideoItem): string | undefined {
