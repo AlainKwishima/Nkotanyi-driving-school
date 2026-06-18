@@ -64,6 +64,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
+    // Some ibyapa endpoints still read the legacy `token` header used by the web app.
+    headers.token = `Bearer ${accessToken}`;
   }
 
   const controller = new AbortController();

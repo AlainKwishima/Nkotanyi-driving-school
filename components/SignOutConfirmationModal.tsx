@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../i18n/useI18n';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 interface SignOutConfirmationModalProps {
   visible: boolean;
@@ -27,7 +28,7 @@ export function SignOutConfirmationModal({
         <View style={styles.modalContainer}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.iconContainer}>
-              <Ionicons name="log-out-outline" size={32} color="#EF4444" />
+              <Ionicons name="log-out-outline" size={30} color={colors.red} />
             </View>
             
             <Text style={styles.title}>{t('auth.signOutConfirmTitle')}</Text>
@@ -70,36 +71,30 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    ...shadows.floating,
   },
   iconContainer: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.redSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   title: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#1E293B',
+    ...typography.title,
+    color: colors.ink,
     marginBottom: 8,
     textAlign: 'center',
   },
   message: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 15,
-    color: '#64748B',
+    ...typography.body,
+    color: colors.inkMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -107,29 +102,31 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     width: '100%',
-    gap: 12,
+    gap: spacing.md,
   },
   button: {
     flex: 1,
     height: 48,
-    borderRadius: 14,
+    borderRadius: radii.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   cancelButtonText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
-    color: '#475569',
+    color: colors.inkMuted,
   },
   confirmButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.red,
   },
   confirmButtonText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

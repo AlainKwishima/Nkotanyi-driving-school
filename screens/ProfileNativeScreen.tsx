@@ -4,132 +4,146 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
-import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { AppHeader } from '../components/AppHeader';
+import { SectionHeading } from '../components/SectionHeading';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
 import { SignOutConfirmationModal } from '../components/SignOutConfirmationModal';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileNative'>;
-
-function BottomTabs({ navigation }: { navigation: Props['navigation'] }) {
-  return <BottomNavBar navigation={navigation} />;
-}
 
 function AccountRow({
   icon,
   label,
   value,
+  onPress,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
   value: string;
+  onPress?: () => void;
 }) {
-  return (
+  const content = (
     <View style={styles.accountRow}>
       <View style={styles.accountIconBox}>
-        <Ionicons name={icon} size={24} color="#1F2B5A" />
+        <Ionicons name={icon} size={21} color={colors.brandStrong} />
       </View>
       <View style={styles.accountTextWrap}>
         <Text style={styles.accountLabel}>{label}</Text>
         <Text style={styles.accountValue}>{value}</Text>
       </View>
+      {onPress ? <Ionicons name="chevron-forward" size={19} color={colors.inkSoft} /> : null}
     </View>
   );
+
+  return onPress ? (
+    <TouchableOpacity activeOpacity={0.78} onPress={onPress}>
+      {content}
+    </TouchableOpacity>
+  ) : content;
 }
 
 export function ProfileNativeScreen({ navigation }: Props) {
   const { hasSubscription, contentLanguage } = useAppFlow();
-  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const { tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
-  const langLabel = t(`profile.lang.${contentLanguage}`);
   const { name, phone, logout } = useAuth();
   const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
+  const langLabel = t(`profile.lang.${contentLanguage}`);
+  const initials = (name ?? 'N')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-          <View style={styles.headerRight}>
-            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
-          </View>
-        </View>
-      </View>
+    <ScreenColumn>
+      <AppHeader title={t('profile.title')} navigation={navigation} onBack={() => navigation.goBack()} />
 
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>{t('profile.myAccount')}</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>{t('profile.edit')}</Text>
-            </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.identityCard}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials || 'N'}</Text>
+            </View>
+            <View style={styles.identityCopy}>
+              <Text style={styles.identityName}>{name ?? t('profile.myAccount')}</Text>
+              <Text style={styles.identityPhone}>{phone ?? t('common.na')}</Text>
+            </View>
+            <View style={[styles.planPill, hasSubscription ? styles.planPillActive : styles.planPillInactive]}>
+              <View style={[styles.planDot, hasSubscription ? styles.planDotActive : styles.planDotInactive]} />
+              <Text style={[styles.planPillText, hasSubscription ? styles.planPillTextActive : styles.planPillTextInactive]}>
+                {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
+              </Text>
+            </View>
           </View>
 
+          <SectionHeading title={t('profile.myAccount')} />
           <View style={styles.accountCard}>
-            <AccountRow icon="person-outline" label={t('profile.fullName').toUpperCase()} value={name ?? '—'} />
-            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}>
-              <AccountRow icon="globe-outline" label={t('profile.language').toUpperCase()} value={langLabel} />
-            </TouchableOpacity>
-            <AccountRow icon="call-outline" label={t('profile.phone').toUpperCase()} value={phone ?? '—'} />
+            <AccountRow icon="person-outline" label={t('profile.fullName')} value={name ?? t('common.na')} />
+            <View style={styles.divider} />
+            <AccountRow
+              icon="globe-outline"
+              label={t('profile.language')}
+              value={langLabel}
+              onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}
+            />
+            <View style={styles.divider} />
+            <AccountRow icon="call-outline" label={t('profile.phone')} value={phone ?? t('common.na')} />
           </View>
 
-          <View style={[styles.sectionHead, styles.paymentHead]}>
-            <Text style={styles.sectionTitle}>{t('profile.paymentInfo')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SubscriptionNative')}>
-              <Text style={styles.sectionLink}>{t('profile.update')}</Text>
-            </TouchableOpacity>
-          </View>
-
+          <SectionHeading
+            title={t('profile.paymentInfo')}
+            action={t('profile.update')}
+            onAction={() => navigation.navigate('SubscriptionNative')}
+          />
           <TouchableOpacity
-            style={styles.paymentCard}
-            activeOpacity={0.9}
+            style={styles.subscriptionCard}
+            activeOpacity={0.86}
             onPress={() => navigation.navigate('SubscriptionNative')}
           >
-            <View style={styles.paymentTop}>
-              <View>
-                <Text style={styles.paymentLabel}>{t('profile.subscriptionPlan').toUpperCase()}</Text>
-                <Text style={styles.paymentPlan}>{hasSubscription ? t('profile.planActive') : t('profile.noPlan')}</Text>
+            <View style={styles.subscriptionTop}>
+              <View style={styles.subscriptionIcon}>
+                <Ionicons name={hasSubscription ? 'shield-checkmark' : 'shield-outline'} size={22} color={colors.brandStrong} />
               </View>
-              <Ionicons name="calendar-outline" size={24} color="#93A2D5" />
+              <Ionicons name="arrow-forward" size={21} color={colors.inkSoft} />
             </View>
-
-            <View style={styles.paymentBottom}>
-              <View>
-                <Text style={styles.paymentLabel}>{t('profile.endDate').toUpperCase()}</Text>
-                <Text style={styles.paymentValue}>N/A</Text>
-              </View>
-              <View>
-                <Text style={styles.paymentLabel}>{t('profile.paymentStatus').toUpperCase()}</Text>
-                <View style={styles.paidRow}>
-                  <Ionicons name="checkmark-circle" size={16} color="#31D17B" />
-                  <Text style={styles.paidText}>{hasSubscription ? t('profile.paid') : t('profile.noPlan')}</Text>
-                </View>
+            <Text style={styles.subscriptionEyebrow}>{t('profile.subscriptionPlan')}</Text>
+            <Text style={styles.subscriptionTitle}>
+              {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
+            </Text>
+            <View style={styles.subscriptionMeta}>
+              <Text style={styles.subscriptionMetaLabel}>{t('profile.paymentStatus')}</Text>
+              <View style={styles.statusRow}>
+                <Ionicons
+                  name={hasSubscription ? 'checkmark-circle' : 'information-circle'}
+                  size={17}
+                  color={hasSubscription ? colors.success : colors.brand}
+                />
+                <Text style={styles.statusText}>
+                  {hasSubscription ? t('profile.paid') : t('profile.noPlan')}
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.signOutBtn}
-            onPress={async () => {
-              setShowSignOutConfirm(true);
-            }}
-          >
-            <MaterialCommunityIcons name="logout-variant" size={18} color="#D43737" />
+          <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowSignOutConfirm(true)} activeOpacity={0.82}>
+            <MaterialCommunityIcons name="logout-variant" size={19} color={colors.danger} />
             <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      <BottomTabs navigation={navigation} />
-
+      <BottomNavBar navigation={navigation} />
       <SignOutConfirmationModal
         visible={showSignOutConfirm}
         onCancel={() => setShowSignOutConfirm(false)}
@@ -143,205 +157,192 @@ export function ProfileNativeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F7F9FE',
-    textAlign: 'center',
-  },
   body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
   },
-  sectionHead: {
+  identityCard: {
+    minHeight: 108,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  sectionTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#1E293B',
+  avatar: {
+    width: 62,
+    height: 62,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
   },
-  sectionLink: {
+  avatarText: {
+    ...typography.title,
+    color: colors.brandStrong,
+  },
+  identityCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  identityName: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  identityPhone: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+  },
+  planPill: {
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planPillActive: {
+    backgroundColor: colors.successSoft,
+  },
+  planPillInactive: {
+    backgroundColor: colors.brandSoft,
+  },
+  planDot: {
+    width: 6,
+    height: 6,
+    marginRight: 6,
+    borderRadius: 3,
+  },
+  planDotActive: {
+    backgroundColor: colors.success,
+  },
+  planDotInactive: {
+    backgroundColor: colors.brand,
+  },
+  planPillText: {
+    ...typography.caption,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    color: '#2563EB',
-    textDecorationLine: 'underline',
+  },
+  planPillTextActive: {
+    color: colors.success,
+  },
+  planPillTextInactive: {
+    color: colors.brandStrong,
   },
   accountCard: {
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   accountRow: {
+    minHeight: 76,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
   accountIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
   },
   accountTextWrap: {
-    marginLeft: 16,
     flex: 1,
+    marginLeft: spacing.md,
   },
   accountLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: '#64748B',
+    ...typography.caption,
+    color: colors.inkSoft,
   },
   accountValue: {
-    marginTop: 4,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    color: '#1E293B',
+    ...typography.bodyStrong,
+    marginTop: 2,
+    color: colors.ink,
   },
-  paymentHead: {
-    marginTop: 20,
+  divider: {
+    height: 1,
+    marginLeft: 56,
+    backgroundColor: colors.line,
   },
-  paymentCard: {
-    borderRadius: 24,
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
+  subscriptionCard: {
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 170,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  paymentTop: {
+  subscriptionTop: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
-  paymentLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: '#BFDBFE',
+  subscriptionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
   },
-  paymentPlan: {
-    marginTop: 6,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#FFFFFF',
+  subscriptionEyebrow: {
+    ...typography.eyebrow,
+    marginTop: spacing.lg,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
   },
-  paymentBottom: {
-    marginTop: 24,
+  subscriptionTitle: {
+    ...typography.heading,
+    marginTop: spacing.xs,
+    color: colors.ink,
+  },
+  subscriptionMeta: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
   },
-  paymentValue: {
-    marginTop: 6,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    color: '#FFFFFF',
+  subscriptionMetaLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
-  paidRow: {
-    marginTop: 6,
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  paidText: {
-    marginLeft: 6,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#10B981',
+  statusText: {
+    ...typography.bodyStrong,
+    marginLeft: spacing.xs,
+    color: colors.ink,
   },
   signOutBtn: {
-    marginTop: 24,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FEF2F2',
+    height: 54,
+    marginTop: spacing.xxl,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    borderWidth: 2,
-    borderColor: '#FCA5A5',
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: colors.dangerSoft,
   },
   signOutText: {
-    marginLeft: 8,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#EF4444',
+    ...typography.bodyStrong,
+    marginLeft: spacing.sm,
+    color: colors.danger,
   },
-  tabs: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 74,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: '#EFF0F4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-  tab: { alignItems: 'center' },
-  tabBubble: { width: 46, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  tabBubbleActive: { backgroundColor: '#4A78D0' },
-  tabText: {
-    marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 14,
-    color: '#8A98B2',
-  },
-  tabTextActive: { color: '#4A78D0' },
 });
-

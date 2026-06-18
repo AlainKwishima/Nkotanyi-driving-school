@@ -5,12 +5,13 @@ import { Dimensions, Image, ImageResolvedAssetSource, ScrollView, StyleSheet, Vi
 import { REFERENCE_BY_KEY } from '../assets/referenceScreens';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { colors, spacing } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReferenceImage'>;
 
 export function ReferenceImageScreen({ route, navigation }: Props) {
   const screen = REFERENCE_BY_KEY[route.params.key];
-  const phoneWidth = Math.min(Dimensions.get('window').width, 420);
+  const phoneWidth = Math.min(Dimensions.get('window').width - spacing.xxl, 420);
   const resolved = Image.resolveAssetSource(screen.source) as ImageResolvedAssetSource | undefined;
   const aspectRatio = resolved?.width && resolved?.height ? resolved.width / resolved.height : 1125 / 2433;
 
@@ -27,13 +28,14 @@ export function ReferenceImageScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
   },
   scroll: {
     flex: 1,
   },
   content: {
     alignItems: 'center',
-    paddingBottom: 24,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xxl,
   },
 });

@@ -3,6 +3,7 @@ import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'r
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { useMobile } from '../hooks/useMobile';
+import { colors, radii, shadows, typography } from '../constants/theme';
 
 type LanguageOptionCardProps = {
   title: string;
@@ -26,7 +27,7 @@ export function LanguageOptionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { width: '100%', height: m.verticalScale(96), padding: m.scale(20) },
+        { width: '100%', minHeight: m.verticalScale(96), padding: m.scale(16) },
         selected ? styles.cardSelected : styles.cardDefault,
         pressed && styles.cardPressed,
       ]}
@@ -53,40 +54,37 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     height: 96,
-    borderRadius: 24,
-    borderWidth: 2,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    ...shadows.card,
   },
   cardDefault: {
-    borderColor: 'transparent',
+    borderColor: colors.line,
   },
   cardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+    borderColor: colors.brand,
+    backgroundColor: colors.brandSoft,
   },
   cardPressed: {
     opacity: 0.96,
   },
   leftContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
   flagFrame: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.surfaceAlt,
     overflow: 'hidden',
     padding: 2,
     shadowColor: '#000000',
@@ -101,21 +99,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   textBlock: {
+    flex: 1,
     justifyContent: 'center',
     marginLeft: 16,
   },
   titleText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    ...typography.title,
     fontSize: 16,
-    lineHeight: 24,
-    color: '#1E293B',
+    color: colors.ink,
   },
   subtitleText: {
     marginTop: 2,
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 13,
     lineHeight: 18,
-    color: '#64748B',
+    color: colors.inkMuted,
   },
   indicator: {
     width: 26,
@@ -125,15 +123,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   indicatorDefault: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.line,
   },
   indicatorSelected: {
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
   },
   checkIcon: {
     width: 12,
     height: 12,
-    tintColor: '#FFFFFF',
+    tintColor: colors.white,
   },
 });
 

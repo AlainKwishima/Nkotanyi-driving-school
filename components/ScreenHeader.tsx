@@ -1,8 +1,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { colors, spacing, typography } from '../constants/theme';
 
 type ScreenHeaderProps = {
   title: string;
@@ -14,7 +16,7 @@ export function ScreenHeader({ title, onBack }: ScreenHeaderProps) {
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
       <Pressable onPress={onBack} style={styles.back} disabled={!onBack} hitSlop={8}>
-        <Text style={styles.backText}>{onBack ? '<' : ' '}</Text>
+        {onBack ? <Ionicons name="chevron-back" size={24} color={colors.ink} /> : null}
       </Pressable>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.backSpacer} />
@@ -26,12 +28,12 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     minHeight: 52,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
   },
   back: {
     minWidth: MIN_TOUCH_TARGET,
@@ -43,17 +45,10 @@ const styles = StyleSheet.create({
     minWidth: MIN_TOUCH_TARGET,
     minHeight: MIN_TOUCH_TARGET,
   },
-  backText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 20,
-    color: '#1B1B1E',
-  },
   title: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    lineHeight: 18,
-    color: '#1B1B1E',
+    ...typography.title,
+    fontSize: 17,
+    color: colors.ink,
     textTransform: 'capitalize',
   },
 });

@@ -4,11 +4,10 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
-import { HeaderMenu } from '../components/HeaderMenu';
+import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useI18n } from '../i18n/useI18n';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type NoSelectedProps = NativeStackScreenProps<RootStackParamList, 'PracticeNoSelectedNative'>;
 type SelectedProps = NativeStackScreenProps<RootStackParamList, 'PracticeSelectedNative'>;
@@ -29,29 +28,36 @@ function PracticeLayout({
   navigation: NoSelectedProps['navigation'] | SelectedProps['navigation'];
 }) {
   const { t } = useI18n();
-  const { insets } = useResponsiveLayout();
   const options = useMemo(() => OPTION_KEYS.map((k) => t(k)), [t]);
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={34} color="#F5F7FC" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('exam.title')}</Text>
-        <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={56} rightOffset={14} />
-      </View>
+    <ScreenColumn>
+      <AppHeader title={t('exam.title')} navigation={navigation} onBack={onBack} />
 
       <View style={styles.body}>
         <View style={styles.qCard}>
+          <View style={styles.questionLabel}>
+            <Ionicons name="help-circle-outline" size={16} color={colors.amber} />
+            <Text style={styles.questionLabelText}>{t('exam.chooseAnswer')}</Text>
+          </View>
           <Text style={styles.question}>{t('performance.mock.question')}</Text>
           <Image source={require('../assets/practice-road-diagram.png')} style={styles.road} resizeMode="contain" />
         </View>
 
         {options.map((opt, i) => (
-          <View key={OPTION_KEYS[i]} style={[styles.option, selected && i === 0 && styles.optionSelected]}>
+          <TouchableOpacity
+            key={OPTION_KEYS[i]}
+            style={[styles.option, selected && i === 0 && styles.optionSelected]}
+            onPress={onAnswer}
+            activeOpacity={0.84}
+          >
+            <View style={[styles.optionMarker, selected && i === 0 && styles.optionMarkerSelected]}>
+              <Text style={[styles.optionMarkerText, selected && i === 0 && styles.optionTextSelected]}>
+                {String.fromCharCode(65 + i)}
+              </Text>
+            </View>
             <Text style={[styles.optionText, selected && i === 0 && styles.optionTextSelected]}>{opt}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
 
         <View style={styles.actions}>
@@ -92,98 +98,110 @@ export function PracticeSelectedNativeScreen({ navigation }: SelectedProps) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 78,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#F4F7FF',
-  },
   body: {
     flex: 1,
-    backgroundColor: '#CBD1DD',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    backgroundColor: colors.canvas,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
   },
   qCard: {
-    borderRadius: 16,
-    backgroundColor: '#E4E4E6',
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
+  },
+  questionLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  questionLabelText: {
+    ...typography.eyebrow,
+    color: colors.amber,
+    textTransform: 'uppercase',
   },
   question: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#40434F',
+    ...typography.title,
+    color: colors.ink,
   },
   road: {
-    marginTop: 16,
+    marginTop: spacing.lg,
     width: '100%',
-    height: 290,
+    height: 250,
+    borderRadius: radii.md,
   },
   option: {
-    minHeight: 78,
-    borderRadius: 16,
-    backgroundColor: '#E6E6E7',
+    minHeight: 68,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   optionSelected: {
-    backgroundColor: '#4A78D0',
+    backgroundColor: colors.brandStrong,
+    borderColor: colors.brandStrong,
   },
-  optionText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#282B67',
-    textAlign: 'center',
-  },
-  optionTextSelected: {
-    color: '#F4F7FF',
-  },
-  actions: {
-    marginTop: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  answerBtn: {
-    width: '46%',
-    height: 74,
-    borderRadius: 40,
-    backgroundColor: '#E6E6E7',
+  optionMarker: {
+    width: 38,
+    height: 38,
+    marginRight: spacing.md,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  optionMarkerSelected: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  optionMarkerText: {
+    ...typography.bodyStrong,
+    color: colors.brandStrong,
+  },
+  optionText: {
+    ...typography.body,
+    flex: 1,
+    color: colors.ink,
+  },
+  optionTextSelected: {
+    color: colors.white,
+  },
+  actions: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  answerBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   answerText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#4A78D0',
+    ...typography.bodyStrong,
+    color: colors.brand,
   },
   nextBtn: {
-    width: '46%',
-    height: 74,
-    borderRadius: 40,
-    backgroundColor: '#4A78D0',
+    flex: 1,
+    height: 54,
+    borderRadius: radii.pill,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nextText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#F4F7FF',
+    ...typography.bodyStrong,
+    color: colors.white,
   },
 });

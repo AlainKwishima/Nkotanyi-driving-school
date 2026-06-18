@@ -1,21 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { HeaderMenu } from '../components/HeaderMenu';
+import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { ProgressRing } from '../components/ProgressRing';
+import { SectionHeading } from '../components/SectionHeading';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
@@ -26,144 +20,130 @@ import { getPerformanceHistory } from '../services/performanceApi';
 import { readLocalExamRecords } from '../services/examHistoryStorage';
 import { mergePerformanceHistory, type PerformanceHistoryRow } from '../services/performanceHistory';
 import { getPdfs, getVideos, type PdfItem, type VideoItem } from '../services/contentApi';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HomeNative'>;
+type LearningRoute = 'ExamInstructionsNative' | 'ReadingNative' | 'RoadSignsNative' | 'VideoCourseList';
 
-type QuickAction = {
+type LearningPath = {
+  route: LearningRoute;
   titleKey: string;
   subtitleKey: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-  route: 'ExamInstructionsNative' | 'ReadingNative' | 'VideoCourseList' | 'PerformanceNative';
+  color: string;
+  background: string;
 };
 
-const QUICK_ACTIONS: QuickAction[] = [
-  { titleKey: 'home.action.exams', subtitleKey: 'home.action.examsSub', icon: 'file-question-outline', route: 'ExamInstructionsNative' },
-  { titleKey: 'video.listTitle', subtitleKey: 'nav.watch', icon: 'play-circle-outline', route: 'VideoCourseList' },
-  { titleKey: 'home.action.reading', subtitleKey: 'home.action.readingSub', icon: 'book-open-page-variant-outline', route: 'ReadingNative' },
-  { titleKey: 'home.action.performance', subtitleKey: 'home.action.performanceSub', icon: 'history', route: 'PerformanceNative' },
+const LEARNING_PATHS: LearningPath[] = [
+  {
+    route: 'ReadingNative',
+    titleKey: 'home.action.reading',
+    subtitleKey: 'home.action.readingSub',
+    icon: 'book-open-page-variant-outline',
+    color: colors.brandStrong,
+    background: colors.brandSoft,
+  },
+  {
+    route: 'VideoCourseList',
+    titleKey: 'video.listTitle',
+    subtitleKey: 'nav.watch',
+    icon: 'play-circle-outline',
+    color: '#A55F1D',
+    background: colors.amberSoft,
+  },
+  {
+    route: 'RoadSignsNative',
+    titleKey: 'home.action.roadSigns',
+    subtitleKey: 'home.action.roadSignsSub',
+    icon: 'sign-caution',
+    color: colors.green,
+    background: colors.greenSoft,
+  },
 ];
 
-function QuickActionCard({ action, title, subtitle, onPress }: { action: QuickAction; title: string; subtitle: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
-      <View pointerEvents="none" style={styles.cardInnerHighlight} />
-      <View style={styles.cardIconWrap}>
-        <MaterialCommunityIcons name={action.icon} size={24} color="#2563EB" />
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardSubtitle}>{subtitle}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function BottomNav({ navigation }: { navigation: Props['navigation'] }) {
-  return <BottomNavBar navigation={navigation} />;
-}
-
 function getInitials(name?: string | null) {
-  if (!name || !name.trim()) return 'U';
+  if (!name?.trim()) return 'U';
   const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
+  return parts.length === 1
+    ? parts[0].slice(0, 2).toUpperCase()
+    : `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function calculateStreak(history: PerformanceHistoryRow[]) {
+  if (history.length === 0) return 0;
+  const uniqueDays = new Set(
+    history.map((row) => {
+      const day = new Date(row.date);
+      day.setHours(0, 0, 0, 0);
+      return day.getTime();
+    }),
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  while (uniqueDays.has(today.getTime())) {
+    streak += 1;
+    today.setDate(today.getDate() - 1);
   }
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return streak;
 }
 
 export function HomeNativeScreen({ navigation }: Props) {
-  const { hasUsedFreeTrial, hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
-  const { openGateModal } = useGateModal();
-  const { insets, tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
-  const { name } = useAuth();
-  const showTrial = !hasSubscription;
+  const { tabScrollBottomPad } = useResponsiveLayout();
+  const { accessToken, name } = useAuth();
+  const { openGateModal } = useGateModal();
+  const {
+    hasUsedFreeTrial,
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+    isSigningOut,
+  } = useAppFlow();
+
+  const [rows, setRows] = useState<PerformanceHistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [recommendation, setRecommendation] = useState<{ type: 'pdf' | 'video'; item: PdfItem | VideoItem } | null>(
+    null,
+  );
+
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   });
-  const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
-  const handleQuickAction = (route: QuickAction['route']) => {
-    if (route === 'ExamInstructionsNative') {
-      if (!isSigningOut && hasSubscription && !languageAccessGranted) {
-        openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
-        return;
-      }
-      navigation.navigate('ExamInstructionsNative');
-      return;
-    }
-
-    const needsReadGate = route === 'ReadingNative';
-    const needsWatchGate = route === 'VideoCourseList';
-
-    if ((needsReadGate || needsWatchGate) && !languageAccessGranted && !isSigningOut) {
-      openGateModal(needsReadGate ? 'subscription_read' : 'subscription_watch', () => navigation.navigate('SubscriptionNative'));
-      return;
-    }
-
-    navigation.navigate(route);
-  };
-
-  const [rows, setRows] = useState<PerformanceHistoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [recommendation, setRecommendation] = useState<{ type: 'pdf' | 'video'; item: any } | null>(null);
-  const { accessToken } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const local = await readLocalExamRecords();
-      let merged: PerformanceHistoryRow[] = [];
       if (!accessToken) {
-        merged = mergePerformanceHistory([], local);
-      } else {
-        const remote = await getPerformanceHistory(accessToken);
-        merged = mergePerformanceHistory(remote, local);
-
-        // Fetch recommendations if logged in
-        const [pdfs, videos] = await Promise.all([
-          getPdfs(accessToken, contentLanguage).catch(() => []),
-          getVideos(accessToken, contentLanguage).catch(() => []),
-        ]);
-        // Filter for GENUINELY NEW content (isNew flag from backend)
-        const newPdf = pdfs.find((p: PdfItem) => (p as any).isNew === true);
-        const newVid = videos.find((v: VideoItem) => (v as any).isNew === true);
-
-        if (newPdf) {
-          setRecommendation({ type: 'pdf', item: newPdf });
-        } else if (newVid) {
-          setRecommendation({ type: 'video', item: newVid });
-        } else {
-          setRecommendation(null);
-        }
+        setRows(mergePerformanceHistory([], local));
+        setRecommendation(null);
+        return;
       }
-      setRows(merged);
-    } catch (e) {
-      console.warn('[Home] failed to load data', e);
+
+      const [remote, pdfs, videos] = await Promise.all([
+        getPerformanceHistory(accessToken).catch(() => []),
+        getPdfs(accessToken, contentLanguage).catch(() => []),
+        getVideos(accessToken, contentLanguage).catch(() => []),
+      ]);
+      setRows(mergePerformanceHistory(remote, local));
+
+      const newPdf = pdfs.find((item) => (item as PdfItem & { isNew?: boolean }).isNew === true);
+      const newVideo = videos.find((item) => (item as VideoItem & { isNew?: boolean }).isNew === true);
+      setRecommendation(newPdf ? { type: 'pdf', item: newPdf } : newVideo ? { type: 'video', item: newVideo } : null);
+    } catch (error) {
+      if (__DEV__) console.warn('[Home] failed to load dashboard', error);
       const local = await readLocalExamRecords();
+      setRows(mergePerformanceHistory([], local));
       setRecommendation(null);
     } finally {
       setLoading(false);
     }
   }, [accessToken, contentLanguage]);
-
-  const calculateStreak = (history: PerformanceHistoryRow[]) => {
-    if (history.length === 0) return 0;
-    const dates = history.map((r) => new Date(r.date).toDateString());
-    const uniqueDates = Array.from(new Set(dates));
-    let streak = 0;
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < uniqueDates.length; i++) {
-      let d = new Date(uniqueDates[i]);
-      d.setHours(0, 0, 0, 0);
-      let diff = (today.getTime() - d.getTime()) / (1000 * 3600 * 24);
-      if (diff === i) streak++;
-      else break;
-    }
-    return streak;
-  };
 
   useFocusEffect(
     useCallback(() => {
@@ -171,163 +151,253 @@ export function HomeNativeScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  const handleLearningRoute = (route: LearningRoute) => {
+    if (route === 'ExamInstructionsNative') {
+      if (hasSubscription && !languageAccessGranted && !isSigningOut) {
+        openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+        return;
+      }
+      navigation.navigate(route);
+      return;
+    }
+
+    if (!languageAccessGranted && !isSigningOut) {
+      openGateModal(route === 'VideoCourseList' ? 'subscription_watch' : 'subscription_read', () =>
+        navigation.navigate('SubscriptionNative'),
+      );
+      return;
+    }
+    navigation.navigate(route);
+  };
+
   const totalExams = rows.length;
-  const avgAccuracy = totalExams > 0 ? Math.round(rows.reduce((s, r) => s + r.percent, 0) / totalExams) : 0;
-  const passedCount = rows.filter((r) => r.status === 'PASSED').length;
-  const successRate = totalExams > 0 ? Math.round((passedCount / totalExams) * 100) : 0;
+  const average = totalExams ? Math.round(rows.reduce((sum, row) => sum + row.percent, 0) / totalExams) : 0;
+  const passed = rows.filter((row) => row.status === 'PASSED').length;
+  const successRate = totalExams ? Math.round((passed / totalExams) * 100) : 0;
   const lastExam = rows[0];
   const streak = calculateStreak(rows);
+  const readiness = totalExams ? Math.round(average * 0.7 + successRate * 0.3) : 0;
+  const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
+  const recommendationTitle =
+    recommendation?.item.title ?? recommendation?.item.name ?? t('reading.documentFallback');
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-        <View style={styles.titleRow}>
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileNative')} style={styles.headerLeft}>
-            <View style={styles.avatarBadge}>
-              <Text style={styles.avatarText}>{getInitials(name)}</Text>
+    <ScreenColumn backgroundColor={colors.brandStrong}>
+      <AppHeader
+        title={t('home.title')}
+        navigation={navigation}
+        left={
+          <TouchableOpacity
+            style={styles.headerAvatar}
+            onPress={() => navigation.navigate('ProfileNative')}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.title')}
+          >
+            <Text style={styles.headerAvatarText}>{getInitials(name)}</Text>
+          </TouchableOpacity>
+        }
+      />
+
+      <View style={styles.body}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
+        >
+          <View style={styles.welcomeRow}>
+            <View style={styles.welcomeCopy}>
+              <Text style={styles.welcome} numberOfLines={1}>
+                {welcome}
+              </Text>
+              <Text style={styles.subwelcome}>{t('home.subwelcome')}</Text>
+            </View>
+            {streak > 0 ? (
+              <View style={styles.streakBadge}>
+                <Ionicons name="calendar-outline" size={16} color={colors.brandStrong} />
+                <Text style={styles.streakText}>{streak}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.readinessCard}>
+            <View style={styles.readinessCopy}>
+              <Text style={styles.heroEyebrow}>{t('home.progressTitle')}</Text>
+              <Text style={styles.heroTitle}>
+                {totalExams ? t('home.keepMomentum') : t('home.startJourney')}
+              </Text>
+              <Text style={styles.heroBody}>
+                {totalExams ? t('home.progressBody', { count: totalExams }) : t('home.startJourneyBody')}
+              </Text>
+            </View>
+            {loading ? (
+              <ActivityIndicator color={colors.amber} />
+            ) : (
+              <ProgressRing value={readiness} label={t('home.readyLabel')} />
+            )}
+          </View>
+
+          <View style={styles.metricStrip}>
+            <View style={styles.metric}>
+              <Text style={styles.metricValue}>{totalExams}</Text>
+              <Text style={styles.metricLabel}>{t('performance.totalExams')}</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <Text style={styles.metricValue}>{average}%</Text>
+              <Text style={styles.metricLabel}>{t('performance.avgAccuracy')}</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <Text style={styles.metricValue}>{successRate}%</Text>
+              <Text style={styles.metricLabel}>{t('performance.successRate')}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryAction}
+            onPress={() => handleLearningRoute('ExamInstructionsNative')}
+            activeOpacity={0.88}
+          >
+            <View style={styles.primaryIcon}>
+              <MaterialCommunityIcons name="steering" size={25} color={colors.white} />
+            </View>
+            <View style={styles.primaryCopy}>
+              <Text style={styles.primaryEyebrow}>{t('home.primaryEyebrow')}</Text>
+              <Text style={styles.primaryTitle}>{t('home.action.exams')}</Text>
+            </View>
+            <View style={styles.primaryArrow}>
+              <Ionicons name="arrow-forward" size={19} color={colors.brandStrong} />
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.homeTitle}>{t('home.title')}</Text>
-
-          <View style={styles.headerRight}>
-            <HeaderMenu navigation={navigation} iconColor="#F2F3F8" topOffset={56} rightOffset={16} />
+          <View style={styles.sectionGap}>
+            <SectionHeading title={t('home.learningPaths')} />
           </View>
-        </View>
-      </View>
-
-      <View style={styles.bodyWrap}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabScrollBottomPad }]}>
-          <View style={styles.welcomeRow}>
-            <View>
-              <View style={styles.greetingLine}>
-                <Text style={styles.welcome}>{welcome}</Text>
-                {streak > 0 && (
-                  <View style={styles.streakBadge}>
-                    <Ionicons name="flame" size={12} color="#F59E0B" />
-                    <Text style={styles.streakText}>{streak}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.subwelcome}>{t('home.subwelcome')}</Text>
-            </View>
-          </View>
-
-          {/* Stats Dashboard */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statVal}>{totalExams}</Text>
-                <Text style={styles.statLab}>{t('performance.totalExams')}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statVal}>{avgAccuracy}%</Text>
-                <Text style={styles.statLab}>{t('performance.avgAccuracy')}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statVal}>{successRate}%</Text>
-                <Text style={styles.statLab}>{t('performance.successRate')}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Recommended Study */}
-          {recommendation && (
-            <View style={styles.recommendSection}>
-              <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pathList}
+            snapToInterval={292}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            disableIntervalMomentum
+            directionalLockEnabled
+            nestedScrollEnabled
+            alwaysBounceHorizontal
+            scrollEventThrottle={16}
+            accessibilityRole="scrollbar"
+            accessibilityLabel={t('home.learningPaths')}
+          >
+            {LEARNING_PATHS.map((path) => (
               <TouchableOpacity
-                style={styles.recommendCard}
-                onPress={() => navigation.navigate(recommendation.type === 'pdf' ? 'ReadingNative' : 'VideoCourseList')}
+                key={path.route}
+                style={styles.pathCard}
+                onPress={() => handleLearningRoute(path.route)}
+                activeOpacity={0.84}
               >
-                <View style={styles.recommendIcon}>
-                  <Ionicons name={recommendation.type === 'pdf' ? 'document-text' : 'play-circle'} size={24} color="#4A78D0" />
+                <View style={[styles.pathIcon, { backgroundColor: path.background }]}>
+                  <MaterialCommunityIcons name={path.icon} size={25} color={path.color} />
                 </View>
-                <View style={styles.recommendInfo}>
-                  <Text style={styles.recommendTag}>{t('home.newContent')}</Text>
-                  <Text style={styles.recommendTitle} numberOfLines={1}>
-                    {recommendation.item.title || recommendation.item.name || 'Study Material'}
+                <View style={styles.pathCopy}>
+                  <Text style={styles.pathTitle} numberOfLines={2}>
+                    {t(path.titleKey).replace('\n', ' ')}
+                  </Text>
+                  <Text style={styles.pathSubtitle} numberOfLines={1}>
+                    {t(path.subtitleKey).replace('\n', ' ')}
                   </Text>
                 </View>
-                <View style={styles.recommendBtn}>
-                  <Text style={styles.recommendBtnText}>{t('home.studyNow')}</Text>
+                <Ionicons name="arrow-forward" size={21} color={path.color} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {recommendation ? (
+            <View style={styles.sectionGap}>
+              <SectionHeading title={t('home.recommended')} />
+              <TouchableOpacity
+                style={styles.recommendation}
+                onPress={() => handleLearningRoute(recommendation.type === 'pdf' ? 'ReadingNative' : 'VideoCourseList')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.recommendationIcon}>
+                  <Ionicons
+                    name={recommendation.type === 'pdf' ? 'document-text-outline' : 'play-outline'}
+                    size={22}
+                    color={colors.brand}
+                  />
                 </View>
+                <View style={styles.recommendationCopy}>
+                  <Text style={styles.recommendationLabel}>{t('home.newContent')}</Text>
+                  <Text style={styles.recommendationTitle} numberOfLines={1}>
+                    {recommendationTitle}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.inkSoft} />
               </TouchableOpacity>
             </View>
-          )}
+          ) : null}
 
-          {showTrial ? (
-            <TouchableOpacity
-              style={styles.premiumBanner}
-              activeOpacity={0.9}
-              onPress={() => navigation.navigate('SubscriptionNative')}
-            >
-              <View style={styles.premiumInfo}>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proBadgeText}>PRO</Text>
-                </View>
-                <Text style={styles.premiumTitle}>
-                  {hasUsedFreeTrial ? t('home.trialUsedTitle') : t('home.trialAvailableTitle')}
-                </Text>
-                <Text style={styles.premiumSub}>{t('profile.upgradeDescription') || 'Unlock all exam types and languages'}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.activePlanRow}>
-              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={styles.activePlanText}>{t('profile.planActive')}</Text>
-            </View>
-          )}
-
-          {/* Recent Activity */}
-          {lastExam && (
-            <View style={styles.recentSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('performance.history')}</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('PerformanceNative')}>
-                  <Text style={styles.viewAll}>{t('home.viewAll')}</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.sectionGap}>
+            <SectionHeading
+              title={t('home.recentInsight')}
+              action={lastExam ? t('home.viewAll') : undefined}
+              onAction={lastExam ? () => navigation.navigate('PerformanceNative') : undefined}
+            />
+            {lastExam ? (
               <TouchableOpacity
-                style={styles.recentCard}
-                activeOpacity={0.8}
+                style={styles.insightCard}
                 onPress={() => navigation.navigate('PerformanceNative')}
+                activeOpacity={0.85}
               >
-                <View style={[styles.statusIndicator, { backgroundColor: lastExam.status === 'PASSED' ? '#10B981' : '#EF4444' }]} />
-                <View style={styles.recentInfo}>
-                  <Text style={styles.recentExamTitle}>
-                    {lastExam.title.startsWith('performance.') ? t(lastExam.title) : lastExam.title}
-                  </Text>
-                  <Text style={styles.recentDate}>{new Date(lastExam.date).toLocaleDateString()}</Text>
-                </View>
-                <View style={styles.recentScoreWrap}>
-                  <Text style={[styles.recentScore, { color: lastExam.status === 'PASSED' ? '#10B981' : '#EF4444' }]}>
+                <View
+                  style={[
+                    styles.scoreBadge,
+                    { backgroundColor: lastExam.status === 'PASSED' ? colors.greenSoft : colors.redSoft },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.scoreValue,
+                      { color: lastExam.status === 'PASSED' ? colors.green : colors.red },
+                    ]}
+                  >
                     {lastExam.percent}%
                   </Text>
-                  <Text style={styles.recentScoreLab}>{t('performance.score')}</Text>
                 </View>
+                <View style={styles.insightCopy}>
+                  <Text style={styles.insightTitle}>
+                    {lastExam.title.startsWith('performance.') ? t(lastExam.title) : lastExam.title}
+                  </Text>
+                  <Text style={styles.insightMeta}>{new Date(lastExam.date).toLocaleDateString()}</Text>
+                </View>
+                <Ionicons name="trending-up" size={20} color={colors.brand} />
               </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.quickHeader}>
-            <Text style={styles.quickTitle}>{t('home.quickActions')}</Text>
-          </View>
-
-          <View style={styles.grid}>
-            {QUICK_ACTIONS.map((action, index) => (
-              <View key={action.titleKey} style={[styles.gridItem, index % 2 === 1 && styles.gridItemRight]}>
-                <QuickActionCard
-                  action={action}
-                  title={t(action.titleKey)}
-                  subtitle={t(action.subtitleKey)}
-                  onPress={() => handleQuickAction(action.route)}
-                />
+            ) : (
+              <View style={styles.emptyInsight}>
+                <Ionicons name="analytics-outline" size={23} color={colors.inkSoft} />
+                <Text style={styles.emptyInsightText}>{t('performance.empty')}</Text>
               </View>
-            ))}
+            )}
           </View>
+
+          {!hasSubscription ? (
+            <TouchableOpacity
+              style={styles.planBanner}
+              onPress={() => navigation.navigate('SubscriptionNative')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles-outline" size={21} color="#9A5A18" />
+              <View style={styles.planCopy}>
+                <Text style={styles.planTitle}>
+                  {hasUsedFreeTrial ? t('home.trialUsedTitle') : t('home.trialAvailableTitle')}
+                </Text>
+                <Text style={styles.planBody}>
+                  {hasUsedFreeTrial ? t('home.trialUsedBody') : t('home.trialAvailableBody')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9A5A18" />
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </View>
 
@@ -337,402 +407,305 @@ export function HomeNativeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  titleRow: {
-    minHeight: 80,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-  },
-  avatarBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FF8A8A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-  },
-  homeTitle: {
-    color: '#F3F5FA',
-    fontSize: 20,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    textAlign: 'center',
-  },
-  bodyWrap: {
+  body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+  content: {
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand,
+  },
+  headerAvatarText: {
+    ...typography.caption,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.white,
   },
   welcomeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
-  greetingLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-    gap: 4,
-  },
-  streakText: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#D97706',
-  },
-  profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  welcomeCopy: {
+    flex: 1,
   },
   welcome: {
-    fontSize: 24,
-    lineHeight: 32,
-    color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    letterSpacing: -0.5,
+    ...typography.title,
+    color: colors.ink,
   },
   subwelcome: {
-    marginTop: 4,
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#64748B',
-    fontFamily: 'PlusJakartaSans-Medium',
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.inkMuted,
   },
-  statsContainer: {
-    marginBottom: 24,
-  },
-  statsGrid: {
+  streakBadge: {
+    minWidth: 44,
+    height: 34,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    gap: 4,
+    backgroundColor: colors.brandSoft,
   },
-  statItem: { flex: 1, alignItems: 'center' },
-  statVal: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 20, color: '#1E293B' },
-  statLab: { marginTop: 4, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, color: '#94A3B8', textTransform: 'uppercase' },
-  statDivider: { width: 1, height: 24, backgroundColor: '#F1F5F9' },
-  premiumBanner: {
+  streakText: {
+    ...typography.bodyStrong,
+    color: colors.brandStrong,
+  },
+  readinessCard: {
+    minHeight: 170,
+    overflow: 'hidden',
+    padding: spacing.xl,
+    borderRadius: radii.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2563EB',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 24,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: colors.ink,
+    ...shadows.card,
   },
-  premiumInfo: {
+  readinessCopy: {
     flex: 1,
+    paddingRight: spacing.lg,
   },
-  proBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 8,
+  heroEyebrow: {
+    ...typography.eyebrow,
+    color: '#9FB4D8',
+    textTransform: 'uppercase',
   },
-  proBadgeText: {
-    color: '#FFFFFF',
+  heroTitle: {
+    ...typography.heading,
+    marginTop: spacing.sm,
+    color: colors.white,
+  },
+  heroBody: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    color: '#C7D0DF',
+  },
+  metricStrip: {
+    minHeight: 82,
+    marginTop: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  metric: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  metricValue: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    color: colors.ink,
+  },
+  metricLabel: {
+    ...typography.caption,
+    marginTop: 3,
     fontSize: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.inkSoft,
+    textAlign: 'center',
   },
-  premiumTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans-Bold',
-    marginBottom: 4,
+  metricDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.line,
   },
-  premiumSub: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-  },
-  activePlanRow: {
+  primaryAction: {
+    minHeight: 76,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 24,
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
+    backgroundColor: colors.brand,
+    ...shadows.card,
   },
-  activePlanText: {
-    color: '#166534',
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans-Bold',
-  },
-  recommendSection: {
-    marginBottom: 24,
-  },
-  recommendCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  recommendIcon: {
+  primaryIcon: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
-  recommendInfo: {
+  primaryCopy: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
-  recommendTag: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#2563EB',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  recommendTitle: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#1E293B',
-  },
-  recommendBtn: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  recommendBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans-Bold',
-  },
-  recentSection: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    color: '#1E293B',
-  },
-  recentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  statusIndicator: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  recentInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  recentExamTitle: {
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  recentDate: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-    color: '#64748B',
-  },
-  recentScoreWrap: {
-    alignItems: 'flex-end',
-  },
-  recentScore: {
-    fontSize: 18,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-  },
-  recentScoreLab: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#94A3B8',
+  primaryEyebrow: {
+    ...typography.eyebrow,
+    color: '#C9D8F0',
     textTransform: 'uppercase',
   },
-  quickHeader: {
-    marginBottom: 16,
+  primaryTitle: {
+    ...typography.title,
+    marginTop: 2,
+    color: colors.white,
   },
-  quickTitle: {
-    fontSize: 18,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    color: '#1E293B',
+  primaryArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
   },
-  viewAll: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontFamily: 'PlusJakartaSans-Bold',
+  sectionGap: {
+    marginTop: spacing.xxl,
+    gap: spacing.md,
   },
-  grid: {
+  pathList: {
+    marginTop: spacing.md,
+    paddingRight: spacing.xl,
+    gap: spacing.md,
+  },
+  pathCard: {
+    width: 280,
+    minHeight: 112,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    alignItems: 'center',
   },
-  gridItem: {
-    width: '48%',
-    marginBottom: 12,
-  },
-  gridItemRight: {
-    marginLeft: 0, // removed margin as we use gap
-  },
-  card: {
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    minHeight: 140,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardInnerHighlight: {
-    display: 'none',
-  },
-  cardIconWrap: {
+  pathIcon: {
     width: 52,
     height: 52,
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
   },
-  cardTitle: {
-    fontSize: 15,
-    color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-Bold',
-    marginBottom: 4,
+  pathCopy: {
+    flex: 1,
+    marginHorizontal: spacing.lg,
   },
-  cardSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    fontFamily: 'PlusJakartaSans-Medium',
-    lineHeight: 14,
+  pathTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
   },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 82,
-    backgroundColor: '#E3E6EC',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+  pathSubtitle: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+  },
+  recommendation: {
+    minHeight: 72,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  activeTab: {
-    width: 72,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4A78D0',
+  recommendationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -6,
+    backgroundColor: colors.brandSoft,
   },
-  activeTabText: {
-    marginTop: -1,
-    fontSize: 11,
-    lineHeight: 14,
-    color: '#F4F7FF',
-    fontFamily: 'PlusJakartaSans-Medium',
+  recommendationCopy: {
+    flex: 1,
+    marginHorizontal: spacing.md,
   },
-  tab: {
+  recommendationLabel: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  recommendationTitle: {
+    ...typography.bodyStrong,
+    marginTop: 2,
+    color: colors.ink,
+  },
+  insightCard: {
+    minHeight: 78,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  scoreBadge: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 58,
   },
-  tabText: {
-    marginTop: -2,
-    fontSize: 10,
-    lineHeight: 12,
-    color: '#8898B0',
-    fontFamily: 'PlusJakartaSans-Medium',
-    textAlign: 'center',
+  scoreValue: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
+  },
+  insightCopy: {
+    flex: 1,
+    marginHorizontal: spacing.md,
+  },
+  insightTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  insightMeta: {
+    ...typography.caption,
+    marginTop: 3,
+    color: colors.inkSoft,
+  },
+  emptyInsight: {
+    minHeight: 78,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#C9D1C7',
+  },
+  emptyInsightText: {
+    ...typography.body,
+    flex: 1,
+    color: colors.inkMuted,
+  },
+  planBanner: {
+    minHeight: 76,
+    marginTop: spacing.xxl,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: '#F1D39F',
+  },
+  planCopy: {
+    flex: 1,
+    marginHorizontal: spacing.md,
+  },
+  planTitle: {
+    ...typography.bodyStrong,
+    color: '#774817',
+  },
+  planBody: {
+    ...typography.caption,
+    marginTop: 3,
+    color: '#93642E',
   },
 });

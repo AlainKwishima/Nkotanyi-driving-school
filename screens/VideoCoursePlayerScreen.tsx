@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useIsFocused } from '@react-navigation/native';
 import {
@@ -11,20 +11,20 @@ import {
   View,
 } from 'react-native';
 import { useEvent } from 'expo';
-import YouTubePlayer from '../components/YouTubePlayer';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 
+import YouTubePlayer from '../components/YouTubePlayer';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
 import { BottomNavBar } from '../components/BottomNavBar';
-import { HeaderMenu } from '../components/HeaderMenu';
+import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VideoCoursePlayer'>;
 
@@ -36,8 +36,6 @@ type VideoEntry = {
   duration?: string;
 };
 
-const FALLBACK_THUMB = require('../assets/ui/video_thumb_1.png');
-
 function getYoutubeId(url: string | undefined): string | null {
   if (!url) return null;
   const match = url.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^"&?/\s]{11})/i);
@@ -47,42 +45,52 @@ function getYoutubeId(url: string | undefined): string | null {
 type SmartPlayerProps = {
   url: string | undefined;
   thumbUri: string | undefined;
-  title: string;
   active: boolean;
   onError: (msg: string, isEmbedDisabled?: boolean) => void;
 };
 
-function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayerProps) {
-  const [loading, setLoading] = useState(true);
+function MediaPlaceholder({ compact = false }: { compact?: boolean }) {
+  return (
+    <View style={[styles.mediaPlaceholder, compact && styles.mediaPlaceholderCompact]}>
+      <View style={[styles.mediaMark, compact && styles.mediaMarkCompact]}>
+        <Ionicons name="play" size={compact ? 14 : 24} color={colors.white} />
+      </View>
+      {!compact ? <Text style={styles.mediaPlaceholderText}>NKOTANYI</Text> : null}
+    </View>
+  );
+}
+
+function SmartVideoPlayer({ url, thumbUri, active, onError }: SmartPlayerProps) {
+  const [loading, setLoading] = useState(Boolean(url));
   const ytId = getYoutubeId(url);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const player = useVideoPlayer(ytId || !url ? null : { uri: url }, (p) => {
-    p.loop = false;
-    if (active) {
-      p.play();
-    }
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const player = useVideoPlayer(ytId || !url ? null : { uri: url }, (instance) => {
+    instance.loop = false;
+    if (active) instance.play();
   });
   const statusEvent = useEvent(player, 'statusChange', { status: player.status });
 
-  const clearTimer = () => {
+  const clearTimer = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (url) {
-      setLoading(true);
-      clearTimer();
-      timeoutRef.current = setTimeout(() => {
-        setLoading(false);
-        onError('Timeout: The video took too long to load. Please check your connection or tap Retry.');
-      }, 30000); // 30s timeout
+    if (!url) {
+      setLoading(false);
+      return clearTimer;
     }
+
+    setLoading(true);
+    clearTimer();
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      onError('Timeout: The video took too long to load. Please check your connection or retry.');
+    }, 30000);
     return clearTimer;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
+  }, [clearTimer, onError, url]);
 
   useEffect(() => {
     if (!url || ytId) return;
@@ -95,78 +103,68 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
   }, [active, player, url, ytId]);
 
   useEffect(() => {
-    if (statusEvent.status === 'loading') {
-      setLoading(true);
-      return;
-    }
+    if (statusEvent.status === 'loading') setLoading(true);
     if (statusEvent.status === 'readyToPlay') {
+      clearTimer();
       setLoading(false);
-      return;
     }
     if (statusEvent.status === 'error') {
+      clearTimer();
       setLoading(false);
-      onError('Playback Error: Unable to load this video.');
+      onError('Unable to load this video.');
     }
-  }, [onError, statusEvent.status]);
+  }, [clearTimer, onError, statusEvent.status]);
 
-  const handleReady = () => {
-    clearTimer();
-    setLoading(false);
-  };
-
-  const handleError = useCallback((msg: string) => {
-    clearTimer();
-    setLoading(false);
-    const isEmbedDisabled = /disabled embedding|embedded players|error 101|error 150|error 153/i.test(msg);
-    onError(msg, isEmbedDisabled);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleYouTubeStateChange = (state: string) => {
-    if (state === 'buffering') {
-      setLoading(true);
-    } else if (state === 'playing') {
-      // Only clear when ACTUALLY playing, not on 'unstarted'
-      handleReady();
-    }
-  };
+  const handleError = useCallback(
+    (message: string) => {
+      clearTimer();
+      setLoading(false);
+      const embedDisabled = /disabled embedding|embedded players|error 101|error 150|error 153/i.test(message);
+      onError(message, embedDisabled);
+    },
+    [clearTimer, onError],
+  );
 
   if (!url) {
     return (
-      <View style={styles.heroWrap}>
-        <Image source={thumbUri ? { uri: thumbUri } : FALLBACK_THUMB} style={styles.hero} resizeMode="cover" />
-        <View style={styles.heroOverlay} />
-        <View style={styles.playCircle}>
-          <Ionicons name="videocam-off-outline" size={28} color="#FFFFFF" />
+      <View style={styles.player}>
+        {thumbUri ? <Image source={{ uri: thumbUri }} style={styles.playerMedia} resizeMode="cover" /> : <MediaPlaceholder />}
+        <View style={styles.playerShade} />
+        <View style={styles.unavailableMark}>
+          <Ionicons name="videocam-off-outline" size={28} color={colors.white} />
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.heroWrap}>
-      {loading && (
+    <View style={styles.player}>
+      {loading ? (
         <View style={styles.playerLoader}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={colors.white} />
         </View>
-      )}
+      ) : null}
 
       {ytId ? (
         <YouTubePlayer
-          height={210}
+          height={230}
           videoId={ytId}
           play={active}
-          onReady={handleReady}
-          onChangeState={handleYouTubeStateChange}
-          onError={(msg: string) => handleError(msg)}
+          onReady={() => {
+            clearTimer();
+            setLoading(false);
+          }}
+          onChangeState={(state: string) => {
+            if (state === 'buffering') setLoading(true);
+            if (state === 'playing') {
+              clearTimer();
+              setLoading(false);
+            }
+          }}
+          onError={handleError}
         />
       ) : (
-        <VideoView
-          style={styles.hero}
-          player={player}
-          nativeControls
-          contentFit="contain"
-        />
+        <VideoView style={styles.playerMedia} player={player} nativeControls contentFit="contain" />
       )}
     </View>
   );
@@ -174,7 +172,7 @@ function SmartVideoPlayer({ url, thumbUri, title, active, onError }: SmartPlayer
 
 export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   const { t } = useI18n();
-  const { insets, tabScrollBottomPad } = useResponsiveLayout();
+  const { tabScrollBottomPad } = useResponsiveLayout();
   const isFocused = useIsFocused();
   const {
     hasSubscription,
@@ -192,34 +190,23 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   });
 
   const allVideos: VideoEntry[] = route.params?.allVideos ?? [];
-  const initialIndex = route.params?.currentIndex ?? 0;
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(route.params?.currentIndex ?? 0);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [unavailableInApp, setUnavailableInApp] = useState(false);
 
-  // Current video — prefer allVideos entry (updated as user switches), fall back to route params
   const current: VideoEntry =
     allVideos.length > 0
       ? allVideos[currentIndex] ?? allVideos[0]
-      : {
-        title: route.params?.title,
-        videoUrl: route.params?.videoUrl,
-      };
-
+      : { title: route.params?.title, videoUrl: route.params?.videoUrl };
   const title = current.title ?? t('video.playerTitle');
-  const videoUrl = current.videoUrl;
-  const thumbUri = current.thumbUri;
+  const playlist = allVideos
+    .map((video, index) => ({ video, index }))
+    .filter(({ index }) => index !== currentIndex);
 
-  const switchTo = (idx: number) => {
-    const target = allVideos[idx];
-    if (!target) return;
-    setPlayerError(null);
-    setUnavailableInApp(false);
-    setCurrentIndex(idx);
-  };
-
-  // Up-next: all other videos (excluding current)
-  const playlist = allVideos.filter((_, i) => i !== currentIndex);
+  const handlePlayerError = useCallback((message: string, embedDisabled?: boolean) => {
+    setPlayerError(message);
+    setUnavailableInApp(Boolean(embedDisabled));
+  }, []);
 
   useEffect(() => {
     if (!languageAccessGranted && !isSigningOut) {
@@ -229,9 +216,10 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
 
   if (!languageAccessGranted) {
     return (
-      <ScreenColumn backgroundColor="#4A78D0">
-        <View style={[styles.centeredGate, { paddingTop: insets.top }]}>
-          <ActivityIndicator size="large" color="#F6F8FE" />
+      <ScreenColumn>
+        <AppHeader title={t('video.playerTitle')} navigation={navigation} onBack={() => navigation.goBack()} />
+        <View style={styles.centeredGate}>
+          <ActivityIndicator size="large" color={colors.brand} />
           <Text style={styles.gateText}>{t('video.loading')}</Text>
         </View>
       </ScreenColumn>
@@ -239,122 +227,120 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      {/* Header */}
-      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {t('video.playerTitle')}
-          </Text>
-          <View style={styles.headerRight}>
-            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
-          </View>
-        </View>
-      </View>
+    <ScreenColumn>
+      <AppHeader
+        title={t('video.playerTitle')}
+        eyebrow={t('video.lessonPosition', {
+          current: allVideos.length > 0 ? currentIndex + 1 : 1,
+          total: Math.max(allVideos.length, 1),
+        })}
+        navigation={navigation}
+        onBack={() => navigation.goBack()}
+      />
 
-      <View style={styles.bodyWrap}>
-        {/* ── Smart Player area ──────────────────────────────────────── */}
-        {playerError ? (
-          <View style={styles.errorOverlay}>
-            <Ionicons
-              name={unavailableInApp ? 'alert-circle-outline' : 'alert-circle-outline'}
-              size={48}
-              color={unavailableInApp ? '#F59E0B' : '#FF6B6B'}
-            />
-            <Text style={styles.errorTitle}>{unavailableInApp ? 'Playback unavailable in-app' : 'Playback Error'}</Text>
-            <Text style={styles.errorSub}>{playerError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => {
-                setPlayerError(null);
-                setUnavailableInApp(false);
-              }}
-            >
-              <Text style={styles.retryText}>{t('common.retry') ?? 'Retry'}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <SmartVideoPlayer
-            url={videoUrl}
-            thumbUri={thumbUri}
-            title={title}
-            active={isFocused}
-            onError={(msg, isEmbed) => {
-              setPlayerError(msg);
-              setUnavailableInApp(!!isEmbed);
-            }}
-          />
-        )}
-
-        {/* ── Title ────────────────────────────────────────────── */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.videoTitle} numberOfLines={3}>
-            {title}
-          </Text>
-          {!videoUrl && (
-            <Text style={styles.noUrl}>{t('video.noUrl')}</Text>
-          )}
-        </View>
-
-        {/* ── Up next list ────────────────────────────────────────────── */}
-        {playlist.length > 0 ? (
-          <ScrollView
-            contentContainerStyle={[styles.listPad, { paddingBottom: tabScrollBottomPad }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.upNextLabel}>Up next</Text>
-            {playlist.map((v, relIdx) => {
-              // Real index in allVideos
-              const realIdx = allVideos.indexOf(v);
-              const isActive = realIdx === currentIndex;
-              return (
-                <TouchableOpacity
-                  key={`${v._id ?? relIdx}-${relIdx}`}
-                  style={[styles.card, isActive && styles.cardActive]}
-                  activeOpacity={0.88}
-                  onPress={() => switchTo(realIdx)}
-                >
-                  <View style={styles.thumbWrap}>
-                    <Image
-                      source={v.thumbUri ? { uri: v.thumbUri } : FALLBACK_THUMB}
-                      style={styles.thumb}
-                      resizeMode="cover"
-                    />
-                    {isActive ? (
-                      <View style={styles.nowPlayingDot}>
-                        <Ionicons name="volume-medium" size={12} color="#FFF" />
-                      </View>
-                    ) : (
-                      <View style={styles.thumbPlay}>
-                        <Ionicons name="play" size={10} color="#FFF" />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.cardText}>
-                    <Text style={[styles.cardTitle, isActive && styles.cardTitleActive]} numberOfLines={2}>
-                      {v.title ?? t('video.lessonFallback', { n: realIdx + 1 })}
-                    </Text>
-                    <Text style={[styles.cardSub, isActive && styles.cardSubActive]}>
-                      {isActive ? '▶ Playing now' : (v.duration ?? t('video.tapWatch'))}
-                    </Text>
-                  </View>
+      <View style={styles.body}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabScrollBottomPad }]}
+        >
+          <View style={styles.playerCard}>
+            {playerError ? (
+              <View style={styles.errorState}>
+                <View style={[styles.errorIcon, unavailableInApp && styles.warningIcon]}>
                   <Ionicons
-                    name={isActive ? 'pause-circle-outline' : 'play-circle-outline'}
-                    size={24}
-                    color={isActive ? '#2563EB' : '#CBD5E1'}
+                    name={unavailableInApp ? 'open-outline' : 'alert-circle-outline'}
+                    size={27}
+                    color={unavailableInApp ? colors.amber : colors.red}
                   />
+                </View>
+                <Text style={styles.errorTitle}>
+                  {t(unavailableInApp ? 'video.playbackUnavailable' : 'video.playbackError')}
+                </Text>
+                <Text style={styles.errorText}>{playerError}</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={() => {
+                    setPlayerError(null);
+                    setUnavailableInApp(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Ionicons name="refresh" size={17} color={colors.white} />
+                  <Text style={styles.retryText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        ) : (
-          <View style={styles.emptyPlaylist}>
-            <Text style={styles.emptyPlaylistText}>No other videos in this course.</Text>
+              </View>
+            ) : (
+              <SmartVideoPlayer
+                url={current.videoUrl}
+                thumbUri={current.thumbUri}
+                active={isFocused}
+                onError={handlePlayerError}
+              />
+            )}
+
+            <View style={styles.nowPlaying}>
+              <View style={styles.nowPlayingLabel}>
+                <View style={styles.liveDot} />
+                <Text style={styles.eyebrow}>{t('video.nowPlaying')}</Text>
+              </View>
+              <Text style={styles.videoTitle}>{title}</Text>
+              {!current.videoUrl ? <Text style={styles.noUrl}>{t('video.noUrl')}</Text> : null}
+            </View>
           </View>
-        )}
+
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>{t('video.libraryTitle')}</Text>
+              <Text style={styles.sectionTitle}>{t('video.upNext')}</Text>
+            </View>
+            <View style={styles.countBadge}>
+              <Text style={styles.countText}>{playlist.length}</Text>
+            </View>
+          </View>
+
+          {playlist.length > 0 ? (
+            playlist.map(({ video, index }, rowIndex) => (
+              <TouchableOpacity
+                key={`${video._id ?? index}-${rowIndex}`}
+                style={styles.lessonCard}
+                activeOpacity={0.84}
+                onPress={() => {
+                  setPlayerError(null);
+                  setUnavailableInApp(false);
+                  setCurrentIndex(index);
+                }}
+              >
+                <View style={styles.thumbnail}>
+                  {video.thumbUri ? (
+                    <Image source={{ uri: video.thumbUri }} style={styles.thumbnailImage} resizeMode="cover" />
+                  ) : (
+                    <MediaPlaceholder compact />
+                  )}
+                  <View style={styles.smallPlay}>
+                    <Ionicons name="play" size={11} color={colors.white} />
+                  </View>
+                </View>
+                <View style={styles.lessonCopy}>
+                  <Text style={styles.lessonNumber}>
+                    {t('video.lessonNumber', { number: index + 1 })}
+                  </Text>
+                  <Text style={styles.lessonTitle} numberOfLines={2}>
+                    {video.title ?? t('video.lessonFallback', { n: index + 1 })}
+                  </Text>
+                  <Text style={styles.lessonMeta}>{video.duration ?? t('video.tapWatch')}</Text>
+                </View>
+                <View style={styles.chevron}>
+                  <Ionicons name="chevron-forward" size={18} color={colors.brand} />
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyPlaylist}>
+              <Ionicons name="checkmark-circle-outline" size={32} color={colors.green} />
+              <Text style={styles.emptyPlaylistText}>{t('video.noOtherVideos')}</Text>
+            </View>
+          )}
+        </ScrollView>
       </View>
 
       <BottomNavBar navigation={navigation} />
@@ -363,49 +349,13 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F5F7FC',
-    textAlign: 'center',
-    maxWidth: '70%',
-  },
-  bodyWrap: {
+  body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
   },
   centeredGate: {
     flex: 1,
@@ -413,219 +363,261 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gateText: {
-    marginTop: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#E8ECFA',
+    ...typography.body,
+    marginTop: spacing.md,
+    color: colors.inkMuted,
   },
-
-  // Player
-  heroWrap: {
-    width: '100%',
-    height: 240,
-    backgroundColor: '#000000',
-    position: 'relative',
-  },
-  hero: {
-    width: '100%',
-    height: '100%',
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  playCircle: {
-    position: 'absolute',
-    alignSelf: 'center',
-    top: '50%',
-    marginTop: -32,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(37,99,235,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  // Title block
-  titleBlock: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  videoTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#1E293B',
-  },
-  noUrl: {
-    marginTop: 8,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#EF4444',
-  },
-  openRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 4,
-  },
-  openText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#7CA3E8',
-  },
-
-  // Playlist
-  listPad: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  upNextLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 13,
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 16,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    marginBottom: 16,
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  cardActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
-  },
-  thumbWrap: {
-    width: 110,
-    height: 74,
-    borderRadius: 14,
+  playerCard: {
     overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#F8FAFC',
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
-  thumb: {
+  player: {
+    position: 'relative',
+    width: '100%',
+    height: 230,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+  },
+  playerMedia: {
     width: '100%',
     height: '100%',
   },
-  thumbPlay: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(37,99,235,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  playerShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,33,58,0.42)',
   },
-  nowPlayingDot: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#10B981', // Success green for now playing
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardText: {
-    flex: 1,
-    gap: 6,
-  },
-  cardTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#1E293B',
-  },
-  cardTitleActive: {
-    color: '#1E40AF',
-  },
-  cardSub: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    color: '#64748B',
-  },
-  cardSubActive: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    color: '#10B981',
-  },
-
-  emptyPlaylist: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyPlaylistText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-
-  // Loading & Error states
   playerLoader: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: 10,
-  },
-  errorOverlay: {
-    height: 240,
-    backgroundColor: '#0F172A',
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
+  },
+  unavailableMark: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 60,
+    height: 60,
+    marginTop: -30,
+    marginLeft: -30,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  mediaPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandStrong,
+  },
+  mediaPlaceholderCompact: {
+    backgroundColor: colors.brandMist,
+  },
+  mediaMark: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.amber,
+    transform: [{ rotate: '-4deg' }],
+  },
+  mediaMarkCompact: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+  },
+  mediaPlaceholderText: {
+    ...typography.eyebrow,
+    marginTop: spacing.md,
+    color: '#BFD0EE',
+  },
+  nowPlaying: {
+    padding: spacing.xl,
+  },
+  nowPlayingLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    marginRight: spacing.sm,
+    borderRadius: 4,
+    backgroundColor: colors.green,
+  },
+  eyebrow: {
+    ...typography.eyebrow,
+    color: colors.green,
+    textTransform: 'uppercase',
+  },
+  videoTitle: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  noUrl: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    color: colors.red,
+  },
+  errorState: {
+    minHeight: 230,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxl,
+    backgroundColor: colors.ink,
+  },
+  errorIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.redSoft,
+  },
+  warningIcon: {
+    backgroundColor: colors.amberSoft,
   },
   errorTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#EF4444',
-    marginTop: 12,
-  },
-  errorSub: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#94A3B8',
+    ...typography.title,
+    marginTop: spacing.md,
+    color: colors.white,
     textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 16,
+  },
+  errorText: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    color: '#BCC6D8',
+    textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
+    minHeight: 44,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.brand,
   },
   retryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...typography.bodyStrong,
+    color: colors.white,
+  },
+  sectionHeader: {
+    marginTop: spacing.xxxl,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  sectionEyebrow: {
+    ...typography.eyebrow,
+    marginBottom: 3,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
+  },
+  sectionTitle: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  countBadge: {
+    minWidth: 32,
+    height: 32,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  countText: {
+    ...typography.bodyStrong,
+    color: colors.brandStrong,
+  },
+  lessonCard: {
+    minHeight: 108,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  thumbnail: {
+    position: 'relative',
+    width: 104,
+    height: 76,
+    overflow: 'hidden',
+    borderRadius: radii.md,
+    backgroundColor: colors.brandMist,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  smallPlay: {
+    position: 'absolute',
+    right: 7,
+    bottom: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand,
+  },
+  lessonCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  lessonNumber: {
+    ...typography.eyebrow,
+    color: colors.amber,
+    textTransform: 'uppercase',
+  },
+  lessonTitle: {
+    ...typography.bodyStrong,
+    marginTop: 3,
+    color: colors.ink,
+  },
+  lessonMeta: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+  },
+  chevron: {
+    width: 34,
+    height: 34,
+    marginLeft: spacing.sm,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  emptyPlaylist: {
+    minHeight: 132,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  emptyPlaylistText: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: colors.inkMuted,
+    textAlign: 'center',
   },
 });

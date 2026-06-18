@@ -22,6 +22,8 @@ export type RoadSignsResult = {
   items: RoadSignStudyItem[];
   progress: RoadSignsProgress;
   language: ContentLanguageCode | null;
+  requestedLanguage: ContentLanguageCode;
+  usedFallback: boolean;
 };
 
 type RawRoadSignsPage = {
@@ -44,19 +46,76 @@ function isContentLanguage(value: unknown): value is ContentLanguageCode {
   return value === 'en' || value === 'rw' || value === 'fr';
 }
 
+function normalizeContentLanguage(value: unknown): ContentLanguageCode | null {
+  const language = String(value ?? '').trim().toLowerCase();
+  if (!language) return null;
+  if (language === 'en' || language.startsWith('eng') || language.includes('english') || language.includes('anglais')) {
+    return 'en';
+  }
+  if (language === 'rw' || language.includes('kinyarwanda') || language.includes('rwanda')) return 'rw';
+  if (
+    language === 'fr' ||
+    language.startsWith('fre') ||
+    language.includes('french') ||
+    language.includes('français') ||
+    language.includes('francais')
+  ) {
+    return 'fr';
+  }
+  return null;
+}
+
 function absoluteImageUrl(value: string): string {
   if (/^https?:\/\//i.test(value)) return value;
   const base = API_BASE_URL.replace(/\/+$/, '');
   return `${base}/${value.replace(/^\/+/, '')}`;
 }
 
-function parseStudyItem(value: unknown): RoadSignStudyItem | null {
+function pickString(item: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function pickTranslation(
+  item: Record<string, unknown>,
+  requestedLanguage: ContentLanguageCode,
+  responseLanguage: ContentLanguageCode | null,
+): Record<string, unknown> | null {
+  const translations = item.translations ?? item.translation ?? item.localizedContent ?? item.contents;
+  if (!Array.isArray(translations)) return null;
+  const records = translations.filter(
+    (translation): translation is Record<string, unknown> =>
+      Boolean(translation) && typeof translation === 'object' && !Array.isArray(translation),
+  );
+  return (
+    records.find((translation) => normalizeContentLanguage(translation.language ?? translation.lang ?? translation.locale) === requestedLanguage) ??
+    records.find((translation) => normalizeContentLanguage(translation.language ?? translation.lang ?? translation.locale) === responseLanguage) ??
+    records[0] ??
+    null
+  );
+}
+
+function parseStudyItem(
+  value: unknown,
+  requestedLanguage: ContentLanguageCode,
+  responseLanguage: ContentLanguageCode | null,
+): RoadSignStudyItem | null {
   if (!value || typeof value !== 'object') return null;
   const item = value as Record<string, unknown>;
-  const id = typeof item._id === 'string' ? item._id.trim() : '';
-  const name = typeof item.name === 'string' ? item.name.trim() : '';
-  const description = typeof item.description === 'string' ? item.description.trim() : '';
-  const imageUrl = typeof item.imageUrl === 'string' ? item.imageUrl.trim() : '';
+  const translation = pickTranslation(item, requestedLanguage, responseLanguage);
+  const id = pickString(item, ['_id', 'id', 'signId', 'trafficSignId']);
+  const name = pickString(translation ?? {}, ['name', 'title', 'label']) || pickString(item, ['name', 'title', 'label']);
+  const description =
+    pickString(translation ?? {}, ['description', 'meaning', 'explanation', 'content']) ||
+    pickString(item, ['description', 'meaning', 'explanation', 'content']);
+  const imageUrl = pickString(item, ['imageUrl', 'imageURL', 'image_url', 'image', 'signImage', 'url', 'file', 'fileUrl']);
+  const language =
+    normalizeContentLanguage(translation?.language ?? translation?.lang ?? translation?.locale) ??
+    normalizeContentLanguage(item.language ?? item.lang ?? item.locale) ??
+    responseLanguage;
 
   if (!id || !name || !description || !imageUrl) return null;
 
@@ -65,12 +124,12 @@ function parseStudyItem(value: unknown): RoadSignStudyItem | null {
     name,
     description,
     imageUrl: absoluteImageUrl(imageUrl),
-    language: isContentLanguage(item.language) ? item.language : null,
+    language,
     viewed: item.viewed === true,
   };
 }
 
-function parsePage(json: unknown): {
+function parsePage(json: unknown, requestedLanguage: ContentLanguageCode): {
   items: RoadSignStudyItem[];
   rawItemCount: number;
   total: number | null;
@@ -84,7 +143,10 @@ function parsePage(json: unknown): {
     throw new ApiError('The road-sign API returned an invalid response.', 502);
   }
 
-  const items = rawItems.map(parseStudyItem).filter((item): item is RoadSignStudyItem => item !== null);
+  const responseLanguage = normalizeContentLanguage(payload.language);
+  const items = rawItems
+    .map((item) => parseStudyItem(item, requestedLanguage, responseLanguage))
+    .filter((item): item is RoadSignStudyItem => item !== null);
   if (rawItems.length > 0 && items.length === 0) {
     throw new ApiError('The road-sign API did not return usable study content.', 502);
   }
@@ -107,7 +169,7 @@ function parsePage(json: unknown): {
     rawItemCount: rawItems.length,
     total,
     totalPages,
-    language: isContentLanguage(payload.language) ? payload.language : null,
+    language: responseLanguage,
     progress,
   };
 }
@@ -124,7 +186,36 @@ function pagePath(page: number, language: ContentLanguageCode): string {
 export async function getRoadSigns(
   accessToken: string,
   language: ContentLanguageCode,
+  fallbackLanguages: ContentLanguageCode[] = [],
 ): Promise<RoadSignsResult> {
+  const candidates = Array.from(new Set([language, ...fallbackLanguages]));
+  let firstError: unknown = null;
+
+  for (const candidate of candidates) {
+    try {
+      const result = await getRoadSignsForLanguage(accessToken, candidate);
+      if (result.items.length > 0 || candidate === candidates[candidates.length - 1]) {
+        return {
+          ...result,
+          requestedLanguage: language,
+          usedFallback:
+            candidate !== language ||
+            (result.language !== null && result.language !== language) ||
+            result.items.some((item) => item.language !== null && item.language !== language),
+        };
+      }
+    } catch (error) {
+      firstError ??= error;
+    }
+  }
+
+  throw firstError instanceof Error ? firstError : new ApiError('Could not load road signs.', 500);
+}
+
+async function getRoadSignsForLanguage(
+  accessToken: string,
+  language: ContentLanguageCode,
+): Promise<Omit<RoadSignsResult, 'requestedLanguage' | 'usedFallback'>> {
   const items: RoadSignStudyItem[] = [];
   let page = 1;
   let totalPages = 1;
@@ -138,7 +229,7 @@ export async function getRoadSigns(
       accessToken,
       headers: { token: `Bearer ${accessToken}` },
     });
-    const parsed = parsePage(json);
+    const parsed = parsePage(json, language);
     items.push(...parsed.items);
     totalPages = Math.min(parsed.totalPages, MAX_PAGES);
     responseLanguage = parsed.language ?? responseLanguage;
@@ -150,7 +241,8 @@ export async function getRoadSigns(
   } while (page <= totalPages);
 
   const languageItems = items.filter((item) => !item.language || item.language === language);
-  const uniqueItems = Array.from(new Map(languageItems.map((item) => [item.id, item])).values());
+  const displayItems = languageItems.length > 0 ? languageItems : items;
+  const uniqueItems = Array.from(new Map(displayItems.map((item) => [item.id, item])).values());
 
   return {
     items: uniqueItems,

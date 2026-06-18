@@ -3,6 +3,7 @@ import { KeyboardTypeOptions, Pressable, StyleProp, StyleSheet, Text, TextInput,
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
+import { colors, radii, typography } from '../constants/theme';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -51,15 +52,15 @@ export function AuthInputField({
       <View
         style={[
           styles.inputWrap,
-          { height: m.verticalScale(48), borderRadius: m.scale(11), paddingHorizontal: m.scale(14) },
+          { height: m.verticalScale(52), borderRadius: m.scale(radii.md), paddingHorizontal: m.scale(14) },
           outline ? styles.inputWrapOutline : styles.inputWrapFilled,
           hasError && styles.inputWrapError,
         ]}
       >
-        <Feather name={leftIcon} size={m.scale(17)} color={outline ? '#C5C8D2' : '#8A8FA2'} />
+        <Feather name={leftIcon} size={m.scale(18)} color={colors.inkSoft} />
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor="#A8AAB4"
+          placeholderTextColor={colors.inkSoft}
           secureTextEntry={secureTextEntry ? isSecure : false}
           value={value}
           onChangeText={onChangeText}
@@ -78,7 +79,7 @@ export function AuthInputField({
             <Feather
               name={secureTextEntry ? (isSecure ? rightIcon : 'eye-off') : rightIcon}
               size={m.scale(17)}
-              color="#BCBEC7"
+              color={colors.inkSoft}
             />
           </Pressable>
         ) : null}
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 20,
     letterSpacing: 0.5,
-    color: '#64748B',
+    color: colors.inkMuted,
     textTransform: 'uppercase',
   },
   inputWrap: {
@@ -110,27 +111,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   inputWrapFilled: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceAlt,
   },
   inputWrapOutline: {
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
   },
   inputWrapError: {
-    borderColor: '#EF4444',
+    borderColor: colors.red,
   },
   errorText: {
     fontFamily: 'PlusJakartaSans-Medium',
-    color: '#EF4444',
+    color: colors.red,
   },
   input: {
     flex: 1,
     marginHorizontal: 10,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#1E293B',
+    ...typography.bodyStrong,
+    color: colors.ink,
     paddingVertical: 0,
   },
 });

@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { BottomNavBar } from '../components/BottomNavBar';
+import { AppHeader } from '../components/AppHeader';
+import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +30,7 @@ import {
   type RoadSignsProgress,
 } from '../services/roadSignsApi';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoadSignsNative'>;
 
@@ -43,80 +44,152 @@ function getRoadSignsLoadMessage(err: unknown, t: (key: string) => string): stri
   return t('roadsigns.loadError');
 }
 
-function RoadSignsHeader({ title, onBack }: { title: string; onBack: () => void }) {
-  const { insets } = useResponsiveLayout();
-
-  return (
-    <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-      <View style={styles.topRow}>
-        <TouchableOpacity onPress={onBack} style={styles.headerLeft} activeOpacity={0.7} hitSlop={15}>
-          <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <View style={styles.headerRight} />
-      </View>
-    </View>
-  );
-}
-
-function RoadSignSlide({
+function RoadSignCard({
   item,
-  width,
   imageFailed,
   onImageError,
+  onPress,
 }: {
   item: RoadSignStudyItem;
-  width: number;
   imageFailed: boolean;
   onImageError: () => void;
+  onPress: () => void;
 }) {
   const { t } = useI18n();
 
   return (
-    <View style={[styles.slide, { width }]}>
-      <View style={styles.studyCard}>
-        <View style={styles.studyLabelRow}>
-          <Text style={styles.studyLabel}>{t('roadsigns.studyLabel')}</Text>
-          {item.viewed ? (
-            <View style={styles.viewedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color="#16724C" />
-              <Text style={styles.viewedText}>{t('roadsigns.viewed')}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <Text style={styles.signTitle}>{item.name}</Text>
-
-        <View style={styles.imageStage}>
-          {imageFailed ? (
-            <View style={styles.imageError}>
-              <Ionicons name="image-outline" size={36} color="#94A3B8" />
-              <Text style={styles.imageErrorText}>{t('roadsigns.imageError')}</Text>
-            </View>
-          ) : (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.signImage}
-              resizeMode="contain"
-              onError={onImageError}
-              accessibilityLabel={item.name}
-            />
-          )}
-        </View>
-
-        <ScrollView
-          style={styles.meaningScroll}
-          contentContainerStyle={styles.meaningContent}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-        >
-          <Text style={styles.meaningLabel}>{t('roadsigns.meaning')}</Text>
-          <Text style={styles.description}>{item.description}</Text>
-        </ScrollView>
+    <TouchableOpacity style={styles.signCard} onPress={onPress} activeOpacity={0.82}>
+      <View style={styles.signThumb}>
+        {imageFailed ? (
+          <View style={styles.gridImageError}>
+            <Ionicons name="image-outline" size={24} color={colors.inkSoft} />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.gridImage}
+            resizeMode="contain"
+            onError={onImageError}
+            accessibilityLabel={item.name}
+          />
+        )}
       </View>
-    </View>
+      <View style={styles.signCardCopy}>
+        <Text style={styles.signCardTitle} numberOfLines={2}>{item.name}</Text>
+        <View style={styles.signMetaRow}>
+          <View style={[styles.viewedBadge, item.viewed ? styles.viewedBadgeDone : styles.viewedBadgeTodo]}>
+            <Ionicons
+              name={item.viewed ? 'checkmark-circle' : 'ellipse-outline'}
+              size={12}
+              color={item.viewed ? colors.success : colors.brand}
+            />
+            <Text style={[styles.viewedText, item.viewed ? styles.viewedTextDone : styles.viewedTextTodo]}>
+              {item.viewed ? t('roadsigns.viewed') : t('roadsigns.studyLabel')}
+            </Text>
+          </View>
+          <Text style={styles.viewDetailsText}>{t('roadsigns.viewDetails')}</Text>
+        </View>
+      </View>
+      <View style={styles.cardArrow}>
+        <Ionicons name="arrow-forward" size={18} color={colors.inkMuted} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function RoadSignDetailModal({
+  visible,
+  item,
+  current,
+  total,
+  imageFailed,
+  onClose,
+  onImageError,
+  onPrevious,
+  onNext,
+}: {
+  visible: boolean;
+  item: RoadSignStudyItem | null;
+  current: number;
+  total: number;
+  imageFailed: boolean;
+  onClose: () => void;
+  onImageError: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const { t } = useI18n();
+  if (!item) return null;
+  const canGoPrevious = current > 1;
+  const canGoNext = current < total;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.detailSheet}>
+          <View style={styles.detailHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose} accessibilityLabel={t('common.cancel')}>
+              <Ionicons name="close" size={22} color={colors.inkMuted} />
+            </TouchableOpacity>
+            <Text style={styles.detailCounter}>{t('roadsigns.positionShort', { current, total })}</Text>
+            <View style={styles.closeButtonSpacer} />
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
+            <View style={styles.detailBadgeRow}>
+              <Text style={styles.detailEyebrow}>{t('roadsigns.studyLabel')}</Text>
+              {item.viewed ? (
+                <View style={styles.detailViewedBadge}>
+                  <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+                  <Text style={styles.detailViewedText}>{t('roadsigns.viewed')}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <Text style={styles.detailTitle}>{item.name}</Text>
+
+            <View style={styles.detailImageFrame}>
+              {imageFailed ? (
+                <View style={styles.detailImageError}>
+                  <Ionicons name="image-outline" size={34} color={colors.inkSoft} />
+                  <Text style={styles.imageErrorText}>{t('roadsigns.imageError')}</Text>
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.detailImage}
+                  resizeMode="contain"
+                  onError={onImageError}
+                  accessibilityLabel={item.name}
+                />
+              )}
+            </View>
+
+            <View style={styles.descriptionCard}>
+              <Text style={styles.meaningLabel}>{t('roadsigns.meaning')}</Text>
+              <Text style={styles.description}>{item.description}</Text>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.floatingNavButton, styles.floatingNavLeft, !canGoPrevious && styles.floatingNavDisabled]}
+            onPress={onPrevious}
+            disabled={!canGoPrevious}
+            accessibilityLabel={t('roadsigns.previous')}
+          >
+            <Ionicons name="chevron-back" size={24} color={canGoPrevious ? colors.brand : colors.inkSoft} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.floatingNavButton, styles.floatingNavRight, !canGoNext && styles.floatingNavDisabled]}
+            onPress={onNext}
+            disabled={!canGoNext}
+            accessibilityLabel={t('roadsigns.next')}
+          >
+            <Ionicons name="chevron-forward" size={24} color={canGoNext ? colors.brand : colors.inkSoft} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -133,13 +206,13 @@ export function RoadSignsNativeScreen({ navigation }: Props) {
     isSigningOut,
   } = useAppFlow();
 
-  const listRef = useRef<FlatList<RoadSignStudyItem>>(null);
   const markedViewedRef = useRef(new Set<string>());
   const [signs, setSigns] = useState<RoadSignStudyItem[]>([]);
   const [progress, setProgress] = useState<RoadSignsProgress>({ viewed: 0, total: 0 });
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [carouselWidth, setCarouselWidth] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [usedFallback, setUsedFallback] = useState(false);
+  const [sourceLanguage, setSourceLanguage] = useState<typeof contentLanguage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,22 +239,29 @@ export function RoadSignsNativeScreen({ navigation }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await getRoadSigns(accessToken, contentLanguage);
+      const result = await getRoadSigns(
+        accessToken,
+        contentLanguage,
+        subscriptionLanguage && subscriptionLanguage !== contentLanguage ? [subscriptionLanguage] : [],
+      );
       setSigns(result.items);
       setProgress(result.progress);
-      setCurrentIndex(0);
+      setUsedFallback(result.usedFallback);
+      setSourceLanguage(result.language);
+      setSelectedIndex(null);
       setFailedImages({});
       markedViewedRef.current.clear();
-      requestAnimationFrame(() => listRef.current?.scrollToOffset({ offset: 0, animated: false }));
     } catch (err) {
       if (__DEV__) console.warn('[RoadSigns] study content load failed', err);
       setSigns([]);
       setProgress({ viewed: 0, total: 0 });
+      setUsedFallback(false);
+      setSourceLanguage(null);
       setError(getRoadSignsLoadMessage(err, t));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, contentLanguage, t]);
+  }, [accessToken, contentLanguage, subscriptionLanguage, t]);
 
   useEffect(() => {
     if (!languageAccessGranted || isSigningOut) {
@@ -207,145 +287,105 @@ export function RoadSignsNativeScreen({ navigation }: Props) {
     [accessToken, signs.length],
   );
 
-  useEffect(() => {
-    if (signs.length > 0) markViewed(signs[currentIndex]);
-  }, [currentIndex, markViewed, signs]);
-
-  const goToIndex = useCallback(
+  const openSign = useCallback(
     (index: number) => {
-      if (index < 0 || index >= signs.length || carouselWidth <= 0) return;
-      listRef.current?.scrollToOffset({ offset: index * carouselWidth, animated: true });
-      setCurrentIndex(index);
+      if (index < 0 || index >= signs.length) return;
+      setSelectedIndex(index);
+      markViewed(signs[index]);
     },
-    [carouselWidth, signs.length],
+    [markViewed, signs],
   );
 
-  const handleScrollEnd = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (carouselWidth <= 0) return;
-      const nextIndex = Math.round(event.nativeEvent.contentOffset.x / carouselWidth);
-      setCurrentIndex(Math.max(0, Math.min(nextIndex, signs.length - 1)));
+  const goToDetailIndex = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= signs.length) return;
+      setSelectedIndex(index);
+      markViewed(signs[index]);
     },
-    [carouselWidth, signs.length],
+    [markViewed, signs],
   );
 
-  const currentPosition = signs.length > 0 ? currentIndex + 1 : 0;
-  const progressWidth: `${number}%` =
-    signs.length > 0 ? `${(currentPosition / signs.length) * 100}%` : '0%';
+  const languageLabel = t(`profile.lang.${contentLanguage}`);
+  const sourceLanguageLabel = sourceLanguage ? t(`profile.lang.${sourceLanguage}`) : languageLabel;
+  const selectedSign = selectedIndex === null ? null : signs[selectedIndex] ?? null;
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <RoadSignsHeader title={t('reading.roadSigns')} onBack={() => navigation.goBack()} />
+    <ScreenColumn>
+      <AppHeader title={t('reading.roadSigns')} navigation={navigation} onBack={() => navigation.goBack()} />
 
       <View style={[styles.body, { paddingBottom: tabScrollBottomPad }]}>
         {!languageAccessGranted || isSigningOut ? (
-          <View style={styles.centerWrap}>
-            <ActivityIndicator size="large" color="#4A78D0" />
-            <Text style={styles.statusText}>{t('roadsigns.checkingAccess')}</Text>
-          </View>
+          <LoadingState message={t('roadsigns.checkingAccess')} />
         ) : loading ? (
-          <View style={styles.centerWrap}>
-            <ActivityIndicator size="large" color="#4A78D0" />
-            <Text style={styles.statusText}>{t('roadsigns.loading')}</Text>
-          </View>
+          <LoadingState message={t('roadsigns.loading')} />
         ) : error ? (
-          <View style={styles.centerWrap}>
-            <Ionicons name="cloud-offline-outline" size={42} color="#94A3B8" />
-            <Text style={styles.errorTitle}>{t('roadsigns.errorTitle')}</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => void loadSigns()} activeOpacity={0.85}>
-              <Ionicons name="refresh" size={18} color="#FFFFFF" />
-              <Text style={styles.retryText}>{t('roadsigns.retry')}</Text>
-            </TouchableOpacity>
-          </View>
+          <InlineErrorState title={t('roadsigns.errorTitle')} message={error} onRetry={() => void loadSigns()} />
         ) : signs.length === 0 ? (
-          <View style={styles.centerWrap}>
-            <Ionicons name="albums-outline" size={42} color="#94A3B8" />
-            <Text style={styles.errorTitle}>{t('roadsigns.emptyTitle')}</Text>
-            <Text style={styles.errorText}>{t('roadsigns.emptyBody')}</Text>
-          </View>
+          <EmptyState title={t('roadsigns.emptyTitle')} message={t('roadsigns.emptyBody')} />
         ) : (
-          <View
-            style={styles.carouselViewport}
-            onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}
-          >
-            <View style={styles.carouselMeta}>
-              <View>
-                <Text style={styles.positionText}>
-                  {t('roadsigns.position', { current: currentPosition, total: signs.length })}
-                </Text>
-                <Text style={styles.progressText}>
-                  {t('roadsigns.progress', { viewed: progress.viewed, total: progress.total || signs.length })}
-                </Text>
-              </View>
-              <Text style={styles.swipeHint}>{t('roadsigns.swipeHint')}</Text>
-            </View>
+          <>
+            <FlatList
+              data={signs}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.gridRow}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[styles.gridContent, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
+              ListHeaderComponent={
+                <View style={styles.gridHeader}>
+                  <View style={styles.gridHeaderRow}>
+                    <View>
+                      <Text style={styles.positionText}>
+                        {t('roadsigns.signCount', {
+                          count: signs.length,
+                          label: signs.length === 1 ? t('roadsigns.signSingular') : t('roadsigns.signPlural'),
+                        })}
+                      </Text>
+                      <Text style={styles.progressText}>
+                        {t('roadsigns.progress', { viewed: progress.viewed, total: progress.total || signs.length })}
+                      </Text>
+                    </View>
+                    <View style={styles.languagePill}>
+                      <Ionicons name="language-outline" size={14} color={colors.brandStrong} />
+                      <Text style={styles.languagePillText}>{sourceLanguageLabel}</Text>
+                    </View>
+                  </View>
 
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: progressWidth }]} />
-            </View>
-
-            {carouselWidth > 0 ? (
-              <FlatList
-                ref={listRef}
-                style={styles.carouselList}
-                data={signs}
-                keyExtractor={(item) => item.id}
-                horizontal
-                pagingEnabled
-                bounces={false}
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={handleScrollEnd}
-                getItemLayout={(_, index) => ({
-                  length: carouselWidth,
-                  offset: carouselWidth * index,
-                  index,
-                })}
-                renderItem={({ item }) => (
-                  <RoadSignSlide
-                    item={item}
-                    width={carouselWidth}
-                    imageFailed={failedImages[item.id] === true}
-                    onImageError={() => setFailedImages((current) => ({ ...current, [item.id]: true }))}
-                  />
-                )}
-              />
-            ) : null}
-
-            <View style={styles.carouselControls}>
-              <TouchableOpacity
-                style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
-                onPress={() => goToIndex(currentIndex - 1)}
-                disabled={currentIndex === 0}
-                accessibilityLabel={t('roadsigns.previous')}
-              >
-                <Ionicons name="arrow-back" size={20} color={currentIndex === 0 ? '#AAB6C8' : '#315FAE'} />
-                <Text style={[styles.navButtonText, currentIndex === 0 && styles.navButtonTextDisabled]}>
-                  {t('roadsigns.previous')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.navButton, currentIndex === signs.length - 1 && styles.navButtonDisabled]}
-                onPress={() => goToIndex(currentIndex + 1)}
-                disabled={currentIndex === signs.length - 1}
-                accessibilityLabel={t('roadsigns.next')}
-              >
-                <Text
-                  style={[
-                    styles.navButtonText,
-                    currentIndex === signs.length - 1 && styles.navButtonTextDisabled,
-                  ]}
-                >
-                  {t('roadsigns.next')}
-                </Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={20}
-                  color={currentIndex === signs.length - 1 ? '#AAB6C8' : '#315FAE'}
+                  {usedFallback ? (
+                    <Text style={styles.fallbackNotice}>
+                      {t('roadsigns.languageFallback', {
+                        requested: languageLabel,
+                        available: sourceLanguageLabel,
+                      })}
+                    </Text>
+                  ) : null}
+                </View>
+              }
+              renderItem={({ item, index }) => (
+                <RoadSignCard
+                  item={item}
+                  imageFailed={failedImages[item.id] === true}
+                  onImageError={() => setFailedImages((current) => ({ ...current, [item.id]: true }))}
+                  onPress={() => openSign(index)}
                 />
-              </TouchableOpacity>
-            </View>
-          </View>
+              )}
+            />
+
+            <RoadSignDetailModal
+              visible={selectedSign !== null}
+              item={selectedSign}
+              current={(selectedIndex ?? 0) + 1}
+              total={signs.length}
+              imageFailed={selectedSign ? failedImages[selectedSign.id] === true : false}
+              onClose={() => setSelectedIndex(null)}
+              onImageError={() => {
+                if (!selectedSign) return;
+                setFailedImages((current) => ({ ...current, [selectedSign.id]: true }));
+              }}
+              onPrevious={() => goToDetailIndex((selectedIndex ?? 0) - 1)}
+              onNext={() => goToDetailIndex((selectedIndex ?? 0) + 1)}
+            />
+          </>
         )}
       </View>
 
@@ -355,278 +395,279 @@ export function RoadSignsNativeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    width: 44,
-    height: 44,
-  },
-  headerTitle: {
-    maxWidth: '72%',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#F8FAFF',
-    textAlign: 'center',
-  },
   body: {
     flex: 1,
-    marginTop: -20,
-    overflow: 'hidden',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    backgroundColor: '#F3F5FA',
+    backgroundColor: colors.canvas,
   },
-  centerWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 36,
+  gridContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
   },
-  statusText: {
-    marginTop: 16,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#64748B',
+  gridHeader: {
+    marginBottom: spacing.lg,
   },
-  errorTitle: {
-    marginTop: 16,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#25334A',
-    textAlign: 'center',
-  },
-  errorText: {
-    marginTop: 8,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 21,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  retryButton: {
-    minHeight: 46,
-    marginTop: 22,
-    paddingHorizontal: 22,
-    borderRadius: 23,
+  gridHeaderRow: {
+    minHeight: 48,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#4A78D0',
-  },
-  retryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  carouselViewport: {
-    flex: 1,
-    paddingTop: 24,
-  },
-  carouselMeta: {
-    paddingHorizontal: 22,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
   },
   positionText: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 13,
-    color: '#315FAE',
+    color: colors.brand,
     letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   progressText: {
     marginTop: 3,
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    color: '#7A8BA5',
+    fontSize: 12,
+    color: colors.inkMuted,
   },
-  swipeHint: {
-    flexShrink: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    color: '#7A8BA5',
-    textAlign: 'right',
-  },
-  progressTrack: {
-    height: 4,
-    marginTop: 12,
-    marginHorizontal: 22,
-    overflow: 'hidden',
-    borderRadius: 2,
-    backgroundColor: '#DDE5F2',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-    backgroundColor: '#4A78D0',
-  },
-  slide: {
-    flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  carouselList: {
-    flex: 1,
-  },
-  studyCard: {
-    flex: 1,
-    overflow: 'hidden',
-    borderRadius: 26,
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E6EBF3',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#1A2B49',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  studyLabelRow: {
-    minHeight: 24,
+  languagePill: {
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.xs,
+    backgroundColor: colors.brandSoft,
   },
-  studyLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 10,
-    color: '#B07121',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+  languagePillText: {
+    ...typography.caption,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.brandStrong,
+  },
+  fallbackNotice: {
+    marginTop: spacing.sm,
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.brandStrong,
+  },
+  gridRow: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  signCard: {
+    flex: 1,
+    minHeight: 206,
+    padding: spacing.md,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  signThumb: {
+    height: 104,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#FFF9EF',
+    borderWidth: 1,
+    borderColor: '#F1DFC3',
+  },
+  gridImage: {
+    width: '92%',
+    height: '92%',
+  },
+  gridImageError: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signCardCopy: {
+    flex: 1,
+    marginTop: spacing.md,
+  },
+  signCardTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  signMetaRow: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
   },
   viewedBadge: {
+    alignSelf: 'flex-start',
+    minHeight: 24,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#E8F6EF',
+  },
+  viewedBadgeDone: {
+    backgroundColor: colors.successSoft,
+  },
+  viewedBadgeTodo: {
+    backgroundColor: colors.brandSoft,
   },
   viewedText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 10,
-    color: '#16724C',
   },
-  signTitle: {
-    marginTop: 7,
+  viewedTextDone: {
+    color: colors.success,
+  },
+  viewedTextTodo: {
+    color: colors.brand,
+  },
+  viewDetailsText: {
+    ...typography.caption,
+    color: colors.brand,
+  },
+  cardArrow: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  modalBackdrop: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(23, 34, 56, 0.46)',
+  },
+  detailSheet: {
+    maxHeight: '86%',
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    overflow: 'visible',
+  },
+  detailHeader: {
+    height: 52,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonSpacer: {
+    width: 40,
+    height: 40,
+  },
+  detailCounter: {
+    ...typography.bodyStrong,
+    color: colors.inkMuted,
+  },
+  detailContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  detailBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailEyebrow: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  detailViewedBadge: {
+    minHeight: 24,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.successSoft,
+  },
+  detailViewedText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 10,
+    color: colors.success,
+  },
+  detailTitle: {
+    marginTop: spacing.sm,
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 20,
     lineHeight: 27,
-    color: '#172238',
+    color: colors.ink,
   },
-  imageStage: {
-    flex: 1,
-    minHeight: 180,
-    maxHeight: 320,
-    marginTop: 14,
+  detailImageFrame: {
+    height: 260,
+    marginTop: spacing.md,
+    borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#F1DFC3',
     backgroundColor: '#FFF9EF',
   },
-  signImage: {
+  detailImage: {
     width: '92%',
     height: '92%',
   },
-  imageError: {
+  detailImageError: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   imageErrorText: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 12,
-    color: '#64748B',
+    color: colors.inkMuted,
     textAlign: 'center',
   },
-  meaningScroll: {
-    flexGrow: 0,
-    maxHeight: 150,
-    marginTop: 14,
-    borderRadius: 18,
-    backgroundColor: '#F7F9FC',
-  },
-  meaningContent: {
-    paddingHorizontal: 15,
-    paddingVertical: 13,
+  descriptionCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   meaningLabel: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 10,
-    color: '#315FAE',
+    color: colors.brand,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   description: {
-    marginTop: 7,
+    marginTop: spacing.sm,
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 22,
-    color: '#46556D',
+    color: colors.inkMuted,
   },
-  carouselControls: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 14,
-  },
-  navButton: {
-    minHeight: 44,
-    minWidth: 120,
-    paddingHorizontal: 15,
-    borderRadius: 22,
-    flexDirection: 'row',
+  floatingNavButton: {
+    position: 'absolute',
+    top: '45%',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#C9D8EF',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.line,
   },
-  navButtonDisabled: {
-    borderColor: '#E2E7EF',
-    backgroundColor: '#EEF1F5',
+  floatingNavLeft: {
+    left: -16,
   },
-  navButtonText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    color: '#315FAE',
+  floatingNavRight: {
+    right: -16,
   },
-  navButtonTextDisabled: {
-    color: '#AAB6C8',
+  floatingNavDisabled: {
+    opacity: 0.45,
   },
 });

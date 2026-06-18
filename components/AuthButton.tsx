@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
+import { colors, shadows, typography } from '../constants/theme';
 
 type AuthButtonProps = {
   label: string;
@@ -24,8 +25,8 @@ export function AuthButton({ label, onPress, withArrow = false, style }: AuthBut
         pressed && styles.buttonPressed,
       ]}
     >
-      <Text style={[styles.label, { fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{label}</Text>
-      {withArrow ? <Feather name="arrow-right" size={m.scale(16)} color="#FFFFFF" style={[styles.icon, { marginLeft: m.scale(7) }]} /> : null}
+      <Text style={[styles.label, { fontSize: m.fontScale(15), lineHeight: m.fontScale(20) }]}>{label}</Text>
+      {withArrow ? <Feather name="arrow-right" size={m.scale(17)} color={colors.white} style={[styles.icon, { marginLeft: m.scale(8) }]} /> : null}
     </Pressable>
   );
 }
@@ -35,24 +36,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    elevation: 4,
+    ...shadows.card,
   },
   buttonPressed: {
-    opacity: 0.95,
+    opacity: 0.88,
   },
   label: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#FFFFFF',
+    ...typography.bodyStrong,
+    color: colors.white,
   },
   icon: {
     marginLeft: 7,

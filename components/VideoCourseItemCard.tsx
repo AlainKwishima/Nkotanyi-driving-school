@@ -1,5 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '../i18n/useI18n';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type VideoCourseItemCardProps = {
   title: string;
@@ -9,14 +12,17 @@ type VideoCourseItemCardProps = {
 };
 
 export function VideoCourseItemCard({ title, duration, active, onPress }: VideoCourseItemCardProps) {
+  const { t } = useI18n();
   return (
     <Pressable onPress={onPress} style={[styles.card, active && styles.cardActive]}>
-      <View style={styles.thumb} />
+      <View style={styles.thumb}>
+        <Ionicons name={active ? 'volume-medium' : 'play'} size={18} color={colors.white} />
+      </View>
       <View style={styles.textWrap}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        <Text style={[styles.duration, active && styles.playing]}>{active ? 'Playing now.....' : duration}</Text>
+        <Text style={[styles.duration, active && styles.playing]}>{active ? t('video.nowPlaying') : duration}</Text>
       </View>
     </Pressable>
   );
@@ -24,44 +30,43 @@ export function VideoCourseItemCard({ title, duration, active, onPress }: VideoC
 
 const styles = StyleSheet.create({
   card: {
-    width: 346,
-    height: 91,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    width: '100%',
+    minHeight: 92,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(198, 197, 208, 0.2)',
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
   },
   cardActive: {
-    borderColor: '#4378DB',
+    borderColor: colors.brand,
+    backgroundColor: colors.brandSoft,
   },
   thumb: {
     width: 89,
     height: 65,
-    borderRadius: 8,
-    backgroundColor: '#C8D4F1',
+    borderRadius: radii.md,
+    backgroundColor: colors.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textWrap: {
     marginLeft: 16,
     flex: 1,
   },
   title: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#1B1B1E',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
   duration: {
     marginTop: 6,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#6E6F76',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   playing: {
-    color: '#4378DB',
+    color: colors.brand,
   },
 });
 

@@ -12,7 +12,6 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 
 import { HelpCenterScreen } from './screens/HelpCenterScreen';
 import { CreateAccountScreen, ForgotPasswordScreen, LoginScreen, ResetPasswordScreen } from './screens/AuthScreens';
@@ -41,6 +40,10 @@ import { RoadSignsNativeScreen } from './screens/RoadSignsNativeScreen';
 import { AppFlowProvider } from './context/AppFlowContext';
 import { AuthProvider } from './context/AuthContext';
 import { GateModalProvider } from './context/GateModalContext';
+import { NetworkStatusProvider } from './context/NetworkStatusContext';
+import { OfflineBanner } from './components/OfflineBanner';
+import { FullScreenErrorBoundary } from './components/FullScreenErrorBoundary';
+import { colors } from './constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -49,7 +52,7 @@ const navTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#FBF8FD',
+    background: colors.canvas,
   },
 };
 
@@ -62,7 +65,7 @@ const stackScreenOptions: NativeStackNavigationOptions = {
   gestureEnabled: true,
   freezeOnBlur: true,
   contentStyle: {
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
   },
 };
 
@@ -73,17 +76,12 @@ export default function App() {
     'PlusJakartaSans-SemiBold': PlusJakartaSans_600SemiBold,
     'PlusJakartaSans-Bold': PlusJakartaSans_700Bold,
     'PlusJakartaSans-ExtraBold': PlusJakartaSans_800ExtraBold,
-    'Poppins-Regular': Poppins_400Regular,
-    'Poppins-Medium': Poppins_500Medium,
-    'Poppins-SemiBold': Poppins_600SemiBold,
-    'Poppins-Bold': Poppins_700Bold,
-    'Poppins-ExtraBold': Poppins_800ExtraBold,
   });
 
   if (!fontsLoaded) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#4378DB" />
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -92,10 +90,14 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'} />
       <AppFlowProvider>
-        <AuthProvider>
-          <GateModalProvider>
-            <NavigationContainer theme={navTheme} ref={navigationRef}>
-          <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="Splash">
+        <NetworkStatusProvider>
+          <AuthProvider>
+            <GateModalProvider>
+              <FullScreenErrorBoundary>
+                <View style={styles.app}>
+                  <OfflineBanner />
+                  <NavigationContainer theme={navTheme} ref={navigationRef}>
+                    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="Splash">
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="LanguageSettings" component={LanguageSettingsScreen} />
@@ -128,20 +130,26 @@ export default function App() {
             <Stack.Screen name="VideoCoursePlayer" component={VideoCoursePlayerScreen} />
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
             <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />
-          </Stack.Navigator>
-            </NavigationContainer>
-          </GateModalProvider>
-        </AuthProvider>
+                    </Stack.Navigator>
+                  </NavigationContainer>
+                </View>
+              </FullScreenErrorBoundary>
+            </GateModalProvider>
+          </AuthProvider>
+        </NetworkStatusProvider>
       </AppFlowProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  app: {
+    flex: 1,
+  },
   loader: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
   },
 });

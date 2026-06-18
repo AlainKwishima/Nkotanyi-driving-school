@@ -251,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPhone(null);
     await AsyncStorage.removeItem(AUTH_KEY);
     await setSignedIn(false);
+    await setHasSubscription(false);
     await setCanChangeLanguage(false);
     await setHasTimeBasedSubscription(false);
     await setSubscriptionLanguage(null);
@@ -264,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
     }
-  }, [accessToken, setCanChangeLanguage, setHasTimeBasedSubscription, setSignedIn, setSigningOut, setSubscriptionLanguage]);
+  }, [accessToken, setCanChangeLanguage, setHasSubscription, setHasTimeBasedSubscription, setSignedIn, setSigningOut, setSubscriptionLanguage]);
 
   useEffect(() => {
     logoutRef.current = logout;

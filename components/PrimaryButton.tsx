@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text } from 'react-native';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { useMobile } from '../hooks/useMobile';
+import { colors, shadows, typography } from '../constants/theme';
 
 type PrimaryButtonProps = {
   label: string;
@@ -32,31 +33,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    elevation: 4,
+    ...shadows.card,
   },
   buttonPressed: {
-    opacity: 0.95,
+    opacity: 0.88,
   },
   label: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    ...typography.bodyStrong,
     fontSize: 15,
-    lineHeight: 20,
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
   },
   icon: {
     marginLeft: 8,
     width: 14,
     height: 14,
-    tintColor: '#FFFFFF',
+    tintColor: colors.white,
   },
 });
 

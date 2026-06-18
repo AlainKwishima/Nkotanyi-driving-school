@@ -13,170 +13,93 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
-import { HeaderMenu } from '../components/HeaderMenu';
+import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { SectionHeading } from '../components/SectionHeading';
+import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
-import { getPdfs, type PdfItem } from '../services/contentApi';
+import { getPdfsWithFallback, type PdfItem } from '../services/contentApi';
+import { ApiError } from '../services/api/types';
 import { useI18n } from '../i18n/useI18n';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type ReadProps = NativeStackScreenProps<RootStackParamList, 'ReadingNative'>;
 type HelpProps = NativeStackScreenProps<RootStackParamList, 'HelpCenterNative'>;
-type AnyNav = ReadProps['navigation'] | HelpProps['navigation'];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function pdfOpenUrl(item: PdfItem): string | undefined {
-  const u = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl;
-  return typeof u === 'string' && u.startsWith('http') ? u : undefined;
+  const value = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl;
+  return typeof value === 'string' && value.startsWith('http') ? value : undefined;
 }
 
-function pdfLabel(item: PdfItem, idx: number, fallback: string): string {
-  return (item.title ?? item.name ?? `${fallback} ${idx + 1}`).trim();
+function pdfLabel(item: PdfItem, index: number, fallback: string): string {
+  return (item.title ?? item.name ?? `${fallback} ${index + 1}`).trim();
 }
 
-function pdfExt(item: PdfItem): string {
-  const url = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl ?? '';
-  const lower = url.toLowerCase();
-  if (lower.includes('.pdf')) return 'PDF';
-  if (lower.includes('.docx') || lower.includes('.doc')) return 'DOC';
-  if (lower.includes('.pptx') || lower.includes('.ppt')) return 'PPT';
+function pdfExtension(item: PdfItem): 'PDF' | 'DOC' | 'PPT' | 'FILE' {
+  const url = (item.file ?? item.pdfURL ?? item.url ?? item.fileUrl ?? '').toLowerCase();
+  if (url.includes('.pdf')) return 'PDF';
+  if (url.includes('.doc')) return 'DOC';
+  if (url.includes('.ppt')) return 'PPT';
   return 'FILE';
 }
 
-function normalizePdfLanguage(value?: string | null): 'en' | 'rw' | 'fr' | null {
-  if (!value) return null;
-  const normalized = value.trim().toLowerCase();
-  if (
-    normalized === 'en' ||
-    normalized.startsWith('en-') ||
-    normalized.startsWith('eng') ||
-    normalized.includes('english') ||
-    normalized.includes('anglais')
-  ) {
-    return 'en';
-  }
-  if (
-    normalized === 'rw' ||
-    normalized.startsWith('rw-') ||
-    normalized.includes('kinyarwanda')
-  ) {
-    return 'rw';
-  }
-  if (
-    normalized === 'fr' ||
-    normalized.startsWith('fr-') ||
-    normalized.includes('francais') ||
-    normalized.includes('français')
-  ) {
-    return 'fr';
-  }
-  return null;
-}
-
-function pdfLanguage(item: PdfItem): 'en' | 'rw' | 'fr' | null {
-  return normalizePdfLanguage(item.language ?? null);
-}
-
-const EXT_COLORS: Record<string, string> = {
-  PDF: '#E4552A',
-  DOC: '#2B5EAE',
-  PPT: '#C0392B',
-  FILE: '#5C6474',
+const FILE_TONES = {
+  PDF: { color: '#B84E35', background: '#FAEBE6' },
+  DOC: { color: colors.brandStrong, background: colors.brandSoft },
+  PPT: { color: '#A55F1D', background: colors.amberSoft },
+  FILE: { color: colors.inkMuted, background: '#EDF0EC' },
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function TopHeader({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: AnyNav }) {
-  const { insets } = useResponsiveLayout();
-  return (
-    <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-      <View style={styles.topRow}>
-        <TouchableOpacity onPress={onBack} style={styles.headerLeft} activeOpacity={0.7} hitSlop={15}>
-          <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
-        <View style={styles.headerRight}>
-          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function DocCard({
+function DocumentCard({
   item,
-  idx,
+  index,
   fallback,
   onPress,
 }: {
   item: PdfItem;
-  idx: number;
+  index: number;
   fallback: string;
   onPress: () => void;
 }) {
   const { t } = useI18n();
-  const label = pdfLabel(item, idx, fallback);
-  const url = pdfOpenUrl(item);
-  const ext = pdfExt(item);
-  const extColor = EXT_COLORS[ext] ?? EXT_COLORS.FILE;
+  const extension = pdfExtension(item);
+  const tone = FILE_TONES[extension];
+  const hasLink = Boolean(pdfOpenUrl(item));
 
   return (
-    <TouchableOpacity style={styles.docCard} onPress={onPress} activeOpacity={0.88}>
-      {/* File-type icon container */}
-      <View style={[styles.extIconWrap, { backgroundColor: extColor + '15' }]}>
-        <Ionicons name="document-text" size={24} color={extColor} />
-        <View style={[styles.extBadgeSmall, { backgroundColor: extColor }]}>
-          <Text style={styles.extBadgeText}>{ext}</Text>
+    <TouchableOpacity
+      style={styles.documentCard}
+      onPress={onPress}
+      activeOpacity={hasLink ? 0.84 : 1}
+      accessibilityState={{ disabled: !hasLink }}
+    >
+      <View style={[styles.fileIcon, { backgroundColor: tone.background }]}>
+        <Ionicons name="document-text-outline" size={24} color={tone.color} />
+      </View>
+      <View style={styles.documentCopy}>
+        <Text style={styles.documentTitle} numberOfLines={2}>
+          {pdfLabel(item, index, fallback)}
+        </Text>
+        <View style={styles.documentMeta}>
+          <View style={[styles.extensionPill, { backgroundColor: tone.background }]}>
+            <Text style={[styles.extensionText, { color: tone.color }]}>{extension}</Text>
+          </View>
+          <Text style={[styles.openText, !hasLink && styles.unavailableText]}>
+            {hasLink ? t('reading.tapToOpen') : t('reading.noLinkAvailable')}
+          </Text>
         </View>
       </View>
-
-      {/* Label */}
-      <View style={styles.docInfo}>
-        <Text style={styles.docTitle} numberOfLines={2}>
-          {label}
-        </Text>
-        {url ? (
-          <View style={styles.docMeta}>
-            <Ionicons name="eye-outline" size={13} color="#4A78D0" />
-            <Text style={styles.docMetaText}>{t('reading.tapToOpen')}</Text>
-          </View>
-        ) : (
-          <Text style={styles.docNoLink}>{t('reading.noLinkAvailable')}</Text>
-        )}
-      </View>
-
-      <View style={styles.docArrowWrap}>
-        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+      <View style={styles.cardArrow}>
+        <Ionicons name={hasLink ? 'arrow-forward' : 'remove'} size={17} color={colors.inkSoft} />
       </View>
     </TouchableOpacity>
   );
 }
-
-function RoadSignsEntryCard({ onPress }: { onPress: () => void }) {
-  const { t } = useI18n();
-  return (
-    <TouchableOpacity style={styles.roadSignsCard} onPress={onPress} activeOpacity={0.88}>
-      <View style={styles.roadSignsIconWrap}>
-        <Ionicons name="warning-outline" size={24} color="#4A78D0" />
-      </View>
-      <View style={styles.roadSignsTextWrap}>
-        <Text style={styles.roadSignsTitle}>{t('reading.roadSigns')}</Text>
-        <Text style={styles.roadSignsSubtitle}>{t('reading.roadSignsSubtitle')}</Text>
-      </View>
-      <View style={styles.roadSignsArrow}>
-        <Ionicons name="chevron-forward" size={18} color="#4A78D0" />
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function ReadingNativeScreen({ navigation }: ReadProps) {
   const { t } = useI18n();
@@ -191,8 +114,11 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const [pdfs, setPdfs] = useState<PdfItem[]>([]);
+  const [pdfSourceLanguage, setPdfSourceLanguage] = useState<typeof contentLanguage | null>(null);
+  const [usedPdfFallback, setUsedPdfFallback] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -200,34 +126,36 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
     contentLanguage,
   });
 
-  const loadPdfs = useCallback(async (token: string, cancelledRef: { current: boolean }) => {
+  const loadPdfs = useCallback(async () => {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
+    setPdfs([]);
+    setPdfSourceLanguage(null);
+    setUsedPdfFallback(false);
     try {
-      const data = await getPdfs(token, contentLanguage);
-      if (!cancelledRef.current) setPdfs(data);
-    } catch (err) {
-      if (!cancelledRef.current) {
-        if (__DEV__) {
-          console.warn('[Reading] PDF load failed', err);
-        }
-        setError(t('reading.loadError'));
-      }
+      const result = await getPdfsWithFallback(
+        accessToken,
+        contentLanguage,
+        subscriptionLanguage && subscriptionLanguage !== contentLanguage ? [subscriptionLanguage] : [],
+      );
+      setPdfs(result.items);
+      setPdfSourceLanguage(result.resolvedLanguage);
+      setUsedPdfFallback(result.usedFallback);
+    } catch (loadError) {
+      if (__DEV__) console.warn('[Reading] PDF load failed', loadError);
+      setError(
+        loadError instanceof ApiError && loadError.code === 'PDF_LANGUAGE_MISMATCH'
+          ? t('reading.languageMismatch', { lang: t(`profile.lang.${contentLanguage}`) })
+          : t('reading.loadError'),
+      );
     } finally {
-      if (!cancelledRef.current) setLoading(false);
+      setLoading(false);
     }
-  }, [contentLanguage, t]);
+  }, [accessToken, contentLanguage, subscriptionLanguage, t]);
 
   useEffect(() => {
-    const cancelledRef = { current: false };
-    if (!languageAccessGranted) {
-      setLoading(false);
-      return () => { cancelledRef.current = true; };
-    }
-    if (accessToken) {
-      void loadPdfs(accessToken, cancelledRef);
-    }
-    return () => { cancelledRef.current = true; };
+    if (languageAccessGranted && accessToken) void loadPdfs();
   }, [accessToken, languageAccessGranted, loadPdfs]);
 
   useEffect(() => {
@@ -236,94 +164,109 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
     }
   }, [isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
-  const languageDocs = useMemo(() => {
-    return pdfs.filter((pdf) => pdfLanguage(pdf) === contentLanguage);
-  }, [contentLanguage, pdfs]);
-
-  const selectedLanguageLabel = t(`profile.lang.${contentLanguage}`);
-  const hasDocs = languageDocs.length > 0;
-  const hasDocsInOtherLanguages = pdfs.length > 0 && languageDocs.length === 0;
-  const emptyLanguageMessage = t('reading.pdfEmptyLanguage', { lang: selectedLanguageLabel });
+  const languageDocuments = useMemo(() => pdfs, [pdfs]);
+  const languageLabel = t(`profile.lang.${contentLanguage}`);
+  const sourceLanguageLabel = pdfSourceLanguage ? t(`profile.lang.${pdfSourceLanguage}`) : languageLabel;
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader
+    <ScreenColumn backgroundColor={colors.brandStrong}>
+      <AppHeader
         title={t('reading.title')}
+        eyebrow={languageLabel}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />
 
       <View style={styles.body}>
         <ScrollView
-          contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad + 24 }]}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          {/* Road Signs Section */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('reading.study').toUpperCase()}</Text>
+          <View style={styles.introRow}>
+            <View style={styles.introCopy}>
+              <Text style={styles.pageTitle}>{t('reading.libraryTitle')}</Text>
+              <Text style={styles.pageSubtitle}>{t('reading.librarySubtitle')}</Text>
+            </View>
+            <View style={styles.languageBadge}>
+              <Ionicons name="language-outline" size={16} color={colors.brandStrong} />
+              <Text style={styles.languageText}>{languageLabel}</Text>
+            </View>
           </View>
 
-          <RoadSignsEntryCard onPress={() => navigation.navigate('RoadSignsNative')} />
+          <TouchableOpacity
+            style={styles.featureCard}
+            onPress={() => navigation.navigate('RoadSignsNative')}
+            activeOpacity={0.86}
+          >
+            <View style={styles.featureIcon}>
+              <Ionicons name="warning-outline" size={28} color={colors.amber} />
+            </View>
+            <View style={styles.featureCopy}>
+              <Text style={styles.featureEyebrow}>{t('reading.study')}</Text>
+              <Text style={styles.featureTitle}>{t('reading.roadSigns')}</Text>
+              <Text style={styles.featureBody}>{t('reading.roadSignsSubtitle')}</Text>
+            </View>
+            <View style={styles.featureArrow}>
+              <Ionicons name="arrow-forward" size={19} color={colors.ink} />
+            </View>
+          </TouchableOpacity>
 
-          {/* PDF Documents Section */}
-          <View style={[styles.sectionHeader, { marginTop: 12 }]}>
-            <Text style={styles.sectionTitle}>{t('reading.pdfSection').toUpperCase()}</Text>
+          <View style={styles.section}>
+            <SectionHeading title={t('reading.pdfSection')} />
+            <Text style={styles.sectionSupport}>
+              {t('reading.documentCount', {
+                count: error ? 0 : languageDocuments.length,
+                label:
+                  !error && languageDocuments.length === 1
+                    ? t('reading.documentSingular')
+                    : t('reading.documentPlural'),
+              })}
+            </Text>
+            {!loading && !error && usedPdfFallback ? (
+              <Text style={styles.fallbackNotice}>
+                {t('reading.languageFallback', {
+                  requested: languageLabel,
+                  available: sourceLanguageLabel,
+                })}
+              </Text>
+            ) : null}
           </View>
 
           {loading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color="#4A78D0" />
-              <Text style={styles.loadingText}>{t('reading.loadingDocuments')}</Text>
-            </View>
+            <LoadingState message={t('reading.loadingDocuments')} />
           ) : error ? (
-            <View style={styles.errorCard}>
-              <Ionicons name="alert-circle-outline" size={24} color="#F25559" />
-              <View style={styles.errorTextWrap}>
-                <Text style={styles.errorText}>{error}</Text>
-                {accessToken ? (
-                  <TouchableOpacity
-                    style={styles.retryBtn}
-                    onPress={() => loadPdfs(accessToken, { current: false })}
-                  >
-                    <Text style={styles.retryText}>{t('common.retry')}</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-          ) : !hasDocs ? (
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="document-outline" size={32} color="#94A3B8" />
-              </View>
-              <Text style={styles.emptyText}>
-                {hasDocsInOtherLanguages ? emptyLanguageMessage : t('reading.pdfEmpty')}
-              </Text>
-            </View>
+            <InlineErrorState
+              title={t('reading.languageUnavailableTitle')}
+              message={error}
+              onRetry={() => void loadPdfs()}
+            />
+          ) : languageDocuments.length === 0 ? (
+            <EmptyState
+              title={t('reading.pdfEmpty')}
+              message={t('reading.libraryEmptyHint')}
+            />
           ) : (
-            <>
-              <Text style={styles.docCount}>
-                {t('reading.documentCount', {
-                  count: languageDocs.length,
-                  label: languageDocs.length === 1 ? t('reading.documentSingular') : t('reading.documentPlural'),
-                })}
-              </Text>
-              {languageDocs.map((pdf, idx) => (
-                <DocCard
-                  key={pdf._id ?? `pdf-${idx}`}
-                  item={pdf}
-                  idx={idx}
-                  fallback={t('reading.materialFallback', { n: '' }).replace('{n}', '').trim()}
+            <View style={styles.documentList}>
+              {languageDocuments.map((document, index) => (
+                <DocumentCard
+                  key={document._id ?? `document-${index}`}
+                  item={document}
+                  index={index}
+                  fallback={t('reading.documentFallback')}
                   onPress={() => {
-                    const docUrl = pdfOpenUrl(pdf);
-                    if (docUrl) {
-                      navigation.navigate('PdfViewer', { title: pdf.title || t('reading.documentFallback'), url: docUrl });
-                    } else {
+                    const url = pdfOpenUrl(document);
+                    if (!url) {
                       Alert.alert(t('reading.pdfAlertTitle'), t('reading.pdfNoLink'));
+                      return;
                     }
+                    navigation.navigate('PdfViewer', {
+                      title: document.title ?? document.name ?? t('reading.documentFallback'),
+                      url,
+                    });
                   }}
                 />
               ))}
-            </>
+            </View>
           )}
         </ScrollView>
       </View>
@@ -333,17 +276,10 @@ export function ReadingNativeScreen({ navigation }: ReadProps) {
   );
 }
 
-// ── Help center screen ────────────────────────
-
 export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
-  const faqs = [
-    t('reading.faq1'),
-    t('reading.faq2'),
-    t('reading.faq3'),
-    t('reading.faq4'),
-  ];
+  const faqs = [t('reading.faq1'), t('reading.faq2'), t('reading.faq3'), t('reading.faq4')];
 
   const handleWhatsApp = () => {
     Linking.openURL('https://wa.me/250780211466').catch(() => {
@@ -352,69 +288,54 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   };
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <TopHeader
-        title={t('menu.help')}
-        onBack={() => navigation.goBack()}
-        navigation={navigation}
-      />
+    <ScreenColumn backgroundColor={colors.brandStrong}>
+      <AppHeader title={t('menu.help')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView
-          contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad + 24 }]}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('reading.helpContact').toUpperCase()}</Text>
-          </View>
+          <Text style={styles.pageTitle}>{t('reading.helpContact')}</Text>
+          <Text style={styles.pageSubtitle}>{t('reading.helpIntro')}</Text>
 
           <View style={styles.contactCard}>
             <View style={styles.contactRow}>
-              <View style={[styles.contactIconCircle, { backgroundColor: '#F0F9FF' }]}>
-                <Ionicons name="mail-outline" size={18} color="#0EA5E9" />
+              <View style={[styles.contactIcon, { backgroundColor: colors.brandSoft }]}>
+                <Ionicons name="mail-outline" size={20} color={colors.brand} />
               </View>
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>{t('reading.supportEmailLabel').toUpperCase()}</Text>
+              <View style={styles.contactCopy}>
+                <Text style={styles.contactLabel}>{t('reading.supportEmailLabel')}</Text>
                 <Text style={styles.contactValue}>nkotanyidrivings@gmail.com</Text>
               </View>
             </View>
-
-            <View style={styles.contactDivider} />
-
+            <View style={styles.divider} />
             <View style={styles.contactRow}>
-              <View style={[styles.contactIconCircle, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="call-outline" size={18} color="#22C55E" />
+              <View style={[styles.contactIcon, { backgroundColor: colors.greenSoft }]}>
+                <Ionicons name="call-outline" size={20} color={colors.green} />
               </View>
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>{t('reading.supportPhoneLabel').toUpperCase()}</Text>
+              <View style={styles.contactCopy}>
+                <Text style={styles.contactLabel}>{t('reading.supportPhoneLabel')}</Text>
                 <Text style={styles.contactValue}>+250 780 211 466</Text>
               </View>
             </View>
-
-            <TouchableOpacity
-              style={styles.whatsappBtn}
-              onPress={handleWhatsApp}
-              activeOpacity={0.8}
-            >
-              <View style={styles.whatsappIconCircle}>
-                <Ionicons name="logo-whatsapp" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.whatsappBtnText}>{t('auth.whatsappUs')}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp} activeOpacity={0.85}>
+              <Ionicons name="logo-whatsapp" size={21} color={colors.white} />
+              <Text style={styles.whatsappText}>{t('auth.whatsappUs')}</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.sectionHeader, { marginTop: 12 }]}>
-            <Text style={styles.sectionTitle}>{t('reading.faqTitle').toUpperCase()}</Text>
+          <View style={styles.section}>
+            <SectionHeading title={t('reading.faqTitle')} />
           </View>
-
           <View style={styles.faqList}>
-            {faqs.map((q, idx) => (
-              <TouchableOpacity key={idx} style={styles.faqCard} activeOpacity={0.85}>
-                <Text style={styles.faqText}>{q}</Text>
-                <View style={styles.faqArrow}>
-                  <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+            {faqs.map((question, index) => (
+              <View key={question} style={styles.faqCard}>
+                <View style={styles.faqNumber}>
+                  <Text style={styles.faqNumberText}>{index + 1}</Text>
                 </View>
-              </TouchableOpacity>
+                <Text style={styles.faqText}>{question}</Text>
+              </View>
             ))}
           </View>
         </ScrollView>
@@ -424,374 +345,297 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#F5F7FC',
-    textAlign: 'center',
-    maxWidth: '70%',
-  },
   body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
-  scrollPad: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+  content: {
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
-
-  // Section header
-  sectionHeader: {
+  introRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    gap: spacing.md,
   },
-  sectionTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 12,
-    color: '#94A3B8',
-    letterSpacing: 1,
-  },
-
-  roadSignsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(74, 120, 208, 0.05)',
-  },
-  roadSignsIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    marginRight: 14,
-  },
-  roadSignsTextWrap: {
+  introCopy: {
     flex: 1,
   },
-  roadSignsTitle: {
+  pageTitle: {
+    ...typography.heading,
+    color: colors.ink,
+  },
+  pageSubtitle: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+  },
+  languageBadge: {
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brandSoft,
+  },
+  languageText: {
+    ...typography.caption,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    color: '#1E293B',
+    color: colors.brandStrong,
   },
-  roadSignsSubtitle: {
-    marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    color: '#64748B',
+  featureCard: {
+    minHeight: 150,
+    marginTop: spacing.xxl,
+    padding: spacing.xl,
+    overflow: 'hidden',
+    borderRadius: radii.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.ink,
+    ...shadows.card,
   },
-  roadSignsArrow: {
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  featureCopy: {
+    flex: 1,
+    marginHorizontal: spacing.lg,
+  },
+  featureEyebrow: {
+    ...typography.eyebrow,
+    color: colors.amber,
+    textTransform: 'uppercase',
+  },
+  featureTitle: {
+    ...typography.title,
+    marginTop: spacing.xs,
+    color: colors.white,
+  },
+  featureBody: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: '#C4CEDD',
+  },
+  featureArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.amber,
+  },
+  section: {
+    marginTop: spacing.xxxl,
+  },
+  sectionSupport: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkSoft,
+  },
+  fallbackNotice: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    lineHeight: 18,
+    color: colors.brandStrong,
+  },
+  documentList: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  documentCard: {
+    minHeight: 92,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  fileIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  documentCopy: {
+    flex: 1,
+    marginHorizontal: spacing.md,
+  },
+  documentTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  documentMeta: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  extensionPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+  },
+  extensionText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 10,
+  },
+  openText: {
+    ...typography.caption,
+    color: colors.brand,
+  },
+  unavailableText: {
+    color: colors.inkSoft,
+  },
+  cardArrow: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F8FAFF',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
   },
-
-  // Loading
-  loadingRow: {
-    flexDirection: 'row',
+  stateCard: {
+    minHeight: 200,
+    marginTop: spacing.lg,
+    padding: spacing.xxl,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  loadingText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#64748B',
+  errorState: {
+    backgroundColor: colors.redSoft,
+    borderColor: '#F1CACA',
   },
-
-  // Error
-  errorCard: {
-    flexDirection: 'row',
+  emptyIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    gap: 12,
+    justifyContent: 'center',
+    backgroundColor: '#EDF0EC',
   },
-  errorTextWrap: {
-    flex: 1,
-    gap: 8,
+  stateTitle: {
+    ...typography.title,
+    marginTop: spacing.md,
+    color: colors.ink,
+    textAlign: 'center',
   },
-  errorText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#991B1B',
+  stateText: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: colors.inkMuted,
+    textAlign: 'center',
   },
-  retryBtn: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#EF4444',
+  retryButton: {
+    minHeight: 42,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand,
   },
   retryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    color: '#FFFFFF',
+    ...typography.bodyStrong,
+    color: colors.white,
   },
-
-  // Empty
-  emptyCard: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  emptyText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#64748B',
-    textAlign: 'center',
-    maxWidth: '80%',
-  },
-
-  // Count
-  docCount: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 12,
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 12,
-    marginLeft: 2,
-  },
-
-  // Document card
-  docCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(74, 120, 208, 0.05)',
-  },
-  extIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-    position: 'relative',
-  },
-  extBadgeSmall: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-    minWidth: 20,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  extBadgeText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 7,
-    color: '#FFFFFF',
-  },
-  docInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  docTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 21,
-    color: '#1E293B',
-  },
-  docMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  docMetaText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    color: '#4A78D0',
-  },
-  docNoLink: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  docArrowWrap: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Help center
   contactCard: {
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    marginTop: spacing.xxl,
+    padding: spacing.xl,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(74, 120, 208, 0.05)',
+    borderColor: colors.line,
+    ...shadows.card,
   },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
   },
-  contactIconCircle: {
-    width: 40,
-    height: 40,
+  contactIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    marginRight: 14,
   },
-  contactInfo: {
+  contactCopy: {
     flex: 1,
+    marginLeft: spacing.md,
   },
   contactLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 9,
-    letterSpacing: 1,
-    color: '#94A3B8',
+    ...typography.caption,
+    color: colors.inkSoft,
   },
   contactValue: {
+    ...typography.bodyStrong,
     marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    color: '#1E293B',
+    color: colors.ink,
   },
-  contactDivider: {
+  divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 16,
-    marginLeft: 54,
+    marginVertical: spacing.lg,
+    marginLeft: 58,
+    backgroundColor: colors.line,
   },
-  whatsappBtn: {
-    marginTop: 12,
-    width: '100%',
-    backgroundColor: '#10B981',
-    height: 56,
-    borderRadius: 20,
+  whatsappButton: {
+    minHeight: 52,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: colors.green,
   },
-  whatsappIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  whatsappBtnText: {
+  whatsappText: {
+    ...typography.bodyStrong,
     flex: 1,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    color: '#FFFFFF',
+    marginLeft: spacing.sm,
+    color: colors.white,
   },
   faqList: {
-    gap: 12,
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   faqCard: {
-    minHeight: 56,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    minHeight: 70,
+    padding: spacing.md,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(74, 120, 208, 0.05)',
+    borderColor: colors.line,
   },
-  faqText: {
-    flex: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#475569',
-    marginRight: 12,
-  },
-  faqArrow: {
-    width: 24,
-    height: 24,
+  faqNumber: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  faqNumberText: {
+    ...typography.bodyStrong,
+    color: colors.brandStrong,
+  },
+  faqText: {
+    ...typography.body,
+    flex: 1,
+    marginLeft: spacing.md,
+    color: colors.ink,
   },
 });

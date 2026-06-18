@@ -1,71 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
+import { AppHeader } from '../components/AppHeader';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-
-function ConfettiPiece({ delay, x, color }: { delay: number; x: number; color: string }) {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 3000 + Math.random() * 2000,
-          useNativeDriver: true,
-          easing: Easing.linear,
-        }),
-      ])
-    ).start();
-  }, [anim, delay]);
-
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-20, 800],
-  });
-
-  const rotate = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '720deg'],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.confetti,
-        {
-          left: x,
-          backgroundColor: color,
-          transform: [{ translateY }, { rotate }],
-        },
-      ]}
-    />
-  );
-}
-
-function ConfettiGroup() {
-  const colors = ['#86C74F', '#4A78D0', '#FFD700', '#F25559', '#AA55FF'];
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {[...Array(25)].map((_, i) => (
-        <ConfettiPiece
-          key={i}
-          delay={i * 150}
-          x={10 + Math.random() * 350}
-          color={colors[i % colors.length]}
-        />
-      ))}
-    </View>
-  );
-}
 
 type FailedProps = NativeStackScreenProps<RootStackParamList, 'TestFailedNative'>;
 type PassedProps = NativeStackScreenProps<RootStackParamList, 'TestPassedNative'>;
@@ -95,18 +41,12 @@ function ScoreRing({ passed, percent }: { passed: boolean; percent: number }) {
   return (
     <View style={styles.ringWrap}>
       <Svg width={size} height={size} style={styles.ringSvg}>
-        <Defs>
-          <LinearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={passed ? '#86C74F' : '#F25559'} />
-            <Stop offset="100%" stopColor={passed ? '#48A854' : '#C41E1E'} />
-          </LinearGradient>
-        </Defs>
         {/* Background Track */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E5E9F0"
+          stroke={colors.line}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -115,7 +55,7 @@ function ScoreRing({ passed, percent }: { passed: boolean; percent: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="url(#ringGradient)"
+          stroke={passed ? colors.success : colors.danger}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -168,29 +108,31 @@ function ResultTemplate({
   }, [fadeAnim, slideAnim]);
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.headerBlue, { backgroundColor: passed ? '#48A854' : '#F25559' }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('test.home')}</Text>
+    <ScreenColumn>
+      <AppHeader
+        title={t('test.results')}
+        eyebrow={passed ? t('performance.passed') : t('performance.failed')}
+        onBack={() => navigation.goBack()}
+      />
+
+      <View style={styles.body}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+        <View style={[styles.outcomeIcon, passed ? styles.outcomeIconPass : styles.outcomeIconFail]}>
+          <Ionicons
+            name={passed ? 'checkmark' : 'refresh'}
+            size={30}
+            color={passed ? colors.green : colors.red}
+          />
         </View>
-      </View>
-      <View style={styles.topDiagonal} />
-
-      {passed && <ConfettiGroup />}
-
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        <Text style={[styles.headline, { color: passed ? '#1B4D2E' : '#8B1A1A' }]}>
+        <Text style={[styles.headline, { color: passed ? colors.green : colors.red }]}>
           {passed ? t('test.passedHeadline') : t('test.failedHeadline')}
         </Text>
 
@@ -212,7 +154,7 @@ function ResultTemplate({
 
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: passed ? '#48A854' : '#F25559' }]}
+            style={[styles.primaryBtn, { backgroundColor: passed ? colors.green : colors.red }]}
             onPress={() => navigation.navigate('ExamInstructionsNative')}
           >
             <Text style={styles.primaryText}>{t('test.newExam')}</Text>
@@ -236,11 +178,9 @@ function ResultTemplate({
             <Text style={styles.secondaryText}>{t('test.checkResults')}</Text>
           </TouchableOpacity>
         </View>
-      </Animated.View>
-
-      <View style={[styles.bottomBlueDark, { backgroundColor: passed ? '#1B4D2E' : '#8B1A1A' }]} />
-      <View style={[styles.bottomBlueLight, { backgroundColor: passed ? '#48A854' : '#F25559' }]} />
-    </View>
+        </Animated.View>
+      </View>
+    </ScreenColumn>
   );
 }
 
@@ -279,63 +219,37 @@ export function TestPassedNativeScreen({ navigation, route }: PassedProps) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  body: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.canvas,
     overflow: 'hidden',
-  },
-  headerBlue: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 160,
-    zIndex: 5,
-  },
-  headerRow: {
-    marginTop: 56,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    marginLeft: 12,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    color: '#FFFFFF',
-  },
-  topDiagonal: {
-    position: 'absolute',
-    left: -120,
-    right: -24,
-    top: 100,
-    height: 120,
-    backgroundColor: '#F8FAFC',
-    transform: [{ rotate: '-8deg' }],
-    zIndex: 6,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 28,
-    paddingTop: 160,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxxl,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 7,
+  },
+  outcomeIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outcomeIconPass: {
+    backgroundColor: colors.greenSoft,
+  },
+  outcomeIconFail: {
+    backgroundColor: colors.redSoft,
   },
   headline: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    letterSpacing: 1,
-    marginBottom: 20,
+    ...typography.eyebrow,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    textTransform: 'uppercase',
   },
   ringWrap: {
     width: 180,
@@ -354,14 +268,14 @@ const styles = StyleSheet.create({
   ringValue: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 56,
-    color: '#1E293B',
+    color: colors.ink,
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
   ringPercent: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 24,
-    color: '#64748B',
+    color: colors.inkMuted,
     marginLeft: 2,
     marginTop: 8, // Optical adjustment to align with the center/bottom of the number
     includeFontPadding: false,
@@ -369,25 +283,22 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     marginTop: 20,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 28,
-    color: '#0F172A',
+    ...typography.heading,
+    color: colors.ink,
     textAlign: 'center',
   },
   statsCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
     padding: 20,
     marginTop: 30,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   statCol: {
     alignItems: 'center',
@@ -396,19 +307,19 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 20,
-    color: '#1E293B',
+    color: colors.ink,
   },
   statLabel: {
     marginTop: 4,
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 10,
-    color: '#94A3B8',
+    color: colors.inkSoft,
     letterSpacing: 0.5,
   },
   dividerVertical: {
     width: 1,
     height: 40,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.line,
   },
   actions: {
     width: '100%',
@@ -417,57 +328,28 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    ...shadows.card,
   },
   primaryText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   secondaryBtn: {
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryText: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 16,
-    color: '#475569',
-  },
-  bottomBlueDark: {
-    position: 'absolute',
-    left: -80,
-    right: -80,
-    bottom: -80,
-    height: 120,
-    transform: [{ rotate: '12deg' }],
-    zIndex: 1,
-  },
-  bottomBlueLight: {
-    position: 'absolute',
-    left: -52,
-    right: -52,
-    bottom: -120,
-    height: 140,
-    transform: [{ rotate: '12deg' }],
-    zIndex: 2,
-  },
-  confetti: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 2,
-    zIndex: 10,
+    color: colors.inkMuted,
   },
 });

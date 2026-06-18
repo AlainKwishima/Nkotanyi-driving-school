@@ -1,9 +1,10 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animated, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useI18n } from '../i18n/useI18n';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 export type GateModalKind = 'exam_ready' | 'subscription_exam' | 'subscription_read' | 'subscription_watch';
 
@@ -16,7 +17,6 @@ const GateModalContext = createContext<GateModalContextValue | null>(null);
 
 export function GateModalProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [kind, setKind] = useState<GateModalKind>('exam_ready');
   const confirmRef = useRef<(() => void) | null>(null);
@@ -119,13 +119,16 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
           <Animated.View style={[styles.overlay, { opacity: fade }]}>
             <TouchableWithoutFeedback>
               <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
-                {config.isSubscription ? (
-                  <Image source={require('../assets/Group.png')} style={styles.illustration} resizeMode="contain" />
-                ) : (
-                  <View style={styles.readyIconWrap}>
-                    <Image source={require('../assets/Group.png')} style={styles.illustrationReady} resizeMode="contain" />
-                  </View>
-                )}
+                <View style={[styles.iconWrap, config.isSubscription ? styles.iconWrapSubscription : styles.iconWrapReady]}>
+                  <Ionicons
+                    name={config.isSubscription ? 'shield-checkmark-outline' : 'flag-outline'}
+                    size={34}
+                    color={config.isSubscription ? colors.amber : colors.brand}
+                  />
+                </View>
+                <Text style={styles.eyebrow}>
+                  {config.isSubscription ? t('subscription.title') : t('exam.title')}
+                </Text>
 
                 <Text style={styles.title}>{config.title}</Text>
                 <Text style={styles.message}>{config.message}</Text>
@@ -157,59 +160,73 @@ export function useGateModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(68,75,92,0.58)',
+    backgroundColor: 'rgba(20,33,58,0.62)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   card: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 10,
-    backgroundColor: '#F4F4F6',
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 22,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.floating,
   },
-  illustration: { width: 205, height: 140, marginTop: 4 },
-  readyIconWrap: { width: 205, height: 140, marginTop: 4, alignItems: 'center', justifyContent: 'center' },
-  illustrationReady: { width: 180, height: 120, opacity: 0.92 },
+  iconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapSubscription: {
+    backgroundColor: colors.amberSoft,
+  },
+  iconWrapReady: {
+    backgroundColor: colors.brandSoft,
+  },
+  eyebrow: {
+    ...typography.eyebrow,
+    marginTop: spacing.lg,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
+  },
   title: {
-    marginTop: 12,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 22,
-    lineHeight: 29,
-    color: '#20222C',
+    ...typography.heading,
+    marginTop: spacing.xs,
+    color: colors.ink,
     textAlign: 'center',
   },
   message: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#4E4C63',
+    ...typography.body,
+    color: colors.inkMuted,
   },
   primaryBtn: {
     marginTop: 22,
     width: '100%',
     minHeight: MIN_TOUCH_TARGET,
-    borderRadius: 6,
-    backgroundColor: '#4A78D0',
+    borderRadius: radii.pill,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 17,
-    lineHeight: 24,
-    color: '#F7F9FE',
+    ...typography.bodyStrong,
+    fontSize: 16,
+    color: colors.white,
   },
   secondaryText: {
     marginTop: 16,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 17,
+    fontSize: 15,
     lineHeight: 24,
-    color: '#4A78D0',
+    color: colors.brand,
   },
 });

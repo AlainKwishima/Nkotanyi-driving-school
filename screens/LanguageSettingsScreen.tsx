@@ -5,10 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { AppHeader } from '../components/AppHeader';
 import { useAppFlow, type ContentLanguageCode } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSettings'>;
 
@@ -19,19 +19,12 @@ const OPTIONS: Array<{ code: ContentLanguageCode; label: string }> = [
 ];
 
 export function LanguageSettingsScreen({ navigation }: Props) {
-  const { insets } = useResponsiveLayout();
   const { contentLanguage, canChangeLanguage, setContentLanguage } = useAppFlow();
   const { t } = useI18n();
 
   return (
-    <ScreenColumn backgroundColor="#F4F6FB">
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button">
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </Pressable>
-        <Text style={styles.headerTitle}>{t('language.settingsTitle')}</Text>
-        <View style={styles.backBtn} />
-      </View>
+    <ScreenColumn>
+      <AppHeader title={t('language.settingsTitle')} navigation={navigation} onBack={() => navigation.goBack()} />
 
       <View style={styles.body}>
         {!canChangeLanguage ? (
@@ -59,7 +52,7 @@ export function LanguageSettingsScreen({ navigation }: Props) {
                   {selected ? <View style={styles.radioInner} /> : null}
                 </View>
                 <Text style={styles.rowLabel}>{option.label}</Text>
-                {selected ? <Ionicons name="checkmark-circle" size={22} color="#4A78D0" /> : <View style={styles.checkSpacer} />}
+                {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.brand} /> : <View style={styles.checkSpacer} />}
               </Pressable>
             );
           })}
@@ -70,37 +63,18 @@ export function LanguageSettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 94,
-    paddingHorizontal: 16,
-    backgroundColor: '#4A78D0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-  },
   body: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    backgroundColor: colors.canvas,
   },
   lockNotice: {
     marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#E8ECF5',
+    borderRadius: radii.md,
+    backgroundColor: colors.amberSoft,
     borderWidth: 1,
-    borderColor: '#D5DCEB',
+    borderColor: '#F1D7A7',
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -112,18 +86,14 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 12,
     lineHeight: 18,
-    color: '#475569',
+    color: colors.inkMuted,
   },
   listCard: {
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E4E9F5',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   row: {
     minHeight: 62,
@@ -133,33 +103,32 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1F8',
+    borderBottomColor: colors.line,
   },
   radioOuter: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#AAB7CF',
+    borderColor: colors.inkSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   radioOuterSelected: {
-    borderColor: '#4A78D0',
+    borderColor: colors.brand,
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#4A78D0',
+    backgroundColor: colors.brand,
   },
   rowLabel: {
     flex: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
+    ...typography.bodyStrong,
     fontSize: 16,
-    lineHeight: 22,
-    color: '#25314D',
+    color: colors.ink,
   },
   checkSpacer: {
     width: 22,

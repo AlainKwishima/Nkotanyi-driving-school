@@ -23,6 +23,7 @@ import {
   validatePasswordStrong,
   validatePasswordsMatch,
 } from '../utils/validation';
+import { colors, radii, shadows } from '../constants/theme';
 
 type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type CreateAccountProps = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
@@ -45,7 +46,7 @@ function AuthBackButton({ navigation }: { navigation: AuthNavigation }) {
         style={({ pressed }) => [styles.authBackBtn, pressed && styles.authBackBtnPressed]}
         hitSlop={10}
       >
-        <Feather name="chevron-left" size={m.scale(22)} color="#1E293B" />
+        <Feather name="chevron-left" size={m.scale(22)} color={colors.ink} />
       </Pressable>
     </View>
   );
@@ -78,7 +79,7 @@ function RememberMeRow({
       <MaterialCommunityIcons
         name={checked ? 'checkbox-marked' : 'checkbox-blank-outline'}
         size={20}
-        color={checked ? '#2563EB' : '#CBD5E1'}
+        color={checked ? colors.brand : colors.inkSoft}
       />
       <Text style={styles.rememberText}>{label}</Text>
     </Pressable>
@@ -364,7 +365,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
         <View style={[styles.contactInfoCard, { marginTop: m.verticalScale(24), padding: m.scale(20) }]}>
           <View style={styles.contactItem}>
             <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
-              <Feather name="mail" size={m.scale(20)} color="#2563EB" />
+              <Feather name="mail" size={m.scale(20)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
               <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</Text>
@@ -374,7 +375,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
 
           <View style={[styles.contactItem, { marginTop: m.verticalScale(20) }]}>
             <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
-              <Feather name="phone" size={m.scale(20)} color="#2563EB" />
+              <Feather name="phone" size={m.scale(20)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
               <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</Text>
@@ -503,7 +504,8 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
+    backgroundColor: colors.canvas,
+    overflow: 'hidden',
   },
   authScroll: {
     paddingTop: 18,
@@ -520,14 +522,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   authBackBtnPressed: {
     opacity: 0.88,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 16,
     lineHeight: 24,
-    color: '#1E293B',
+    color: colors.ink,
     textAlign: 'center',
   },
   taglineText: {
@@ -557,10 +557,10 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     marginTop: 16,
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 24,
     lineHeight: 34,
-    color: '#1E293B',
+    color: colors.ink,
     textAlign: 'center',
   },
   authSubtitle: {
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 22,
-    color: '#64748B',
+    color: colors.inkMuted,
     textAlign: 'center',
   },
   formGroup: {
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#475569',
+    color: colors.inkMuted,
   },
   forgotLinkWrap: {
     marginTop: 16,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#2563EB',
+    color: colors.brand,
   },
   separatorRow: {
     width: '100%',
@@ -615,14 +615,14 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.line,
   },
   separatorText: {
     marginHorizontal: 14,
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#94A3B8',
+    color: colors.inkSoft,
   },
   bottomLinkRow: {
     marginTop: 16,
@@ -638,13 +638,13 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 20,
-    color: '#64748B',
+    color: colors.inkMuted,
   },
   bottomLinkAction: {
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: '#2563EB',
+    color: colors.brand,
   },
   secondaryScroll: {
     paddingTop: 16,
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: '#1E293B',
+    color: colors.ink,
   },
   resetIconBadge: {
     marginTop: 20,
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 24,
-    color: '#64748B',
+    color: colors.inkMuted,
   },
   secondaryFormGroup: {
     marginTop: 24,
@@ -708,24 +708,22 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 16,
     lineHeight: 24,
-    color: '#2563EB',
+    color: colors.brand,
   },
   contactInfoCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   contactIconBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.brandSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -736,13 +734,13 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 11,
     letterSpacing: 0.5,
-    color: '#94A3B8',
+    color: colors.inkSoft,
     marginBottom: 4,
   },
   contactValue: {
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
-    color: '#1E293B',
+    color: colors.ink,
   },
   whatsappBtn: {
     width: '100%',
@@ -796,7 +794,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -806,7 +804,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 22,
     lineHeight: 30,
-    color: '#1E293B',
+    color: colors.ink,
   },
   resetSubtitle: {
     marginTop: 8,
@@ -814,7 +812,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 24,
-    color: '#64748B',
+    color: colors.inkMuted,
   },
   requirementsCard: {
     marginTop: 12,
@@ -824,14 +822,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.line,
   },
   requirementsHeading: {
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 12,
     lineHeight: 18,
     textTransform: 'uppercase',
-    color: '#94A3B8',
+    color: colors.inkSoft,
     marginBottom: 10,
     letterSpacing: 0.5,
   },
@@ -839,14 +837,14 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#10B981',
+    color: colors.green,
     marginBottom: 6,
   },
   reqTodo: {
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 15,
     lineHeight: 22,
-    color: '#64748B',
+    color: colors.inkMuted,
     marginBottom: 4,
   },
   footerLines: {
@@ -857,7 +855,7 @@ const styles = StyleSheet.create({
   footerLine: {
     width: '45%',
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.line,
   },
   supportText: {
     marginTop: 12,
@@ -865,10 +863,10 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 22,
-    color: '#64748B',
+    color: colors.inkMuted,
   },
   supportAction: {
-    color: '#2563EB',
+    color: colors.brand,
     fontFamily: 'PlusJakartaSans-SemiBold',
   },
 });

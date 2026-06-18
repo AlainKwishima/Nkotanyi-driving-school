@@ -11,6 +11,7 @@ import { useAppFlow } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { SignOutConfirmationModal } from './SignOutConfirmationModal';
+import { colors, radii, shadows, typography } from '../constants/theme';
 
 type HeaderMenuProps = {
   navigation: NavigationProp<RootStackParamList>;
@@ -109,25 +110,23 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20,24,38,0.12)',
+    backgroundColor: 'rgba(20,33,58,0.22)',
   },
   dropdown: {
     position: 'absolute',
     width: 186,
     maxHeight: 320,
-    borderRadius: 10,
-    backgroundColor: '#F7F8FC',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#D7DDEB',
+    borderColor: colors.line,
     overflow: 'hidden',
-    shadowColor: '#1C2448',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 6,
+    ...shadows.floating,
   },
   dropdownScroll: {
     width: '100%',
@@ -139,17 +138,15 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_TARGET,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   menuItemDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E5F0',
+    borderBottomColor: colors.line,
   },
   menuText: {
-    marginLeft: 8,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#2C355C',
+    ...typography.body,
+    marginLeft: 10,
+    color: colors.ink,
   },
 });

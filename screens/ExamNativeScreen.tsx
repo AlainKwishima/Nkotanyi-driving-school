@@ -5,29 +5,30 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
+import { AppHeader } from '../components/AppHeader';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
-import { HeaderMenu } from '../components/HeaderMenu';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { getExamQuestions, getSignQuestions, type TrafficQuestion } from '../services/trafficApi';
 import { appendLocalExamRecord } from '../services/examHistoryStorage';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
 import { resolveExamLanguage } from '../utils/subscriptionAccess';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
 
 const EXAM_DURATION_SEC = 30 * 60;
 const PASS_PERCENT = 60;
+const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-function formatTime(totalSec: number): string {
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+function formatTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 export function ExamNativeScreen({ navigation, route }: Props) {
+  const { t } = useI18n();
   const {
     hasSubscription,
     hasUsedFreeTrial,
@@ -36,8 +37,6 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     contentLanguage,
   } = useAppFlow();
   const { accessToken } = useAuth();
-  const { insets } = useResponsiveLayout();
-  const { t } = useI18n();
   const mode = route.params?.mode ?? 'traffic';
   const examLanguage = resolveExamLanguage({
     hasSubscription,
@@ -48,34 +47,26 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<TrafficQuestion[]>([]);
-
   const [questionIndex, setQuestionIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(EXAM_DURATION_SEC);
   const [selectedByQuestion, setSelectedByQuestion] = useState<Record<number, string>>({});
-  const scrollRef = useRef<ScrollView>(null);
+  const questionNavRef = useRef<ScrollView>(null);
+  const contentRef = useRef<ScrollView>(null);
   const startedAtRef = useRef(new Date().toISOString());
-
-  useEffect(() => {
-    // Auto-scroll to current box
-    if (scrollRef.current) {
-      const boxWidth = 44 + 10; // box width + gap
-      scrollRef.current.scrollTo({ x: questionIndex * boxWidth - 16, animated: true });
-    }
-  }, [questionIndex]);
 
   const totalQuestions = questions.length;
   const current = questions[questionIndex];
-  const currentQuestionNo = questionIndex + 1;
-  const progress = useMemo(
-    () => (totalQuestions > 0 ? Math.max(0, Math.min(1, currentQuestionNo / totalQuestions)) : 0),
-    [currentQuestionNo, totalQuestions],
-  );
-  const canGoPrev = questionIndex > 0;
+  const currentQuestionNumber = questionIndex + 1;
+  const selectedId = selectedByQuestion[questionIndex];
+  const answeredCount = Object.keys(selectedByQuestion).length;
+  const progress = totalQuestions ? currentQuestionNumber / totalQuestions : 0;
+  const canGoPrevious = questionIndex > 0;
   const canGoNext = questionIndex < totalQuestions - 1;
+  const timerUrgent = secondsLeft <= 5 * 60;
 
   useEffect(() => {
     let cancelled = false;
-    const run = async () => {
+    const load = async () => {
       if (!accessToken) {
         setLoadError(t('exam.needSignIn'));
         setLoading(false);
@@ -84,71 +75,74 @@ export function ExamNativeScreen({ navigation, route }: Props) {
       setLoading(true);
       setLoadError(null);
       try {
-        const data = mode === 'signs' 
-          ? await getSignQuestions(accessToken, examLanguage) 
-          : await getExamQuestions(accessToken, examLanguage);
-        if (!cancelled) {
-          setQuestions(data);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(getMessageFromUnknownError(e));
-        }
+        const data =
+          mode === 'signs'
+            ? await getSignQuestions(accessToken, examLanguage)
+            : await getExamQuestions(accessToken, examLanguage);
+        if (!cancelled) setQuestions(data);
+      } catch (error) {
+        if (!cancelled) setLoadError(getMessageFromUnknownError(error));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    void run();
+    void load();
     return () => {
       cancelled = true;
     };
   }, [accessToken, examLanguage, mode, t]);
 
   useEffect(() => {
+    if (loading || !current) return;
     const timer = setInterval(() => {
-      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setSecondsLeft((value) => Math.max(0, value - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [current, loading]);
 
-  const elapsedSec = EXAM_DURATION_SEC - secondsLeft;
-  const timerText = formatTime(secondsLeft);
-
-  const selectOption = useCallback((optionId: string) => {
-    setSelectedByQuestion((prev) => ({ ...prev, [questionIndex]: optionId }));
+  useEffect(() => {
+    questionNavRef.current?.scrollTo({
+      x: Math.max(0, questionIndex * 42 - 24),
+      animated: true,
+    });
+    contentRef.current?.scrollTo({ y: 0, animated: true });
   }, [questionIndex]);
 
-  const performExamSubmit = useCallback(async () => {
-    if (!hasSubscription && !hasUsedFreeTrial) {
-      await setHasUsedFreeTrial(true);
-    }
+  const selectOption = useCallback(
+    (optionId: string) => {
+      setSelectedByQuestion((currentSelections) => ({
+        ...currentSelections,
+        [questionIndex]: optionId,
+      }));
+    },
+    [questionIndex],
+  );
+
+  const submitExam = useCallback(async () => {
+    if (!hasSubscription && !hasUsedFreeTrial) await setHasUsedFreeTrial(true);
 
     let correct = 0;
-    questions.forEach((q, idx) => {
-      const picked = selectedByQuestion[idx];
-      if (!picked) return;
-      const opt = q.options.find((o) => o._id === picked);
-      if (opt?.is_correct) correct += 1;
+    questions.forEach((question, index) => {
+      const selected = selectedByQuestion[index];
+      if (question.options.find((option) => option._id === selected)?.is_correct) correct += 1;
     });
 
     const total = totalQuestions || 1;
     const percent = Math.round((correct / total) * 100);
-    const passed = percent >= PASS_PERCENT;
-    const timeLabel = formatTime(elapsedSec);
+    const elapsedSeconds = EXAM_DURATION_SEC - secondsLeft;
+    const timeLabel = formatTime(elapsedSeconds);
     const finishedAt = new Date().toISOString();
-    const answeredCount = questions.reduce((n, _, idx) => (selectedByQuestion[idx] ? n + 1 : n), 0);
-    const answers = questions.map((q, idx) => {
-      const selectedId = selectedByQuestion[idx] ?? null;
-      const selectedOpt = selectedId ? q.options.find((o) => o._id === selectedId) : undefined;
-      const correctOpt = q.options.find((o) => o.is_correct);
+    const answers = questions.map((question, index) => {
+      const selectedOption = question.options.find((option) => option._id === selectedByQuestion[index]);
+      const correctOption = question.options.find((option) => option.is_correct);
       return {
-        questionId: q._id,
-        questionText: q.question.description,
-        selectedOptionId: selectedId,
-        selectedOptionText: selectedOpt?.optionText ?? null,
-        correctOptionId: correctOpt?._id ?? null,
-        correctOptionText: correctOpt?.optionText ?? null,
-        isCorrect: Boolean(selectedOpt?.is_correct),
+        questionId: question._id,
+        questionText: question.question.description,
+        selectedOptionId: selectedOption?._id ?? null,
+        selectedOptionText: selectedOption?.optionText ?? null,
+        correctOptionId: correctOption?._id ?? null,
+        correctOptionText: correctOption?.optionText ?? null,
+        isCorrect: Boolean(selectedOption?.is_correct),
       };
     });
 
@@ -160,47 +154,52 @@ export function ExamNativeScreen({ navigation, route }: Props) {
       mode,
       startedAt: startedAtRef.current,
       finishedAt,
-      elapsedSec,
+      elapsedSec: elapsedSeconds,
       answeredCount,
       answers,
     });
 
-    const payload = { correct, total, timeLabel, percent };
-    if (passed) {
-      navigation.navigate('TestPassedNative', payload);
-    } else {
-      navigation.navigate('TestFailedNative', payload);
-    }
+    const result = { correct, total, timeLabel, percent };
+    navigation.navigate(percent >= PASS_PERCENT ? 'TestPassedNative' : 'TestFailedNative', result);
   }, [
-    elapsedSec,
+    answeredCount,
     hasSubscription,
     hasUsedFreeTrial,
     mode,
     navigation,
     questions,
+    secondsLeft,
     selectedByQuestion,
     setHasUsedFreeTrial,
     totalQuestions,
   ]);
 
-  const onPressFinishExam = useCallback(() => {
-    const unanswered = questions.reduce((n, _, idx) => (selectedByQuestion[idx] ? n : n + 1), 0);
+  const confirmSubmit = useCallback(() => {
+    const unanswered = totalQuestions - answeredCount;
     if (unanswered > 0) {
       Alert.alert(t('exam.unansweredTitle'), t('exam.unansweredBody', { count: unanswered }), [
         { text: t('exam.keepWorking'), style: 'cancel' },
-        { text: t('exam.finishAnyway'), style: 'destructive', onPress: () => void performExamSubmit() },
+        { text: t('exam.finishAnyway'), style: 'destructive', onPress: () => void submitExam() },
       ]);
       return;
     }
-    void performExamSubmit();
-  }, [performExamSubmit, questions, selectedByQuestion, t]);
+    void submitExam();
+  }, [answeredCount, submitExam, t, totalQuestions]);
+
+  const timer = (
+    <View style={[styles.timerPill, timerUrgent && styles.timerPillUrgent]}>
+      <Ionicons name="time-outline" size={17} color={timerUrgent ? colors.red : colors.white} />
+      <Text style={[styles.timerText, timerUrgent && styles.timerTextUrgent]}>{formatTime(secondsLeft)}</Text>
+    </View>
+  );
 
   if (loading) {
     return (
-      <ScreenColumn backgroundColor="#4A78D0">
-        <View style={[styles.centered, { paddingTop: insets.top, flex: 1 }]}>
-          <ActivityIndicator size="large" color="#F5F7FC" />
-          <Text style={styles.loadingText}>{t('exam.loading')}</Text>
+      <ScreenColumn backgroundColor={colors.brandStrong}>
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={colors.amber} />
+          <Text style={styles.loadingTitle}>{t('exam.loading')}</Text>
+          <Text style={styles.loadingBody}>{t('exam.loadingHint')}</Text>
         </View>
       </ScreenColumn>
     );
@@ -208,11 +207,16 @@ export function ExamNativeScreen({ navigation, route }: Props) {
 
   if (loadError || !current) {
     return (
-      <ScreenColumn backgroundColor="#4A78D0">
-        <View style={[styles.centered, { paddingHorizontal: 24, paddingTop: insets.top, flex: 1 }]}>
-          <Text style={styles.loadingText}>{loadError ?? t('exam.noQuestions')}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.retryBtnText}>{t('exam.goBack')}</Text>
+      <ScreenColumn backgroundColor={colors.brandStrong}>
+        <AppHeader title={t('exam.title')} onBack={() => navigation.goBack()} />
+        <View style={[styles.body, styles.errorBody]}>
+          <View style={styles.errorIcon}>
+            <Ionicons name="alert-circle-outline" size={32} color={colors.red} />
+          </View>
+          <Text style={styles.errorTitle}>{t('exam.noQuestions')}</Text>
+          <Text style={styles.errorText}>{loadError ?? t('exam.loadError')}</Text>
+          <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.errorButtonText}>{t('exam.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </ScreenColumn>
@@ -220,369 +224,439 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   }
 
   const imageUri = current.question.imageURLs?.[0];
-  const selectedId = selectedByQuestion[questionIndex];
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-        <View style={styles.topRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backTap}>
-            <Ionicons name="chevron-back" size={28} color="#F5F7FC" />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t('exam.title')}</Text>
-          <View style={styles.rightCluster}>
-            <Ionicons name="timer-outline" size={20} color="#F5F7FC" />
-            <Text style={styles.timerText}>{timerText}</Text>
-            <HeaderMenu navigation={navigation} iconColor="#F5F7FC" topOffset={56} rightOffset={20} />
-          </View>
-        </View>
-      </View>
+    <ScreenColumn backgroundColor={colors.brandStrong}>
+      <AppHeader
+        title={mode === 'signs' ? t('examType.signs.title') : t('exam.title')}
+        eyebrow={t('exam.liveExam')}
+        onBack={() => navigation.goBack()}
+        right={timer}
+      />
 
       <View style={styles.body}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <Text style={styles.sectionTitle}>{t('exam.question')}</Text>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.paginationScroll}
-            contentContainerStyle={styles.paginationContent}
-          >
-            {questions.map((_, idx) => {
-              const isCurrent = idx === questionIndex;
-              const isAnswered = !!selectedByQuestion[idx];
-              const isUnanswered = !isAnswered;
+        <View style={styles.progressHeader}>
+          <View>
+            <Text style={styles.questionPosition}>
+              {t('exam.questionPosition', { current: currentQuestionNumber, total: totalQuestions })}
+            </Text>
+            <Text style={styles.answeredLabel}>
+              {t('exam.answeredCount', { answered: answeredCount, total: totalQuestions })}
+            </Text>
+          </View>
+          <Text style={styles.progressPercent}>{Math.round(progress * 100)}%</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+        </View>
 
-              return (
-                <TouchableOpacity
-                  key={idx}
+        <ScrollView
+          ref={questionNavRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.questionNav}
+          contentContainerStyle={styles.questionNavContent}
+        >
+          {questions.map((_, index) => {
+            const active = index === questionIndex;
+            const answered = Boolean(selectedByQuestion[index]);
+            return (
+              <TouchableOpacity
+                key={`question-${index + 1}`}
+                style={[
+                  styles.questionChip,
+                  answered && styles.questionChipAnswered,
+                  active && styles.questionChipActive,
+                ]}
+                onPress={() => setQuestionIndex(index)}
+                activeOpacity={0.75}
+              >
+                <Text
                   style={[
-                    styles.pageBox,
-                    isCurrent && styles.pageBoxActive,
-                    isAnswered && !isCurrent && styles.pageBoxAnswered,
-                    isUnanswered && !isCurrent && styles.pageBoxUnanswered,
+                    styles.questionChipText,
+                    answered && styles.questionChipTextAnswered,
+                    active && styles.questionChipTextActive,
                   ]}
-                  onPress={() => setQuestionIndex(idx)}
-                  activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.pageText,
-                      isCurrent && styles.pageTextActive,
-                      isAnswered && !isCurrent && styles.pageTextAnswered,
-                      isUnanswered && !isCurrent && styles.pageTextUnanswered,
-                    ]}
-                  >
-                    {idx + 1}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                  {index + 1}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
+        <ScrollView
+          ref={contentRef}
+          style={styles.questionScroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.questionContent}
+        >
           <View style={styles.questionCard}>
+            <View style={styles.questionLabelRow}>
+              <Text style={styles.questionLabel}>{t('exam.question')}</Text>
+              <Ionicons name="help-circle-outline" size={18} color={colors.brand} />
+            </View>
             {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.questionImage} resizeMode="contain" />
+              <View style={styles.imageStage}>
+                <Image source={{ uri: imageUri }} style={styles.questionImage} resizeMode="contain" />
+              </View>
             ) : null}
             <Text style={styles.questionText}>{current.question.description}</Text>
           </View>
 
-          {current.options.map((opt) => {
-            const active = selectedId === opt._id;
-            return (
-              <TouchableOpacity
-                key={opt._id}
-                style={[styles.optionCard, active && styles.optionCardSelected]}
-                onPress={() => selectOption(opt._id)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.optionText}>{opt.optionText}</Text>
-              </TouchableOpacity>
-            );
-          })}
-
-          <View style={styles.navButtonsRow}>
-            <TouchableOpacity
-              style={[styles.prevBtn, !canGoPrev && styles.navBtnDisabled]}
-              onPress={() => canGoPrev && setQuestionIndex((prev) => prev - 1)}
-              disabled={!canGoPrev}
-            >
-              <View style={styles.btnInner}>
-                <Ionicons name="arrow-back" size={24} color="#434854" />
-                <Text style={styles.prevText}>{t('exam.previous')}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextBtn, !canGoNext && styles.navBtnDisabledBlue]}
-              onPress={() => canGoNext && setQuestionIndex((prev) => prev + 1)}
-              disabled={!canGoNext}
-            >
-              <View style={styles.btnInner}>
-                <Text style={styles.nextText}>{t('exam.next')}</Text>
-                <Ionicons name="arrow-forward" size={24} color="#F5F7FC" />
-              </View>
-            </TouchableOpacity>
+          <Text style={styles.chooseLabel}>{t('exam.chooseAnswer')}</Text>
+          <View style={styles.optionList}>
+            {current.options.map((option, index) => {
+              const selected = selectedId === option._id;
+              return (
+                <TouchableOpacity
+                  key={option._id}
+                  style={[styles.optionCard, selected && styles.optionCardSelected]}
+                  onPress={() => selectOption(option._id)}
+                  activeOpacity={0.82}
+                >
+                  <View style={[styles.optionMarker, selected && styles.optionMarkerSelected]}>
+                    <Text style={[styles.optionMarkerText, selected && styles.optionMarkerTextSelected]}>
+                      {OPTION_LABELS[index] ?? index + 1}
+                    </Text>
+                  </View>
+                  <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                    {option.optionText}
+                  </Text>
+                  <Ionicons
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={21}
+                    color={selected ? colors.brand : '#BAC2CF'}
+                  />
+                </TouchableOpacity>
+              );
+            })}
           </View>
-
-          {questionIndex === totalQuestions - 1 ? (
-            <TouchableOpacity style={styles.finishWrap} onPress={() => onPressFinishExam()}>
-              <Text style={styles.finishText}>{t('exam.finish')}</Text>
-            </TouchableOpacity>
-          ) : null}
         </ScrollView>
+
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.navButton, !canGoPrevious && styles.navButtonDisabled]}
+            onPress={() => canGoPrevious && setQuestionIndex((index) => index - 1)}
+            disabled={!canGoPrevious}
+          >
+            <Ionicons name="arrow-back" size={19} color={canGoPrevious ? colors.ink : colors.inkSoft} />
+            <Text style={[styles.navText, !canGoPrevious && styles.navTextDisabled]}>{t('exam.previous')}</Text>
+          </TouchableOpacity>
+
+          {canGoNext ? (
+            <TouchableOpacity
+              style={[styles.navButton, styles.navButtonPrimary]}
+              onPress={() => setQuestionIndex((index) => index + 1)}
+            >
+              <Text style={[styles.navText, styles.navTextPrimary]}>{t('exam.next')}</Text>
+              <Ionicons name="arrow-forward" size={19} color={colors.white} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.navButton, styles.finishButton]} onPress={confirmSubmit}>
+              <Text style={[styles.navText, styles.navTextPrimary]}>{t('exam.finish')}</Text>
+              <Ionicons name="checkmark" size={19} color={colors.white} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
+  loadingState: {
     flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: spacing.xxxl,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 15,
-    color: '#F5F7FC',
+  loadingTitle: {
+    ...typography.title,
+    marginTop: spacing.lg,
+    color: colors.white,
+  },
+  loadingBody: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: '#BFD0E8',
     textAlign: 'center',
-  },
-  retryBtn: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  retryBtnText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 14,
-    color: '#F5F7FC',
-  },
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backTap: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F5F7FC',
-    textAlign: 'center',
-  },
-  rightCluster: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 5,
-  },
-  timerText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    color: '#F5F7FC',
-    marginRight: 4,
   },
   body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  sectionTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#1E293B',
-    marginBottom: 16,
-  },
-  paginationScroll: {
-    marginBottom: 24,
-    marginHorizontal: -20,
-  },
-  paginationContent: {
-    paddingHorizontal: 20,
-    columnGap: 12,
-    alignItems: 'center',
-  },
-  pageBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+  errorBody: {
+    paddingHorizontal: spacing.xxxl,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  pageBoxActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+  errorIcon: {
+    width: 66,
+    height: 66,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.redSoft,
   },
-  pageBoxAnswered: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#4A78D0',
+  errorTitle: {
+    ...typography.title,
+    marginTop: spacing.lg,
+    color: colors.ink,
+    textAlign: 'center',
   },
-  pageBoxUnanswered: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FDBA74',
-    borderStyle: 'dashed',
+  errorText: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: colors.inkMuted,
+    textAlign: 'center',
   },
-  pageText: {
+  errorButton: {
+    minHeight: 46,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand,
+  },
+  errorButtonText: {
+    ...typography.bodyStrong,
+    color: colors.white,
+  },
+  timerPill: {
+    minWidth: 76,
+    height: 38,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  timerPillUrgent: {
+    backgroundColor: colors.redSoft,
+  },
+  timerText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: colors.white,
+  },
+  timerTextUrgent: {
+    color: colors.red,
+  },
+  progressHeader: {
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  questionPosition: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  answeredLabel: {
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.inkMuted,
+  },
+  progressPercent: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 16,
+    color: colors.brand,
+  },
+  progressTrack: {
+    height: 5,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.xl,
+    overflow: 'hidden',
+    borderRadius: 3,
+    backgroundColor: '#DCE2DD',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+  },
+  questionNav: {
+    flexGrow: 0,
+    marginTop: spacing.lg,
+  },
+  questionNavContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  questionChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  questionChipAnswered: {
+    borderColor: '#B8D8C9',
+    backgroundColor: colors.greenSoft,
+  },
+  questionChipActive: {
+    borderColor: colors.brandStrong,
+    backgroundColor: colors.brandStrong,
+  },
+  questionChipText: {
+    ...typography.caption,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    color: '#374151',
+    color: colors.inkMuted,
   },
-  pageTextActive: {
-    color: '#FFFFFF',
+  questionChipTextAnswered: {
+    color: colors.green,
   },
-  pageTextAnswered: {
-    color: '#1E40AF',
+  questionChipTextActive: {
+    color: colors.white,
   },
-  pageTextUnanswered: {
-    color: '#B45309',
+  questionScroll: {
+    flex: 1,
+  },
+  questionContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   questionCard: {
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    padding: spacing.xl,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
+  },
+  questionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  questionLabel: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  imageStage: {
+    height: 220,
+    marginTop: spacing.lg,
+    overflow: 'hidden',
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
   },
   questionImage: {
-    width: '100%',
-    height: 260,
-    borderRadius: 16,
-    marginBottom: 16,
-    backgroundColor: '#F8FAFC',
+    width: '94%',
+    height: '94%',
   },
   questionText: {
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#1E293B',
+    fontSize: 17,
+    lineHeight: 26,
+    marginTop: spacing.lg,
+    color: colors.ink,
+  },
+  chooseLabel: {
+    ...typography.eyebrow,
+    marginTop: spacing.xxl,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
+  },
+  optionList: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   optionCard: {
-    minHeight: 72,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    minHeight: 66,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
   },
   optionCardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 2,
+    borderColor: colors.brand,
+    backgroundColor: colors.brandSoft,
+  },
+  optionMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EDF0EC',
+  },
+  optionMarkerSelected: {
+    backgroundColor: colors.brand,
+  },
+  optionMarkerText: {
+    ...typography.bodyStrong,
+    color: colors.inkMuted,
+  },
+  optionMarkerTextSelected: {
+    color: colors.white,
   },
   optionText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#1E293B',
-    textAlign: 'center',
+    ...typography.body,
+    flex: 1,
+    marginHorizontal: spacing.md,
+    color: colors.ink,
   },
-  navButtonsRow: {
+  optionTextSelected: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.brandStrong,
+  },
+  footer: {
+    minHeight: 76,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    marginBottom: 16,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.surface,
   },
-  prevBtn: {
-    width: '48%',
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-  },
-  nextBtn: {
-    width: '48%',
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4A78D0',
-    justifyContent: 'center',
-  },
-  navBtnDisabled: {
-    opacity: 0.5,
-  },
-  navBtnDisabledBlue: {
-    opacity: 0.6,
-  },
-  btnInner: {
+  navButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceAlt,
   },
-  prevText: {
-    marginLeft: 8,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    color: '#475569',
+  navButtonPrimary: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
   },
-  nextText: {
-    marginRight: 8,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    color: '#FFFFFF',
+  finishButton: {
+    borderColor: colors.green,
+    backgroundColor: colors.green,
   },
-  finishWrap: {
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    marginBottom: 24,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+  navButtonDisabled: {
+    opacity: 0.45,
   },
-  finishText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#FFFFFF',
+  navText: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  navTextPrimary: {
+    color: colors.white,
+  },
+  navTextDisabled: {
+    color: colors.inkSoft,
   },
 });

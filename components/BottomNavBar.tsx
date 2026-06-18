@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 
@@ -10,6 +10,7 @@ import { useGateModal } from '../context/GateModalContext';
 import { useI18n } from '../i18n/useI18n';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { colors, radii, shadows, typography } from '../constants/theme';
 
 export type TabKey = 'home' | 'exam' | 'read' | 'watch' | 'performance';
 
@@ -52,11 +53,8 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const activeKey = active ?? resolveActive(route.name);
   const isCompact = shortSide <= 360;
   const isWidePhone = shortSide >= 412;
-  const iconSize = isCompact ? 19 : 21;
-  const labelSize = isCompact ? 10 : isWidePhone ? 12 : 11;
-  const bubbleWidth = isCompact ? 42 : isWidePhone ? 50 : 46;
-  const bubbleHeight = isCompact ? 32 : 34;
-  const floatingBottom = Platform.OS === 'ios' ? 12 : 14;
+  const iconSize = isCompact ? 20 : 22;
+  const labelSize = isCompact ? 9 : isWidePhone ? 11 : 10;
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -97,7 +95,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   };
 
   return (
-    <View style={[styles.tabs, { bottom: floatingBottom }]}>
+    <View style={styles.tabs}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeKey;
         return (
@@ -108,8 +106,8 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
           >
-            <View style={[styles.tabBubble, { width: bubbleWidth, height: bubbleHeight, borderRadius: bubbleHeight / 2 }, isActive && styles.tabBubbleActive]}>
-              <Ionicons name={tab.icon} size={iconSize} color={isActive ? '#F5F8FF' : '#95A4BF'} />
+            <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
+              <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.brandStrong : colors.inkSoft} />
             </View>
             <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
               {t(tab.labelKey)}
@@ -124,38 +122,42 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
 const styles = StyleSheet.create({
   tabs: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 12,
-    minHeight: 56,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 64,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    elevation: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
   },
   tab: {
     alignItems: 'center',
     minWidth: MIN_TOUCH_TARGET,
     minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
+    flex: 1,
   },
-  tabPressed: { opacity: 0.88 },
-  tabBubble: { width: 48, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  tabBubbleActive: { backgroundColor: '#4A78D0' },
+  tabPressed: { opacity: 0.72 },
+  tabBubble: {
+    width: 40,
+    height: 31,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBubbleActive: { backgroundColor: colors.brandSoft },
   tabText: {
-    marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 14,
-    color: '#8A98B2',
+    ...typography.caption,
+    marginTop: 1,
+    color: colors.inkSoft,
   },
-  tabTextActive: { color: '#4A78D0' },
+  tabTextActive: {
+    color: colors.brandStrong,
+    fontFamily: 'PlusJakartaSans-Bold',
+  },
 });

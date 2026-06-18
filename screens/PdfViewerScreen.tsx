@@ -5,7 +5,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { AppHeader } from '../components/AppHeader';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { useI18n } from '../i18n/useI18n';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PdfViewer'>;
 type PreviewState = 'loading' | 'ready' | 'error';
@@ -290,11 +293,11 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
 
 export function PdfViewerScreen({ navigation, route }: Props) {
   const { title, url } = route.params;
-  const { insets } = useResponsiveLayout();
+  const { t } = useI18n();
   const webViewRef = useRef<WebView>(null);
   const [previewState, setPreviewState] = useState<PreviewState>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [progressLabel, setProgressLabel] = useState('Preparing document...');
+  const [progressLabel, setProgressLabel] = useState(t('pdf.preparing'));
   const [loadVersion, setLoadVersion] = useState(0);
 
   const sourceHtml = useMemo(() => buildSecurePreviewHtml(url, title || 'Document'), [title, url]);
@@ -302,7 +305,7 @@ export function PdfViewerScreen({ navigation, route }: Props) {
   const handleRetry = () => {
     setPreviewState('loading');
     setError(null);
-    setProgressLabel('Preparing document...');
+    setProgressLabel(t('pdf.preparing'));
     setLoadVersion((version) => version + 1);
   };
 
@@ -315,7 +318,7 @@ export function PdfViewerScreen({ navigation, route }: Props) {
 
       if (payload.type === 'progress' && payload.payload?.page && payload.payload?.total) {
         setPreviewState('loading');
-        setProgressLabel(`Rendering page ${payload.payload.page} of ${payload.payload.total}...`);
+        setProgressLabel(t('pdf.rendering', { page: payload.payload.page, total: payload.payload.total }));
         return;
       }
 
@@ -327,27 +330,17 @@ export function PdfViewerScreen({ navigation, route }: Props) {
 
       if (payload.type === 'error') {
         setPreviewState('error');
-        setError(payload.payload?.message ?? 'Unable to preview this document securely.');
+        setError(payload.payload?.message ?? t('pdf.previewErrorBody'));
       }
     } catch {
       setPreviewState('error');
-      setError('Unable to preview this document securely.');
+      setError(t('pdf.previewErrorBody'));
     }
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.headerBlue}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {title || 'Document'}
-          </Text>
-          <View style={styles.headerRight} />
-        </View>
-      </View>
+    <ScreenColumn>
+      <AppHeader title={title || t('pdf.document')} onBack={() => navigation.goBack()} />
 
       <View style={styles.bodyWrap}>
         <WebView
@@ -378,119 +371,95 @@ export function PdfViewerScreen({ navigation, route }: Props) {
           }}
           onError={() => {
             setPreviewState('error');
-            setError('Unable to preview this document securely.');
+            setError(t('pdf.previewErrorBody'));
           }}
         />
 
         {previewState === 'loading' ? (
           <View style={styles.overlayCard}>
-            <ActivityIndicator size="large" color="#4A78D0" />
-            <Text style={styles.overlayTitle}>Opening secure preview</Text>
+            <View style={styles.overlayIcon}>
+              <Ionicons name="document-text-outline" size={28} color={colors.brand} />
+            </View>
+            <ActivityIndicator size="small" color={colors.brand} />
+            <Text style={styles.overlayTitle}>{t('pdf.opening')}</Text>
             <Text style={styles.overlayBody}>{progressLabel}</Text>
           </View>
         ) : null}
 
         {previewState === 'error' ? (
           <View style={styles.overlayCard}>
-            <Ionicons name="alert-circle-outline" size={36} color="#C05A5A" />
-            <Text style={styles.overlayTitle}>Unable to preview document</Text>
+            <View style={[styles.overlayIcon, styles.overlayIconError]}>
+              <Ionicons name="alert-circle-outline" size={30} color={colors.red} />
+            </View>
+            <Text style={styles.overlayTitle}>{t('pdf.previewErrorTitle')}</Text>
             <Text style={styles.overlayBody}>
-              {error ?? 'The secure in-app preview could not be prepared.'}
+              {error ?? t('pdf.previewErrorBody')}
             </Text>
             <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
       </View>
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#4A78D0',
-  },
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F5F7FC',
-    textAlign: 'center',
-    maxWidth: '70%',
+    backgroundColor: colors.canvas,
   },
   bodyWrap: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
   webview: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
+    backgroundColor: colors.canvas,
   },
   overlayCard: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#F3F5FA',
+    paddingHorizontal: spacing.xxl,
+    backgroundColor: colors.canvas,
     zIndex: 5,
+  },
+  overlayIcon: {
+    width: 60,
+    height: 60,
+    marginBottom: spacing.lg,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  overlayIconError: {
+    backgroundColor: colors.redSoft,
   },
   overlayTitle: {
     marginTop: 12,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 18,
-    color: '#1E293B',
+    ...typography.title,
+    color: colors.ink,
     textAlign: 'center',
   },
   overlayBody: {
     marginTop: 8,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    lineHeight: 19,
-    color: '#5C6474',
+    ...typography.body,
+    color: colors.inkMuted,
   },
   retryBtn: {
     marginTop: 18,
     minHeight: 52,
     minWidth: 140,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: '#2563EB',
+    borderRadius: radii.pill,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

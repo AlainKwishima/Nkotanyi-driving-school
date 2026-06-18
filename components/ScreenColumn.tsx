@@ -3,6 +3,7 @@ import { StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScreenColumnStyle } from '../hooks/useResponsiveLayout';
+import { colors } from '../constants/theme';
 
 type ScreenColumnProps = ViewProps & {
   backgroundColor?: string;
@@ -26,6 +27,7 @@ export function ScreenColumn({ backgroundColor, style, children, ...rest }: Scre
 const styles = StyleSheet.create({
   base: {
     flex: 1,
+    backgroundColor: colors.canvas,
   },
   fill: {
     flex: 1,

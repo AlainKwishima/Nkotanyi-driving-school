@@ -9,6 +9,7 @@ import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { useI18n } from '../i18n/useI18n';
 import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScreensHub'>;
 
@@ -171,26 +172,25 @@ export function ScreensHubScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(198, 197, 208, 0.25)',
+    borderColor: colors.line,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 10,
+    marginBottom: spacing.md,
+    ...shadows.card,
   },
   cardTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#1B1B1E',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
 });

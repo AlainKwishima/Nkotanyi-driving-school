@@ -11,6 +11,7 @@ import { useMobile } from '../hooks/useMobile';
 import { useAppFlow } from '../context/AppFlowContext';
 import type { ContentLanguageCode } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
+import { colors, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSelection'>;
 type LanguageKey = 'kinyarwanda' | 'english' | 'francais';
@@ -66,9 +67,9 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={[styles.header, { height: m.verticalScale(216) }]}>
-          <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(184), height: m.scale(184) }]} resizeMode="cover" />
-          <Text style={[styles.brandTitle, { width: m.scale(266), fontSize: m.fontScale(20), lineHeight: m.fontScale(32) }]}>
+        <View style={[styles.header, { minHeight: m.verticalScale(190) }]}>
+          <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(132), height: m.scale(132) }]} resizeMode="contain" />
+          <Text style={[styles.brandTitle, { width: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(26) }]}>
             {t('language.brand')}
           </Text>
         </View>
@@ -128,29 +129,30 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
+    backgroundColor: colors.canvas,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   phoneFrame: {
     width: '100%',
     minHeight: '100%',
-    backgroundColor: '#F3F5FA',
+    backgroundColor: 'transparent',
     alignItems: 'center',
   },
   header: {
     width: '100%',
-    height: 216,
+    minHeight: 190,
     alignItems: 'center',
   },
   logo: {
-    width: 184,
-    height: 184,
+    width: 132,
+    height: 132,
   },
   brandTitle: {
     width: 266.22,
     textAlign: 'center',
-    color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: colors.ink,
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 20,
     lineHeight: 32,
     letterSpacing: -0.6,
@@ -177,15 +179,15 @@ const styles = StyleSheet.create({
   },
   heading: {
     textAlign: 'center',
-    color: '#1E293B',
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: colors.ink,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 22,
     lineHeight: 32,
   },
   subHeading: {
     marginTop: 8,
     textAlign: 'center',
-    color: '#64748B',
+    color: colors.inkMuted,
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
     lineHeight: 22,
@@ -205,7 +207,7 @@ const styles = StyleSheet.create({
   copyright: {
     marginTop: 24,
     textAlign: 'center',
-    color: '#94A3B8',
+    color: colors.inkSoft,
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 10,
     lineHeight: 15,

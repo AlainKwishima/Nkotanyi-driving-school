@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
+import { colors } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StartExamNative'>;
 
@@ -65,6 +66,6 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   blank: {
     flex: 1,
-    backgroundColor: '#00000000',
+    backgroundColor: colors.canvas,
   },
 });

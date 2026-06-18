@@ -4,119 +4,111 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 
 import { BottomNavBar } from '../components/BottomNavBar';
-import { HeaderMenu } from '../components/HeaderMenu';
+import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamInstructionsNative'>;
 
-type StatCardDef = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  labelKey: string;
-  valueKey: string;
-};
+const STAT_DEFINITIONS = [
+  { icon: 'timer-outline', label: 'examInstructions.statTimeLimit', value: 'examInstructions.statTimeValue' },
+  { icon: 'help-circle-outline', label: 'examInstructions.statQuestions', value: 'examInstructions.statQuestionsValue' },
+  { icon: 'ribbon-outline', label: 'examInstructions.statPassing', value: 'examInstructions.statPassingValue' },
+  { icon: 'clipboard-outline', label: 'examInstructions.statExamType', value: 'examInstructions.statExamTypeValue' },
+] as const;
 
-const STAT_CARD_DEFS: StatCardDef[] = [
-  { icon: 'timer-outline', labelKey: 'examInstructions.statTimeLimit', valueKey: 'examInstructions.statTimeValue' },
-  { icon: 'help-circle-outline', labelKey: 'examInstructions.statQuestions', valueKey: 'examInstructions.statQuestionsValue' },
-  { icon: 'ribbon-outline', labelKey: 'examInstructions.statPassing', valueKey: 'examInstructions.statPassingValue' },
-  { icon: 'clipboard-outline', labelKey: 'examInstructions.statExamType', valueKey: 'examInstructions.statExamTypeValue' },
-];
-
-const GUIDE_KEYS = ['examInstructions.guide1', 'examInstructions.guide2', 'examInstructions.guide3', 'examInstructions.guide4'] as const;
+const GUIDE_KEYS = [
+  'examInstructions.guide1',
+  'examInstructions.guide2',
+  'examInstructions.guide3',
+  'examInstructions.guide4',
+] as const;
 
 export function ExamInstructionsNativeScreen({ navigation }: Props) {
-  const {
-    hasSubscription,
-    hasUsedFreeTrial,
-    isSigningOut,
-  } = useAppFlow();
-  const { openGateModal } = useGateModal();
-  const { insets, tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
+  const { tabScrollBottomPad } = useResponsiveLayout();
+  const { hasSubscription, hasUsedFreeTrial, isSigningOut } = useAppFlow();
+  const { openGateModal } = useGateModal();
 
-  const statCards = useMemo(
+  const stats = useMemo(
     () =>
-      STAT_CARD_DEFS.map((c) => ({
-        icon: c.icon,
-        label: t(c.labelKey),
-        value: t(c.valueKey),
+      STAT_DEFINITIONS.map((item) => ({
+        icon: item.icon,
+        label: t(item.label),
+        value: t(item.value),
       })),
     [t],
   );
 
+  const startExam = () => {
+    if (!hasSubscription && hasUsedFreeTrial) {
+      if (!isSigningOut) {
+        openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
+      }
+      return;
+    }
+    navigation.navigate('ExamTypeSelectNative');
+  };
+
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
-      <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('examInstructions.title')}</Text>
-          <View style={styles.headerRight}>
-            <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
-          </View>
-        </View>
-      </View>
+    <ScreenColumn backgroundColor={colors.brandStrong}>
+      <AppHeader
+        title={t('examInstructions.title')}
+        eyebrow={t('home.action.exams')}
+        onBack={() => navigation.goBack()}
+        navigation={navigation}
+      />
 
       <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          <View style={styles.readyStrip}>
-            <Text style={styles.readyTitle}>{t('examInstructions.readyTitle')}</Text>
-            <Text style={styles.readySub}>{t('examInstructions.readySub')}</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
+        >
+          <View style={styles.hero}>
+            <View style={styles.heroIcon}>
+              <Ionicons name="shield-checkmark-outline" size={29} color={colors.brandStrong} />
+            </View>
+            <Text style={styles.heroTitle}>{t('examInstructions.readyTitle')}</Text>
+            <Text style={styles.heroBody}>{t('examInstructions.readySub')}</Text>
+            <TouchableOpacity style={styles.startButton} onPress={startExam} activeOpacity={0.88}>
+              <Text style={styles.startText}>{t('examInstructions.startExam')}</Text>
+              <Ionicons name="arrow-forward" size={19} color={colors.white} />
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.startBtn}
-            onPress={() => {
-              if (!hasSubscription && hasUsedFreeTrial) {
-                if (isSigningOut) {
-                  return;
-                }
-                openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
-                return;
-              }
-              navigation.navigate('ExamTypeSelectNative');
-            }}
-          >
-            <Text style={styles.startBtnText}>{t('examInstructions.startExam')}</Text>
-            <Ionicons name="arrow-forward" size={18} color="#F4F7FE" />
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
+          <Text style={styles.sectionBody}>{t('examInstructions.sectionSub')}</Text>
 
-          <View style={styles.contentWrap}>
-            <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
-            <Text style={styles.sectionSub}>{t('examInstructions.sectionSub')}</Text>
-
-            <View style={styles.statsGrid}>
-              {statCards.map((card) => (
-                <View key={card.label} style={styles.statCard}>
-                  <Ionicons name={card.icon} size={16} color="#4A78D0" />
-                  <Text style={styles.statLabel}>{card.label}</Text>
-                  <Text style={styles.statValue}>{card.value}</Text>
+          <View style={styles.statsGrid}>
+            {stats.map((stat) => (
+              <View key={stat.label} style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Ionicons name={stat.icon} size={19} color={colors.brand} />
                 </View>
-              ))}
-            </View>
-
-            <View style={styles.guideCard}>
-              <View style={styles.guideHeader}>
-                <View style={styles.guideBar} />
-                <Text style={styles.guideTitle}>{t('examInstructions.guidelinesTitle').toUpperCase()}</Text>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
+            ))}
+          </View>
 
-              {GUIDE_KEYS.map((key, index) => (
-                <View key={key} style={styles.guideItem}>
-                  <View style={styles.numberDot}>
-                    <Text style={styles.numberDotText}>{index + 1}</Text>
-                  </View>
-                  <Text style={styles.guideText}>{t(key)}</Text>
-                </View>
-              ))}
+          <View style={styles.guideCard}>
+            <View style={styles.guideHeading}>
+              <Ionicons name="list-outline" size={20} color={colors.brandStrong} />
+              <Text style={styles.guideTitle}>{t('examInstructions.guidelinesTitle')}</Text>
             </View>
+            {GUIDE_KEYS.map((key, index) => (
+              <View key={key} style={styles.guideRow}>
+                <View style={styles.guideNumber}>
+                  <Text style={styles.guideNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.guideText}>{t(key)}</Text>
+              </View>
+            ))}
           </View>
         </ScrollView>
       </View>
@@ -127,198 +119,144 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F7F9FE',
-    textAlign: 'center',
-  },
   body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
-  scrollPad: {
-    paddingTop: 24,
-    paddingHorizontal: 20,
+  content: {
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
-  readyStrip: {
-    paddingTop: 10,
-    paddingBottom: 16,
+  hero: {
+    padding: spacing.xxl,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
-  readyTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 24,
-    color: '#1E293B',
+  heroIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
   },
-  readySub: {
-    marginTop: 6,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    color: '#64748B',
+  heroTitle: {
+    ...typography.heading,
+    marginTop: spacing.lg,
+    color: colors.ink,
+    textAlign: 'center',
   },
-  startBtn: {
-    marginTop: 8,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2563EB',
+  heroBody: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    color: colors.inkMuted,
+    textAlign: 'center',
+  },
+  startButton: {
+    minHeight: 54,
+    width: '100%',
+    marginTop: spacing.xl,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    elevation: 4,
+    gap: spacing.sm,
+    backgroundColor: colors.brand,
   },
-  startBtnText: {
-    marginRight: 8,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  contentWrap: {
-    marginTop: 24,
-    backgroundColor: 'transparent',
+  startText: {
+    ...typography.bodyStrong,
+    color: colors.white,
   },
   sectionTitle: {
+    ...typography.title,
+    marginTop: spacing.xxxl,
+    color: colors.ink,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#1E293B',
   },
-  sectionSub: {
-    marginTop: 6,
+  sectionBody: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    color: '#64748B',
   },
   statsGrid: {
-    marginTop: 20,
+    marginTop: spacing.xl,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   statCard: {
-    width: '48%',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    width: '48.5%',
+    minHeight: 128,
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  statLabel: {
-    marginTop: 8,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 11,
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    marginTop: 4,
-    textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 16,
-    color: '#1E293B',
-  },
-  guideCard: {
-    marginTop: 12,
-    marginBottom: 24,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  guideHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  guideBar: {
-    width: 4,
-    height: 24,
-    borderRadius: 2,
-    backgroundColor: '#2563EB',
-    marginRight: 10,
-  },
-  guideTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    color: '#1E293B',
-    letterSpacing: 0.5,
-  },
-  guideItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  numberDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+  statIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    marginTop: 2,
+    backgroundColor: colors.brandSoft,
   },
-  numberDotText: {
+  statValue: {
+    ...typography.bodyStrong,
+    marginTop: spacing.md,
+    color: colors.ink,
+  },
+  statLabel: {
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.inkSoft,
+  },
+  guideCard: {
+    marginTop: spacing.md,
+    padding: spacing.xl,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  guideHeading: {
+    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  guideTitle: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  guideRow: {
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  guideNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.amberSoft,
+  },
+  guideNumberText: {
+    ...typography.caption,
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 11,
-    color: '#2563EB',
+    color: '#9A5A18',
   },
   guideText: {
+    ...typography.body,
     flex: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#475569',
+    marginLeft: spacing.md,
+    color: colors.inkMuted,
   },
 });

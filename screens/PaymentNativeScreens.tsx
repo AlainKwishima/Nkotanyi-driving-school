@@ -5,10 +5,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 
 import { RootStackParamList } from '../navigation/types';
-import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { AppHeader } from '../components/AppHeader';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +32,7 @@ import {
   validateCvv,
   validateCardHolder,
 } from '../utils/validation';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type SubscriptionProps = NativeStackScreenProps<RootStackParamList, 'SubscriptionNative'>;
 type PaymentProps = NativeStackScreenProps<RootStackParamList, 'PaymentNative'>;
@@ -40,20 +40,7 @@ type ConfirmationProps = NativeStackScreenProps<RootStackParamList, 'PaymentConf
 type Nav = SubscriptionProps['navigation'] | PaymentProps['navigation'] | ConfirmationProps['navigation'];
 
 function Header({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: Nav }) {
-  const { insets } = useResponsiveLayout();
-  return (
-    <View style={[styles.headerBlue, { paddingTop: insets.top }]}>
-      <View style={styles.topRow}>
-        <TouchableOpacity style={styles.headerLeft} onPress={onBack}>
-          <Ionicons name="chevron-back" size={28} color="#F6F8FE" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <View style={styles.headerRight}>
-          <HeaderMenu navigation={navigation} iconColor="#F6F8FE" topOffset={56} rightOffset={20} />
-        </View>
-      </View>
-    </View>
-  );
+  return <AppHeader title={title} onBack={onBack} navigation={navigation} />;
 }
 
 function BottomTabs({ navigation }: { navigation: Nav }) {
@@ -138,6 +125,12 @@ function extractPaymentReference(payload: unknown): string | null {
   if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
   if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
   const keys = [
+    'reqRef',
+    'req_ref',
+    'requestRef',
+    'request_ref',
+    'requestId',
+    'request_id',
     'transaction_id',
     'transactionId',
     'orderId',
@@ -149,6 +142,7 @@ function extractPaymentReference(payload: unknown): string | null {
     'trx_id',
     'trxId',
     'uniqueTransactionId',
+    'unique_transaction_id',
     'id',
     '_id',
   ];
@@ -170,8 +164,25 @@ function extractReqRef(payload: unknown): string | null {
   if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
 
   for (const obj of objs) {
-    const value = obj.reqRef ?? obj.req_ref ?? obj.requestRef ?? obj.request_ref;
+    const value = obj.reqRef ?? obj.req_ref ?? obj.requestRef ?? obj.request_ref ?? obj.requestId ?? obj.request_id;
     if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function extractPaymentMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const root = payload as Record<string, unknown>;
+  const objs: Record<string, unknown>[] = [root];
+  if (root.data && typeof root.data === 'object' && !Array.isArray(root.data)) objs.push(root.data as Record<string, unknown>);
+  if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
+  if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
+  const keys = ['message', 'msg', 'error', 'details', 'reason', 'statusText'];
+  for (const obj of objs) {
+    for (const key of keys) {
+      const value = obj[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
   }
   return null;
 }
@@ -423,7 +434,7 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
   };
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
+    <ScreenColumn>
       <Header title={t('subscription.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView
@@ -444,7 +455,7 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
 
           {pricingLoading ? (
             <View style={styles.pricingStatusCard}>
-              <ActivityIndicator color="#4A78D0" />
+              <ActivityIndicator color={colors.brand} />
               <Text style={styles.pricingStatusText}>{t('payment.loadingPlans')}</Text>
             </View>
           ) : pricingError ? (
@@ -667,7 +678,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
       if (looksLikeFailedPayment(statusPayload)) {
         await clearPendingState();
-        Alert.alert(t('payment.failed'), t('payment.failed'));
+        Alert.alert(t('payment.failed'), extractPaymentMessage(statusPayload) ?? t('payment.failed'));
         return;
       }
 
@@ -805,7 +816,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           if (looksLikeFailedPayment(confirmedPayload)) {
             await clearPendingState();
           }
-          throw new Error(getMessageFromUnknownError(confirmedPayload));
+          throw new Error(extractPaymentMessage(confirmedPayload) ?? getMessageFromUnknownError(confirmedPayload));
         }
         const finalReceipt = extractPaymentReceipt(confirmedPayload, paymentLanguage);
         await finalizeSuccessfulPayment(finalReceipt.orderId ? finalReceipt : receipt);
@@ -942,7 +953,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   };
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
+    <ScreenColumn>
       <Header title={t('payment.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
@@ -1171,7 +1182,7 @@ export function PaymentConfirmationNativeScreen({ navigation, route }: Confirmat
   const amountFormatted = amountRwf.toLocaleString(locale, { maximumFractionDigits: 0 });
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
+    <ScreenColumn>
       <Header title={t('payment.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
@@ -1225,50 +1236,11 @@ export function PaymentConfirmationNativeScreen({ navigation, route }: Confirmat
 }
 
 const styles = StyleSheet.create({
-  headerBlue: {
-    backgroundColor: '#4A78D0',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  topRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLeft: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 20,
-    color: '#F7F9FE',
-    textAlign: 'center',
-  },
   body: {
     flex: 1,
-    backgroundColor: '#F3F5FA',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    marginTop: -20,
+    backgroundColor: colors.canvas,
   },
-  scrollPad: { paddingHorizontal: 20, paddingTop: 24 },
+  scrollPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   subHeading: {
@@ -1276,7 +1248,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 20,
     lineHeight: 28,
-    color: '#14265A',
+    color: colors.ink,
   },
   subLead: {
     marginTop: 10,
@@ -1284,15 +1256,15 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Regular',
     fontSize: 12,
     lineHeight: 18,
-    color: '#646C7D',
+    color: colors.inkMuted,
   },
   renewBanner: {
     marginTop: 14,
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#D8E4FA',
+    borderRadius: radii.md,
+    backgroundColor: colors.brandSoft,
   },
   renewBannerText: {
     flex: 1,
@@ -1300,25 +1272,21 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 12,
     lineHeight: 18,
-    color: '#1F2B54',
+    color: colors.brandStrong,
   },
   planCard: {
     marginTop: 16,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
     padding: 20,
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
+    ...shadows.card,
   },
   planCardActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
+    backgroundColor: colors.brandStrong,
+    borderColor: colors.brandStrong,
+    shadowColor: colors.brandStrong,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
@@ -1337,15 +1305,15 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 4,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 9,
+    fontSize: 10,
     lineHeight: 12,
     color: '#F6F8FF',
   },
-  planTitle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 20, color: '#1E293B' },
+  planTitle: { ...typography.title, fontSize: 20, color: colors.ink },
   planTitleActive: { color: '#FFFFFF' },
   planPriceCol: { alignItems: 'flex-end' },
   planPriceRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
-  planPrice: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 32, color: '#1E293B' },
+  planPrice: { ...typography.display, fontSize: 32, color: colors.ink },
   planPriceActive: { color: '#FFFFFF' },
   planCurrency: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#64748B' },
   planCurrencyActive: { color: '#BFDBFE' },
@@ -1356,28 +1324,30 @@ const styles = StyleSheet.create({
     marginTop: 20,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.brandSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   startNowBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
-  startNowText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: '#2563EB' },
-  startNowTextActive: { color: '#2563EB' },
+  startNowText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: colors.brand },
+  startNowTextActive: { color: colors.brand },
   customPlanCard: {
     marginTop: 14,
-    borderRadius: 12,
-    backgroundColor: '#C6CEDD',
+    borderRadius: radii.lg,
+    backgroundColor: colors.amberSoft,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  customPlanTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, lineHeight: 26, color: '#22315A' },
+  customPlanTitle: { ...typography.title, color: colors.ink },
   customPlanText: { marginTop: 4, textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, lineHeight: 17, color: '#5D6678' },
   pricingStatusCard: {
     marginTop: 12,
     borderRadius: 10,
-    backgroundColor: '#DDE3EF',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     paddingVertical: 14,
     paddingHorizontal: 12,
     alignItems: 'center',
@@ -1400,25 +1370,27 @@ const styles = StyleSheet.create({
     color: '#B03030',
   },
 
-  sectionTitle: { marginTop: 10, marginBottom: 10, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 24, color: '#252A35' },
-  changeLink: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 12, lineHeight: 18, color: '#4A78D0' },
+  sectionTitle: { marginTop: 10, marginBottom: 10, ...typography.title, fontSize: 16, color: colors.ink },
+  changeLink: { ...typography.caption, fontFamily: 'PlusJakartaSans-Bold', color: colors.brand },
   subscriptionPlanCard: {
-    borderRadius: 10,
-    backgroundColor: '#ECECF0',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  planIconSquare: { width: 42, height: 42, borderRadius: 6, backgroundColor: '#4A78D0', alignItems: 'center', justifyContent: 'center' },
+  planIconSquare: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
   standardDaily: { marginLeft: 12, flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#252A35' },
-  amountBlue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#4A78D0' },
+  amountBlue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: colors.brand },
   pendingCard: {
     marginTop: 14,
     borderRadius: 16,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: colors.brandSoft,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#93C5FD',
+    borderColor: '#C5D7F2',
   },
   pendingHeaderRow: { flexDirection: 'row', alignItems: 'center' },
   pendingTitle: {
@@ -1438,7 +1410,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1451,19 +1423,15 @@ const styles = StyleSheet.create({
   methodsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   methodCard: {
     width: '31.4%',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: colors.line,
+    ...shadows.card,
   },
-  methodCardActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
+  methodCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   methodIconWrap: {
     width: 42,
     height: 42,
@@ -1477,14 +1445,12 @@ const styles = StyleSheet.create({
   checkDot: { position: 'absolute', top: 6, right: 6, width: 14, height: 14, borderRadius: 7, backgroundColor: '#1F2B54', alignItems: 'center', justifyContent: 'center' },
 
   detailsCard: {
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   inputLabel: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
   inputLabelSpacing: { marginTop: 14 },
@@ -1492,12 +1458,12 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceAlt,
     paddingHorizontal: 14,
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 14,
-    color: '#1E293B',
+    color: colors.ink,
   },
   cardRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' },
   cardCol: { width: '48%' },
@@ -1528,18 +1494,18 @@ const styles = StyleSheet.create({
     marginTop: 24,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.brand,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.24,
     shadowRadius: 12,
     elevation: 4,
   },
   payNowText: { marginLeft: 8, fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, color: '#FFFFFF' },
-  secureInfo: { marginTop: 16, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#94A3B8' },
+  secureInfo: { marginTop: 16, textAlign: 'center', ...typography.caption, color: colors.inkSoft },
   checkoutBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -1547,9 +1513,9 @@ const styles = StyleSheet.create({
   },
   checkoutSheet: {
     height: '88%',
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     overflow: 'hidden',
   },
   checkoutHeader: {
@@ -1559,12 +1525,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.line,
   },
   checkoutTitle: {
     fontFamily: 'PlusJakartaSans-ExtraBold',
     fontSize: 16,
-    color: '#1E293B',
+    color: colors.ink,
   },
   checkoutCloseBtn: {
     width: 36,
@@ -1581,31 +1547,29 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
+    shadowColor: colors.green,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 4,
   },
-  successTitle: { marginTop: 24, textAlign: 'center', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 24, color: '#1E293B' },
-  successSubtitle: { marginTop: 8, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
+  successTitle: { marginTop: 24, textAlign: 'center', ...typography.heading, color: colors.ink },
+  successSubtitle: { marginTop: 8, textAlign: 'center', ...typography.body, color: colors.inkMuted },
 
   confirmationCard: {
     marginTop: 24,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   confirmHeader: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: '#475569' },
-  activePill: { borderRadius: 12, backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 4 },
+  activePill: { borderRadius: 12, backgroundColor: colors.green, paddingHorizontal: 12, paddingVertical: 4 },
   activePillText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 10, color: '#FFFFFF' },
   confirmRow: { marginTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   confirmKey: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
@@ -1640,7 +1604,7 @@ const styles = StyleSheet.create({
   },
   tab: { alignItems: 'center' },
   tabBubble: { width: 46, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  tabBubbleActive: { backgroundColor: '#4A78D0' },
+  tabBubbleActive: { backgroundColor: colors.brand },
   tabText: { marginTop: 2, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 14, color: '#8A98B2' },
-  tabTextActive: { color: '#4A78D0' },
+  tabTextActive: { color: colors.brand },
 });

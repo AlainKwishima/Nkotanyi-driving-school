@@ -1,136 +1,200 @@
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { BottomNavBar } from '../components/BottomNavBar';
-import { ScreenHeader } from '../components/ScreenHeader';
+import { AppHeader } from '../components/AppHeader';
+import { ScreenColumn } from '../components/ScreenColumn';
+import { SectionHeading } from '../components/SectionHeading';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HelpCenter'>;
 
 export function HelpCenterScreen({ navigation }: Props) {
   const { t } = useI18n();
+  const { tabScrollBottomPad } = useResponsiveLayout();
   const faqs = [t('help.faq1'), t('help.faq2'), t('help.faq3'), t('help.faq4')];
 
   return (
-    <View style={styles.root}>
-      <ScreenHeader title={t('help.title')} onBack={() => navigation.goBack()} />
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>{t('help.directContact')}</Text>
-        <View style={styles.contactCard}>
-          <View style={styles.contactRow}>
-            <View style={styles.iconCircle} />
-            <View>
-              <Text style={styles.contactLabel}>{t('help.emailSupport')}</Text>
-              <Text style={styles.contactValue}>support@nkotanyi.rw</Text>
+    <ScreenColumn>
+      <AppHeader title={t('help.title')} navigation={navigation} onBack={() => navigation.goBack()} />
+      <View style={styles.body}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.introCard}>
+            <View style={styles.introIcon}>
+              <Ionicons name="chatbubbles-outline" size={27} color={colors.brand} />
+            </View>
+            <View style={styles.introCopy}>
+              <Text style={styles.introTitle}>{t('help.directContact')}</Text>
+              <Text style={styles.introText}>{t('reading.helpIntro')}</Text>
             </View>
           </View>
-          <View style={styles.contactRow}>
-            <View style={styles.iconCircle} />
-            <View>
-              <Text style={styles.contactLabel}>{t('help.phoneNumber')}</Text>
-              <Text style={styles.contactValue}>+250 788 123 456</Text>
-            </View>
+
+          <SectionHeading title={t('help.directContact')} />
+          <View style={styles.contactCard}>
+            <TouchableOpacity
+              style={styles.contactRow}
+              onPress={() => void Linking.openURL('mailto:support@nkotanyi.rw')}
+              activeOpacity={0.78}
+            >
+              <View style={styles.contactIcon}>
+                <Ionicons name="mail-outline" size={21} color={colors.brandStrong} />
+              </View>
+              <View style={styles.contactCopy}>
+                <Text style={styles.contactLabel}>{t('help.emailSupport')}</Text>
+                <Text style={styles.contactValue}>support@nkotanyi.rw</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.contactRow}
+              onPress={() => void Linking.openURL('tel:+250788123456')}
+              activeOpacity={0.78}
+            >
+              <View style={[styles.contactIcon, styles.contactIconAmber]}>
+                <Ionicons name="call-outline" size={21} color="#9A641B" />
+              </View>
+              <View style={styles.contactCopy}>
+                <Text style={styles.contactLabel}>{t('help.phoneNumber')}</Text>
+                <Text style={styles.contactValue}>+250 788 123 456</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
+            </TouchableOpacity>
           </View>
-        </View>
 
-        <Text style={styles.sectionTitle}>{t('help.faqTitle')}</Text>
-        {faqs.map((question) => (
-          <Pressable key={question} style={styles.faqItem}>
-            <Text style={styles.faqText}>{question}</Text>
-            <Text style={styles.chevron}>⌄</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
+          <SectionHeading title={t('help.faqTitle')} />
+          {faqs.map((question, index) => (
+            <View key={`${question}-${index}`} style={styles.faqItem}>
+              <View style={styles.faqNumber}>
+                <Text style={styles.faqNumberText}>{String(index + 1).padStart(2, '0')}</Text>
+              </View>
+              <Text style={styles.faqText}>{question}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.inkSoft} />
+            </View>
+          ))}
+        </ScrollView>
+      </View>
       <BottomNavBar navigation={navigation} />
-    </View>
+    </ScreenColumn>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  body: {
     flex: 1,
-    backgroundColor: '#FBF8FD',
+    backgroundColor: colors.canvas,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  introCard: {
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.brandSoft,
   },
-  scroll: {
-    width: '100%',
+  introIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
-  scrollContent: {
-    width: 375,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+  introCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
-  sectionTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 12,
-    lineHeight: 28,
-    color: '#1B1B1E',
-    marginBottom: 16,
+  introTitle: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  introText: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
   },
   contactCard: {
-    width: 327,
-    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(198, 197, 208, 0.2)',
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    marginBottom: 28,
+    borderColor: colors.line,
+    ...shadows.card,
   },
   contactRow: {
+    minHeight: 82,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E5ECFB',
-    marginRight: 16,
+  contactIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
+  contactIconAmber: {
+    backgroundColor: colors.amberSoft,
+  },
+  contactCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   contactLabel: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 15,
-    color: '#6E6F76',
+    ...typography.caption,
+    color: colors.inkSoft,
   },
   contactValue: {
-    marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#1B1B1E',
+    ...typography.bodyStrong,
+    marginTop: 3,
+    color: colors.ink,
+  },
+  divider: {
+    height: 1,
+    marginLeft: 56,
+    backgroundColor: colors.line,
   },
   faqItem: {
-    width: 327,
-    minHeight: 62,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(198, 197, 208, 0.2)',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    minHeight: 70,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  faqNumber: {
+    width: 36,
+    height: 36,
+    marginRight: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  faqNumberText: {
+    ...typography.caption,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.amber,
   },
   faqText: {
+    ...typography.bodyStrong,
     flex: 1,
-    marginRight: 12,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#1B1B1E',
-  },
-  chevron: {
-    fontSize: 20,
-    lineHeight: 20,
-    color: '#8D8E98',
+    marginRight: spacing.sm,
+    color: colors.ink,
   },
 });

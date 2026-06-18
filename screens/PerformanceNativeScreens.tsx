@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { ActivityIndicator, Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
-import { HeaderMenu } from '../components/HeaderMenu';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
-import { MIN_TOUCH_TARGET } from '../constants/accessibility';
+import { AppHeader } from '../components/AppHeader';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
 import { getPerformanceHistory } from '../services/performanceApi';
@@ -16,6 +15,7 @@ import { readLocalExamRecords } from '../services/examHistoryStorage';
 import { mapLocalExamRecord, mergePerformanceHistory, type PerformanceHistoryRow } from '../services/performanceHistory';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type PerfProps = NativeStackScreenProps<RootStackParamList, 'PerformanceNative'>;
 type DetailProps = NativeStackScreenProps<RootStackParamList, 'PerformanceDetailNative'>;
@@ -75,26 +75,41 @@ function formatDurationForLanguage(raw: string, minShort: string, naText: string
   return value;
 }
 
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function scoreTone(percent: number) {
+  if (percent >= 60) {
+    return {
+      color: colors.success,
+      backgroundColor: colors.successSoft,
+    };
+  }
+  if (percent >= 50) {
+    return {
+      color: colors.brandStrong,
+      backgroundColor: colors.brandSoft,
+    };
+  }
+  return {
+    color: colors.danger,
+    backgroundColor: colors.dangerSoft,
+  };
+}
+
 function TopHeader({
   title,
   onBack,
   navigation,
-  plain = false,
 }: {
   title: string;
   onBack: () => void;
   navigation: PerfProps['navigation'] | DetailProps['navigation'] | ReviewProps['navigation'];
-  plain?: boolean;
 }) {
-  const { insets } = useResponsiveLayout();
   return (
-    <View style={[styles.header, plain ? styles.headerPlain : styles.headerBlue, { paddingTop: insets.top }]}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color={plain ? '#1E293B' : '#FFFFFF'} />
-      </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: plain ? '#1E293B' : '#FFFFFF' }]}>{title}</Text>
-      <HeaderMenu navigation={navigation} iconColor={plain ? '#1E293B' : '#FFFFFF'} topOffset={56} rightOffset={16} />
-    </View>
+    <AppHeader title={title} onBack={onBack} navigation={navigation} />
   );
 }
 
@@ -108,7 +123,7 @@ function HistoryCard({ item, onPress, index }: { item: PerformanceHistoryRow; on
   const statusText = passed ? t('performance.passed') : t('performance.failed');
   const displayTitle = item.title.startsWith('performance.') ? t(item.title) : item.title;
   const displayDate = formatHistoryDateForLanguage(item.date, lang, item.date);
-  const displayDuration = formatDurationForLanguage(item.duration, t('common.minShort'), t('common.na'));
+  const tone = scoreTone(item.percent);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -130,53 +145,50 @@ function HistoryCard({ item, onPress, index }: { item: PerformanceHistoryRow; on
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      <TouchableOpacity style={styles.historyCard} onPress={onPress} activeOpacity={0.7}>
-        <View style={[styles.cardIndicator, { backgroundColor: passed ? '#22C55E' : '#EF4444' }]} />
-        <View style={styles.historyTop}>
-          <View style={styles.historyMeta}>
+      <TouchableOpacity style={styles.historyRow} onPress={onPress} activeOpacity={0.78}>
+        <Text style={styles.historyIndex}>{index + 1}</Text>
+        <View style={styles.historyMeta}>
+          <View>
             <Text style={styles.historyTitle}>{displayTitle}</Text>
             <Text style={styles.historyDate}>{displayDate}</Text>
           </View>
-          <View style={[styles.statusPill, passed ? styles.statusPillPass : styles.statusPillFail]}>
-            <Text style={[styles.statusPillText, passed ? styles.statusPillTextPass : styles.statusPillTextFail]}>
-              {statusText.toUpperCase()}
-            </Text>
-          </View>
         </View>
-
-        <View style={styles.historyBottom}>
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: '#F1F5F9' }]}>
-              <MaterialIcons name="fact-check" size={14} color="#475569" />
-            </View>
-            <View>
-              <Text style={styles.metricLabel}>{t('performance.answers')}</Text>
-              <Text style={styles.metricValue}>{item.answers}</Text>
-            </View>
+        <View style={styles.historyScoreColumn}>
+          <View style={[styles.scoreChip, { backgroundColor: tone.backgroundColor }]}>
+            <Text style={[styles.scoreChipText, { color: tone.color }]}>{clampPercent(item.percent)}%</Text>
           </View>
-
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: '#F1F5F9' }]}>
-              <Ionicons name="time-outline" size={14} color="#475569" />
-            </View>
-            <View>
-              <Text style={styles.metricLabel}>{t('performance.duration')}</Text>
-              <Text style={styles.metricValue}>{displayDuration}</Text>
-            </View>
-          </View>
-
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: '#F0F9FF' }]}>
-              <Ionicons name="trending-up" size={14} color="#0EA5E9" />
-            </View>
-            <View>
-              <Text style={styles.metricLabel}>{t('performance.accuracy')}</Text>
-              <Text style={[styles.metricValue, { color: '#0EA5E9' }]}>{item.percent}%</Text>
-            </View>
-          </View>
+          <Text style={[styles.historyStatus, passed ? styles.historyStatusPass : styles.historyStatusFail]}>
+            {statusText}
+          </Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  tone?: 'neutral' | 'positive' | 'negative' | 'brand';
+}) {
+  const color =
+    tone === 'negative'
+      ? colors.danger
+      : tone === 'positive'
+        ? colors.success
+        : tone === 'brand'
+          ? colors.brand
+          : colors.ink;
+
+  return (
+    <View style={styles.statTile}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+    </View>
   );
 }
 
@@ -185,25 +197,46 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
   const total = rows.length;
   const avgAccuracy = total > 0 ? Math.round(rows.reduce((s, r) => s + r.percent, 0) / total) : 0;
   const passedCount = rows.filter((r) => r.status === 'PASSED').length;
-  const successRate = total > 0 ? Math.round((passedCount / total) * 100) : 0;
+  const totalQuestions = rows.reduce((sum, row) => sum + row.total, 0);
+  const recentDelta = total > 1 ? clampPercent(rows[0].percent) - clampPercent(rows[1].percent) : 0;
+  const lowestScore = total > 0 ? Math.min(...rows.map((row) => clampPercent(row.percent))) : 0;
+  const highestScore = total > 0 ? Math.max(...rows.map((row) => clampPercent(row.percent))) : 0;
+  const deltaLabel = `${recentDelta > 0 ? '+' : ''}${recentDelta}%`;
+  const averageWidth: `${number}%` = `${clampPercent(avgAccuracy)}%`;
 
   return (
     <View style={styles.summaryContainer}>
       <View style={styles.summaryGrid}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryVal}>{total}</Text>
-            <Text style={styles.summaryLab}>{t('performance.totalExams')}</Text>
+        <StatTile label={t('performance.avgAccuracy')} value={`${avgAccuracy}%`} tone={avgAccuracy >= 60 ? 'positive' : 'negative'} />
+        <StatTile label={t('performance.passedExams')} value={`${passedCount}`} tone="brand" />
+        <StatTile label={t('performance.totalQuestions')} value={`${totalQuestions}`} />
+        <StatTile
+          label={t('performance.scoreTrend')}
+          value={deltaLabel}
+          tone={recentDelta >= 0 ? 'positive' : 'negative'}
+        />
+      </View>
+
+      <View style={styles.scoreBand}>
+        <Text style={styles.scoreBandTitle}>{t('performance.yourScore')}</Text>
+        <View style={styles.scoreBandValues}>
+          <View>
+            <Text style={styles.scoreBandMin}>{lowestScore}%</Text>
+            <Text style={styles.scoreBandLabel}>{t('performance.lowestScore')}</Text>
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryVal}>{avgAccuracy}%</Text>
-            <Text style={styles.summaryLab}>{t('performance.avgAccuracy')}</Text>
+          <View style={styles.scoreBandCenter}>
+            <View style={styles.scoreTrack}>
+              <View style={[styles.scoreFill, { width: averageWidth }]} />
+            </View>
+            <Text style={styles.scoreAverage}>
+              {t('performance.avgAccuracy')} <Text style={styles.scoreAverageValue}>{avgAccuracy}%</Text>
+            </Text>
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryVal}>{successRate}%</Text>
-            <Text style={styles.summaryLab}>{t('performance.successRate')}</Text>
+          <View style={styles.scoreBandRight}>
+            <Text style={styles.scoreBandMax}>{highestScore}%</Text>
+            <Text style={styles.scoreBandLabel}>{t('performance.highestScore')}</Text>
           </View>
+        </View>
       </View>
     </View>
   );
@@ -228,21 +261,17 @@ function HistoryBackground({
     <>
       <TopHeader title={t('performance.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
-        <PerformanceSummary rows={rows} />
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('performance.history')}</Text>
-          <TouchableOpacity onPress={onRetry} disabled={loading} style={styles.refreshBtn}>
-            <Ionicons name="refresh" size={14} color="#4A78D0" />
-            <Text style={styles.refreshText}>{t('performance.refresh')}</Text>
-          </TouchableOpacity>
-        </View>
-        {loadError ? <View style={styles.errorBox}><Text style={styles.inlineError}>{loadError}</Text></View> : null}
-        {loading && rows.length === 0 ? (
-          <View style={styles.centerPad}>
-            <ActivityIndicator size="large" color="#4A78D0" />
-          </View>
-        ) : null}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.listPad, { paddingBottom: tabScrollBottomPad }]}>
+          <PerformanceSummary rows={rows} />
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('performance.examList')}</Text>
+            <TouchableOpacity onPress={onRetry} disabled={loading} style={styles.refreshBtn}>
+              <Ionicons name="refresh" size={14} color={colors.brand} />
+              <Text style={styles.refreshText}>{loading ? t('common.loading') : t('performance.refresh')}</Text>
+            </TouchableOpacity>
+          </View>
+          {loadError ? <View style={styles.errorBox}><Text style={styles.inlineError}>{loadError}</Text></View> : null}
           {rows.length === 0 && !loading ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
@@ -252,29 +281,38 @@ function HistoryBackground({
               <Text style={styles.emptyText}>{t('performance.empty')}</Text>
             </View>
           ) : null}
-          {rows.map((item, idx) => (
-            <HistoryCard
-              key={item.id}
-              item={item}
-              index={idx}
-              onPress={() =>
-                navigation.navigate('PerformanceDetailNative', {
-                  correct: item.correct,
-                  total: item.total,
-                  percent: item.percent,
-                  timeLabel: item.duration,
-                  passed: item.status === 'PASSED',
-                  dateLabel: item.date,
-                  title: item.title,
-                  answeredCount: item.answeredCount,
-                  startedAt: item.startedAt,
-                  finishedAt: item.finishedAt,
-                  elapsedSec: item.elapsedSec,
-                  answerDetails: item.answerDetails,
-                })
-              }
-            />
-          ))}
+          {rows.length > 0 ? (
+            <View style={styles.historyTable}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, styles.tableIndex]}>#</Text>
+                <Text style={[styles.tableHeaderText, styles.tableExam]}>{t('performance.examColumn')}</Text>
+                <Text style={[styles.tableHeaderText, styles.tableScore]}>{t('performance.scoreColumn')}</Text>
+              </View>
+              {rows.map((item, idx) => (
+                <HistoryCard
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  onPress={() =>
+                    navigation.navigate('PerformanceDetailNative', {
+                      correct: item.correct,
+                      total: item.total,
+                      percent: item.percent,
+                      timeLabel: item.duration,
+                      passed: item.status === 'PASSED',
+                      dateLabel: item.date,
+                      title: item.title,
+                      answeredCount: item.answeredCount,
+                      startedAt: item.startedAt,
+                      finishedAt: item.finishedAt,
+                      elapsedSec: item.elapsedSec,
+                      answerDetails: item.answerDetails,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
         </ScrollView>
       </View>
     </>
@@ -328,7 +366,7 @@ export function PerformanceNativeScreen({ navigation }: PerfProps) {
   );
 
   return (
-    <ScreenColumn backgroundColor="#4A78D0">
+    <ScreenColumn>
       <HistoryBackground navigation={navigation} rows={rows} loading={loading} loadError={loadError} onRetry={load} />
       <BottomTabs navigation={navigation} />
     </ScreenColumn>
@@ -353,12 +391,11 @@ export function PerformanceDetailNativeScreen({ navigation, route }: DetailProps
   const finishedAt = p?.finishedAt ?? dateRaw;
 
   return (
-    <ScreenColumn backgroundColor="#F8FAFC">
+    <ScreenColumn>
       <TopHeader
         title={t('performance.title')}
         onBack={() => navigation.goBack()}
         navigation={navigation}
-        plain
       />
       <View style={styles.detailBody}>
         <View style={styles.detailCard}>
@@ -381,7 +418,7 @@ export function PerformanceDetailNativeScreen({ navigation, route }: DetailProps
               <Text style={styles.detailStatLab}>{t('performance.score')}</Text>
             </View>
             <View style={styles.detailStatItem}>
-              <Ionicons name="time-outline" size={20} color="#4A78D0" />
+              <Ionicons name="time-outline" size={20} color={colors.brand} />
               <Text style={styles.detailStatVal}>{durationLabel}</Text>
               <Text style={styles.detailStatLab}>{t('performance.time')}</Text>
             </View>
@@ -493,8 +530,8 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
   const selectedIsCorrect = Boolean(currentQuestion?.isCorrect);
 
   return (
-    <ScreenColumn backgroundColor="#F8FAFC">
-      <TopHeader title={t('test.results')} onBack={() => navigation.goBack()} navigation={navigation} plain />
+    <ScreenColumn>
+      <TopHeader title={t('test.results')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.detailBody}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.reviewPad, { paddingBottom: tabScrollBottomPad }]}>
           {attempt ? (
@@ -562,7 +599,7 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
 
               <View style={styles.explanationBox}>
                 <View style={styles.explainHeader}>
-                  <Ionicons name="bulb-outline" size={16} color="#4A78D0" />
+                  <Ionicons name="bulb-outline" size={16} color={colors.brand} />
                   <Text style={styles.explainTitle}>{t('performance.review')}</Text>
                 </View>
                 <Text style={styles.explainText}>
@@ -608,91 +645,188 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 110,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    zIndex: 10,
-  },
-  headerBlue: { backgroundColor: '#4A78D0' },
-  headerPlain: { backgroundColor: '#F8FAFC' },
-  backBtn: { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18 },
   body: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.canvas,
   },
   summaryContainer: {
-    backgroundColor: '#4A78D0',
-    paddingBottom: 24,
-    paddingHorizontal: 16,
+    gap: spacing.md,
+    marginBottom: spacing.xxl,
   },
   summaryGrid: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryVal: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 20, color: '#FFFFFF' },
-  summaryLab: { marginTop: 4, fontFamily: 'PlusJakartaSans-Medium', fontSize: 10, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
-  summaryDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)' },
+  statTile: {
+    width: '48%',
+    minHeight: 82,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  statLabel: {
+    ...typography.caption,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.inkMuted,
+  },
+  statValue: {
+    marginTop: spacing.xs,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 26,
+    lineHeight: 32,
+  },
+  scoreBand: {
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  scoreBandTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+  },
+  scoreBandValues: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  scoreBandMin: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.danger,
+  },
+  scoreBandMax: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.brand,
+    textAlign: 'right',
+  },
+  scoreBandLabel: {
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.inkMuted,
+  },
+  scoreBandCenter: {
+    flex: 1,
+  },
+  scoreBandRight: {
+    alignItems: 'flex-end',
+  },
+  scoreTrack: {
+    height: 12,
+    overflow: 'hidden',
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceAlt,
+  },
+  scoreFill: {
+    height: '100%',
+    borderRadius: radii.pill,
+    backgroundColor: colors.danger,
+  },
+  scoreAverage: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    color: colors.inkMuted,
+  },
+  scoreAverageValue: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    color: colors.danger,
+  },
   sectionHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 12,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sectionTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, color: '#1E293B' },
+  sectionTitle: { ...typography.title, color: colors.ink },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  refreshText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: '#4A78D0' },
-  errorBox: { marginHorizontal: 20, marginBottom: 16, padding: 12, borderRadius: 8, backgroundColor: '#FEF2F2' },
-  inlineError: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#B91C1C' },
-  centerPad: { paddingVertical: 40, alignItems: 'center' },
+  refreshText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: colors.brand },
+  errorBox: { marginBottom: 16, padding: 12, borderRadius: radii.md, backgroundColor: colors.redSoft },
+  inlineError: { ...typography.caption, color: colors.red },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 40 },
   emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#334155', marginBottom: 8 },
   emptyText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 },
-  listPad: { paddingHorizontal: 18, paddingTop: 6 },
-  historyCard: {
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+  listPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
+  historyTable: {
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     overflow: 'hidden',
   },
-  cardIndicator: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
-  historyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  historyMeta: { flex: 1, marginRight: 8 },
-  historyTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#0F172A', marginBottom: 4 },
-  historyDate: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 13, color: '#64748B' },
-  statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  statusPillPass: { backgroundColor: '#DCFCE7' },
-  statusPillFail: { backgroundColor: '#FEE2E2' },
-  statusPillText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 10 },
-  statusPillTextPass: { color: '#166534' },
-  statusPillTextFail: { color: '#991B1B' },
-  historyBottom: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  metricItem: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  metricIconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  metricLabel: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 9, color: '#94A3B8', marginBottom: 2 },
-  metricValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: '#334155' },
+  tableHeader: {
+    minHeight: 38,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  tableHeaderText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
+  },
+  tableIndex: { width: 34 },
+  tableExam: { flex: 1 },
+  tableScore: { width: 74, textAlign: 'center' },
+  historyRow: {
+    minHeight: 72,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  historyIndex: {
+    width: 34,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: colors.brandStrong,
+  },
+  historyMeta: { flex: 1, paddingRight: spacing.md },
+  historyTitle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 13, lineHeight: 18, color: colors.ink },
+  historyDate: { marginTop: 2, fontFamily: 'PlusJakartaSans-Medium', fontSize: 11, lineHeight: 16, color: colors.inkMuted },
+  historyScoreColumn: { width: 86, alignItems: 'flex-end' },
+  scoreChip: {
+    minWidth: 54,
+    minHeight: 30,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreChipText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+  },
+  historyStatus: {
+    marginTop: spacing.xs,
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  historyStatusPass: { color: colors.success },
+  historyStatusFail: { color: colors.danger },
 
-  detailBody: { flex: 1, paddingHorizontal: 20 },
-  detailCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 4 },
+  detailBody: { flex: 1, paddingHorizontal: 20, paddingTop: 24, backgroundColor: colors.canvas },
+  detailCard: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: 24, borderWidth: 1, borderColor: colors.line, ...shadows.card },
   detailCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   statusTag: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 10 },
   statusTagPass: { backgroundColor: '#22C55E' },
@@ -717,9 +851,9 @@ const styles = StyleSheet.create({
   progressTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
   progressValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
   progressTrack: { marginTop: 8, height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: 8, backgroundColor: '#4A78D0', borderRadius: 4 },
+  progressFill: { height: 8, backgroundColor: colors.brand, borderRadius: 4 },
   detailActions: { marginTop: 32, gap: 12 },
-  detailPrimaryBtn: { height: 56, borderRadius: 28, backgroundColor: '#4A78D0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#4A78D0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 8 },
+  detailPrimaryBtn: { height: 56, borderRadius: 28, backgroundColor: colors.brand, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', ...shadows.card },
   detailPrimaryBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#FFFFFF' },
   detailSecondaryBtn: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
   detailSecondaryBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#475569' },
@@ -728,7 +862,7 @@ const styles = StyleSheet.create({
   reviewStepText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: '#64748B' },
   reviewStepDots: { flexDirection: 'row', gap: 4 },
   stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E2E8F0' },
-  stepDotActive: { width: 16, backgroundColor: '#4A78D0' },
+  stepDotActive: { width: 16, backgroundColor: colors.brand },
   questionCard: { borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3 },
   questionText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#0F172A', marginBottom: 18, lineHeight: 26 },
   diagramContainer: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, alignItems: 'center' },
@@ -745,11 +879,11 @@ const styles = StyleSheet.create({
   answerDark: { flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
   explanationBox: { backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, marginBottom: 32 },
   explainHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  explainTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: '#4A78D0', letterSpacing: 0.5 },
+  explainTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: colors.brand, letterSpacing: 0.5 },
   explainText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#334155', lineHeight: 22 },
   reviewNav: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20 },
   reviewNavBtn: { flex: 1, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  reviewNavBtnPrimary: { backgroundColor: '#4A78D0', borderColor: '#4A78D0' },
+  reviewNavBtnPrimary: { backgroundColor: colors.brand, borderColor: colors.brand },
   reviewNavBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#475569' },
   navBtnDisabled: { opacity: 0.45 },
   reviewPad: { paddingVertical: 20 },
