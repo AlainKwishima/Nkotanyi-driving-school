@@ -67,21 +67,21 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={[styles.header, { minHeight: m.verticalScale(190) }]}>
-          <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(132), height: m.scale(132) }]} resizeMode="contain" />
-          <Text style={[styles.brandTitle, { width: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(26) }]}>
+        <View style={[styles.header, { minHeight: m.verticalScale(132), paddingTop: m.verticalScale(12) }]}>
+          <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(92), height: m.scale(92) }]} resizeMode="contain" />
+          <Text style={[styles.brandTitle, { width: m.scale(240), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
             {t('language.brand')}
           </Text>
         </View>
 
-        <View style={[styles.main, { paddingTop: m.verticalScale(30), paddingHorizontal: m.scale(24) }]}>
+        <View style={[styles.main, { paddingTop: m.verticalScale(14), paddingHorizontal: m.scale(20) }]}>
           <View style={styles.mainInner}>
-            <View style={[styles.titleMargin, { paddingBottom: m.verticalScale(32) }]}>
+            <View style={[styles.titleMargin, { paddingBottom: m.verticalScale(20) }]}>
               <View style={styles.titleSection}>
                 <Text style={[styles.heading, { maxWidth: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
                   {changeOnly ? t('language.changeTitle') : t('language.chooseTitle')}
                 </Text>
-                <Text style={[styles.subHeading, { marginTop: m.verticalScale(8), maxWidth: m.scale(280), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
+                <Text style={[styles.subHeading, { marginTop: m.verticalScale(6), maxWidth: m.scale(280), fontSize: m.fontScale(13), lineHeight: m.fontScale(19) }]}>
                   {changeOnly ? t('language.changeHint') : t('language.chooseSubtitle')}
                 </Text>
               </View>
@@ -89,7 +89,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
 
             <View style={styles.languageList}>
               {LANGUAGE_OPTIONS.map((option) => (
-                <View key={option.key} style={option.key === 'kinyarwanda' ? undefined : [styles.languageCardSpacing, { marginTop: m.verticalScale(16) }]}>
+                <View key={option.key} style={option.key === 'kinyarwanda' ? undefined : [styles.languageCardSpacing, { marginTop: m.verticalScale(12) }]}>
                   <LanguageOptionCard
                     title={t(option.titleKey)}
                     subtitle={t(option.subtitleKey)}
@@ -102,7 +102,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          <View style={[styles.footerActions, { paddingBottom: m.verticalScale(24), paddingTop: m.verticalScale(20) }]}>
+          <View style={[styles.footerActions, { paddingBottom: m.verticalScale(16), paddingTop: m.verticalScale(14) }]}>
             <PrimaryButton
               label={t('language.continue')}
               onPress={async () => {
@@ -116,7 +116,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
                 navigation.navigate('CreateAccount');
               }}
             />
-            <Text style={[styles.copyright, { marginTop: m.verticalScale(24), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
+            <Text style={[styles.copyright, { marginTop: m.verticalScale(14), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
               {t('language.copyright')}
             </Text>
           </View>
@@ -141,27 +141,29 @@ const styles = StyleSheet.create({
   },
   header: {
     width: '100%',
-    minHeight: 190,
+    minHeight: 132,
+    paddingTop: 12,
     alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   logo: {
-    width: 132,
-    height: 132,
+    width: 92,
+    height: 92,
   },
   brandTitle: {
-    width: 266.22,
+    width: 240,
     textAlign: 'center',
     color: colors.ink,
     fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 20,
-    lineHeight: 32,
+    fontSize: 14,
+    lineHeight: 20,
     letterSpacing: -0.6,
   },
   main: {
     width: '100%',
     flex: 1,
-    paddingTop: 34,
-    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingHorizontal: 20,
     alignItems: 'stretch',
     justifyContent: 'space-between',
   },
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   },
   titleMargin: {
     width: '100%',
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   titleSection: {
     width: '100%',
@@ -196,16 +198,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   languageCardSpacing: {
-    marginTop: 16,
+    marginTop: 12,
   },
   footerActions: {
     width: '100%',
     alignItems: 'center',
-    paddingBottom: 24,
-    paddingTop: 20,
+    paddingBottom: 16,
+    paddingTop: 14,
   },
   copyright: {
-    marginTop: 24,
+    marginTop: 14,
     textAlign: 'center',
     color: colors.inkSoft,
     fontFamily: 'PlusJakartaSans-SemiBold',

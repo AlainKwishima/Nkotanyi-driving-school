@@ -1,10 +1,10 @@
-# Nkotanyi Driving School
+# IBYAPA
 
 Mobile learning app for driving school students, built with Expo + React Native.
 
 ## Overview
 
-Nkotanyi Driving School is a mobile-first learning app that helps users prepare for driving tests through:
+IBYAPA is a mobile-first learning app that helps users prepare for driving tests through:
 
 - Guided onboarding and authentication
 - Exam instructions + exam simulation flow
@@ -89,6 +89,16 @@ npm run android    # Run on Android emulator/device
 npm run ios        # Run on iOS simulator (macOS only)
 npm run web        # Run web build
 ```
+
+## Android APK Automation
+
+Every push to `main` queues an EAS preview APK build through GitHub Actions.
+
+Required repository secret:
+
+- `EXPO_TOKEN`: an Expo access token with permission to build the `IBYAPA` project.
+
+You can also start the same APK build manually from GitHub Actions with the `Build Android APK` workflow.
 
 ## Design Notes
 

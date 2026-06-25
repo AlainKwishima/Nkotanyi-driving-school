@@ -2,7 +2,7 @@ import type { ContentLanguageCode } from '../context/AppFlowContext';
 
 /** Flat keys; use dot convention e.g. `auth.welcomeBack` */
 const en: Record<string, string> = {
-  'language.brand': 'Nkotanyi Driving School',
+  'language.brand': 'IBYAPA',
   'language.chooseTitle': 'Choose Your Language',
   'language.chooseSubtitle': 'Hitamo Ururimi',
   'language.continue': 'Continue',
@@ -10,7 +10,7 @@ const en: Record<string, string> = {
   'language.changeHint': 'Content and menus will follow this choice.',
   'language.lockedTitle': 'Language locked',
   'language.lockedBody': 'Only users with the highest subscription plan can change app language.',
-  'language.copyright': '© 2024 NKOTANYI DRIVING SCHOOL',
+  'language.copyright': '© 2024 IBYAPA',
 
   'splash.wait': 'Wait a second…',
 
@@ -90,7 +90,7 @@ const en: Record<string, string> = {
   'auth.sendReset': 'Send reset link',
   'auth.resetSelfServiceTitle': 'Password reset',
   'auth.resetSelfServiceBody':
-    'Self-service reset is not available in the app yet. Please contact NKOTANYI support for help recovering your account.',
+    'Self-service reset is not available in the app yet. Please contact IBYAPA support for help recovering your account.',
   'auth.backSignIn': 'Back to sign in',
   'auth.newPasswordTitle': 'Create new password',
   'auth.newPasswordSubtitle': 'Your new password must be different from passwords you used before.',
@@ -526,7 +526,7 @@ const en: Record<string, string> = {
 };
 
 const rw: Record<string, string> = {
-  'language.brand': 'Nkotanyi Driving School',
+  'language.brand': 'IBYAPA',
   'language.chooseTitle': 'Hitamo ururimi',
   'language.chooseSubtitle': 'Hitamo Ururimi',
   'language.continue': 'Komeza',
@@ -534,7 +534,7 @@ const rw: Record<string, string> = {
   'language.changeHint': 'Ibirimo na porogaramu bizakurikira uwo muhanda.',
   'language.lockedTitle': 'Ururimi rwafunzwe',
   'language.lockedBody': 'Abafite gahunda yo hejuru gusa ni bo bemerewe guhindura ururimi rwa porogaramu.',
-  'language.copyright': '© 2024 NKOTANYI DRIVING SCHOOL',
+  'language.copyright': '© 2024 IBYAPA',
 
   'splash.wait': 'Tegereza gato…',
 
@@ -614,7 +614,7 @@ const rw: Record<string, string> = {
   'auth.sendReset': 'Ohereza uburyo bwo guhindura',
   'auth.resetSelfServiceTitle': 'Guhindura ijambo ry’ibanga',
   'auth.resetSelfServiceBody':
-    'Ubu porogaramu itarenganura guhindura ijambo ry’ibanga ubwawe. Vugisha ubufasha bwa NKOTANYI.',
+    'Ubu porogaramu itarenganura guhindura ijambo ry’ibanga ubwawe. Vugisha ubufasha bwa IBYAPA.',
   'auth.backSignIn': 'Subira kwinjira',
   'auth.newPasswordTitle': 'Ijambo ry’ibanga rishya',
   'auth.newPasswordSubtitle': 'Rigomba gutandukana n’iryari koreshejwe mbere.',
@@ -1048,7 +1048,7 @@ const rw: Record<string, string> = {
 };
 
 const fr: Record<string, string> = {
-  'language.brand': 'Nkotanyi Driving School',
+  'language.brand': 'IBYAPA',
   'language.chooseTitle': 'Choisissez votre langue',
   'language.chooseSubtitle': 'Hitamo Ururimi',
   'language.continue': 'Continuer',
@@ -1056,7 +1056,7 @@ const fr: Record<string, string> = {
   'language.changeHint': 'Les menus et le contenu suivront ce choix.',
   'language.lockedTitle': 'Langue verrouillée',
   'language.lockedBody': "Seuls les utilisateurs avec l'abonnement le plus élevé peuvent changer la langue de l'application.",
-  'language.copyright': '© 2024 NKOTANYI DRIVING SCHOOL',
+  'language.copyright': '© 2024 IBYAPA',
 
   'splash.wait': 'Un instant…',
 
@@ -1136,7 +1136,7 @@ const fr: Record<string, string> = {
   'auth.sendReset': 'Envoyer le lien',
   'auth.resetSelfServiceTitle': 'Réinitialisation',
   'auth.resetSelfServiceBody':
-    "La réinitialisation dans l'app n'est pas encore disponible. Contactez le support NKOTANYI.",
+    "La réinitialisation dans l'app n'est pas encore disponible. Contactez le support IBYAPA.",
   'auth.backSignIn': 'Retour à la connexion',
   'auth.newPasswordTitle': 'Nouveau mot de passe',
   'auth.newPasswordSubtitle': 'Il doit être différent des anciens mots de passe.',

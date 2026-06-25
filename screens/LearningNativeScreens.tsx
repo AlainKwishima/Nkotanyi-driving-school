@@ -21,6 +21,7 @@ import { ScreenColumn } from '../components/ScreenColumn';
 import { ReadSectionTabs } from '../components/ReadSectionTabs';
 import { SectionHeading } from '../components/SectionHeading';
 import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
+import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
@@ -108,8 +109,14 @@ function DocumentCard({
       activeOpacity={hasLink ? 0.84 : 1}
       accessibilityState={{ disabled: !hasLink }}
     >
-      <View style={[styles.fileIcon, { backgroundColor: tone.background }]}>
-        <Ionicons name="document-text-outline" size={24} color={tone.color} />
+      <View style={styles.fileIcon}>
+        {extension === 'PDF' ? (
+          <PdfDocumentIcon size={58} />
+        ) : (
+          <View style={[styles.genericFileIcon, { backgroundColor: tone.background }]}>
+            <Ionicons name="document-text-outline" size={24} color={tone.color} />
+          </View>
+        )}
       </View>
       <View style={styles.documentCopy}>
         <Text style={styles.documentTitle} numberOfLines={2}>
@@ -757,8 +764,15 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   fileIcon: {
-    width: 50,
-    height: 50,
+    width: 58,
+    height: 58,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genericFileIcon: {
+    width: 58,
+    height: 58,
     borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',

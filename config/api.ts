@@ -16,7 +16,7 @@ const fromExpoExtra =
   typeof Constants.expoConfig?.extra?.apiUrl === 'string' ? Constants.expoConfig.extra.apiUrl : undefined;
 
 /**
- * Base URL for NKOTANYI / ibyapa API (same backend as the website).
+ * Base URL for the IBYAPA API (same backend as the website).
  * Priority: `expo.extra.apiUrl` (from app.config.js) → `EXPO_PUBLIC_API_URL` → production.
  *
  * Note: `??` alone is unsafe here — an empty `EXPO_PUBLIC_API_URL` would yield `''`, and fetch would use

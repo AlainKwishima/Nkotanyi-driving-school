@@ -9,6 +9,7 @@ import { ScreenColumn } from '../components/ScreenColumn';
 import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { SectionHeading } from '../components/SectionHeading';
+import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
@@ -327,11 +328,11 @@ export function HomeNativeScreen({ navigation }: Props) {
                 activeOpacity={0.85}
               >
                 <View style={styles.recommendationIcon}>
-                  <Ionicons
-                    name={recommendation.type === 'pdf' ? 'document-text-outline' : 'play-outline'}
-                    size={22}
-                    color={colors.brand}
-                  />
+                  {recommendation.type === 'pdf' ? (
+                    <PdfDocumentIcon size={44} />
+                  ) : (
+                    <Ionicons name="play-outline" size={22} color={colors.brand} />
+                  )}
                 </View>
                 <View style={styles.recommendationCopy}>
                   <Text style={styles.recommendationLabel}>{t('home.newContent')}</Text>
@@ -642,7 +643,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.brandSoft,
   },
   recommendationCopy: {
     flex: 1,

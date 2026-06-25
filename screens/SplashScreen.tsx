@@ -39,8 +39,8 @@ export function SplashScreen({ navigation }: Props) {
         <View style={styles.logoCard}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={styles.logo} resizeMode="contain" />
         </View>
-        <Text style={styles.brandName}>NKOTANYI</Text>
-        <Text style={styles.brandDescriptor}>DRIVING SCHOOL</Text>
+        <Text style={styles.brandName}>IBYAPA</Text>
+        <Text style={styles.brandDescriptor}>ROAD SAFETY LEARNING</Text>
         <ActivityIndicator size="small" color={colors.brand} style={styles.spinner} />
         <Text style={styles.waitText}>{t('splash.wait')}</Text>
       </View>

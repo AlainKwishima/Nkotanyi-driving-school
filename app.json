@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Ibyapa",
-    "slug": "nkotanyi",
+    "name": "IBYAPA",
+    "slug": "ibyapa",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "nkotanyi",
+    "scheme": "ibyapa",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,13 +14,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nkotanyi.app",
+      "bundleIdentifier": "com.ibyapa.app",
       "infoPlist": {
         "UIRequiresFullScreen": false
       }
     },
     "android": {
-      "package": "com.nkotanyi.app",
+      "package": "com.ibyapa.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fbf8fd"
@@ -30,8 +30,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "name": "Ibyapa",
-      "shortName": "Ibyapa",
+      "name": "IBYAPA",
+      "shortName": "IBYAPA",
       "lang": "en",
       "description": "Road safety learning and driving exam preparation.",
       "themeColor": "#4A78D0",

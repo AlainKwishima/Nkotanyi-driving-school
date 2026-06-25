@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
+import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
 import { colors, radii, spacing, typography } from '../constants/theme';
@@ -126,18 +127,36 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
         pointer-events: none;
         overflow: hidden;
       }
+      .watermark-inner {
+        display: flex;
+        width: 92%;
+        max-width: 92%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transform: rotate(-24deg);
+        transform-origin: center;
+      }
       .watermark span {
         display: block;
-        width: 130%;
+        width: 100%;
         text-align: center;
         color: var(--watermark);
-        font-size: 28px;
+        font-size: clamp(18px, 6.2vw, 30px);
         font-style: oblique;
         font-weight: 700;
-        letter-spacing: 4px;
-        transform: rotate(-24deg);
+        letter-spacing: 0.16em;
+        line-height: 1.05;
         text-transform: uppercase;
-        white-space: nowrap;
+        white-space: normal;
+        overflow-wrap: normal;
+      }
+      .watermark span:first-child {
+        margin-left: -18%;
+      }
+      .watermark span:last-child {
+        margin-left: 18%;
       }
       .page-meta {
         margin-top: 10px;
@@ -321,9 +340,15 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
 
               var watermark = document.createElement('div');
               watermark.className = 'watermark';
-              var watermarkText = document.createElement('span');
-              watermarkText.textContent = 'NKOTANYI DRIVING SCHOOL';
-              watermark.appendChild(watermarkText);
+              var watermarkInner = document.createElement('div');
+              watermarkInner.className = 'watermark-inner';
+              var watermarkTop = document.createElement('span');
+              watermarkTop.textContent = 'NKOTANYI';
+              var watermarkBottom = document.createElement('span');
+              watermarkBottom.textContent = 'DRIVING SCHOOL';
+              watermarkInner.appendChild(watermarkTop);
+              watermarkInner.appendChild(watermarkBottom);
+              watermark.appendChild(watermarkInner);
 
               var meta = document.createElement('div');
               meta.className = 'page-meta';
@@ -585,8 +610,8 @@ export function PdfViewerScreen({ navigation, route }: Props) {
 
         {previewState === 'loading' ? (
           <View style={styles.overlayCard}>
-            <View style={styles.overlayIcon}>
-              <Ionicons name="document-text-outline" size={28} color={colors.brand} />
+            <View style={styles.pdfLoadingIcon}>
+              <PdfDocumentIcon size={68} />
             </View>
             <ActivityIndicator size="small" color={colors.brand} />
             <Text style={styles.overlayTitle}>{t('pdf.opening')}</Text>
@@ -645,6 +670,9 @@ const styles = StyleSheet.create({
   },
   overlayIconError: {
     backgroundColor: colors.redSoft,
+  },
+  pdfLoadingIcon: {
+    marginBottom: spacing.lg,
   },
   overlayTitle: {
     marginTop: 12,

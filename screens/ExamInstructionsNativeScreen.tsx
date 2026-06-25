@@ -11,7 +11,7 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
-import { colors, radii, shadows, spacing, typography } from '../constants/theme';
+import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamInstructionsNative'>;
 
@@ -69,20 +69,27 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <View style={styles.hero}>
-            <View style={styles.heroIcon}>
-              <Ionicons name="shield-checkmark-outline" size={29} color={colors.brandStrong} />
+          <View style={styles.introCard}>
+            <View style={styles.introHeader}>
+              <View style={styles.introIcon}>
+                <Ionicons name="shield-checkmark-outline" size={23} color={colors.brandStrong} />
+              </View>
+              <View style={styles.introCopy}>
+                <Text style={styles.introEyebrow}>{t('home.action.exams')}</Text>
+                <Text style={styles.introTitle}>{t('examInstructions.readyTitle')}</Text>
+              </View>
             </View>
-            <Text style={styles.heroTitle}>{t('examInstructions.readyTitle')}</Text>
-            <Text style={styles.heroBody}>{t('examInstructions.readySub')}</Text>
+            <Text style={styles.introBody}>{t('examInstructions.readySub')}</Text>
             <TouchableOpacity style={styles.startButton} onPress={startExam} activeOpacity={0.88}>
               <Text style={styles.startText}>{t('examInstructions.startExam')}</Text>
               <Ionicons name="arrow-forward" size={19} color={colors.white} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
-          <Text style={styles.sectionBody}>{t('examInstructions.sectionSub')}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
+            <Text style={styles.sectionBody}>{t('examInstructions.sectionSub')}</Text>
+          </View>
 
           <View style={styles.statsGrid}>
             {stats.map((stat) => (
@@ -98,13 +105,13 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
 
           <View style={styles.guideCard}>
             <View style={styles.guideHeading}>
-              <Ionicons name="list-outline" size={20} color={colors.brandStrong} />
               <Text style={styles.guideTitle}>{t('examInstructions.guidelinesTitle')}</Text>
+              <Ionicons name="list-outline" size={20} color={colors.brandStrong} />
             </View>
             {GUIDE_KEYS.map((key, index) => (
               <View key={key} style={styles.guideRow}>
                 <View style={styles.guideNumber}>
-                  <Text style={styles.guideNumberText}>{index + 1}</Text>
+                  <Ionicons name="checkmark" size={15} color={colors.brandStrong} />
                 </View>
                 <Text style={styles.guideText}>{t(key)}</Text>
               </View>
@@ -124,42 +131,51 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  hero: {
-    padding: spacing.xxl,
+  introCard: {
+    padding: spacing.xl,
     borderRadius: radii.xl,
-    alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    ...shadows.card,
   },
-  heroIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
+  introHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  introIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.brandSoft,
   },
-  heroTitle: {
-    ...typography.heading,
-    marginTop: spacing.lg,
-    color: colors.ink,
-    textAlign: 'center',
+  introCopy: {
+    flex: 1,
   },
-  heroBody: {
+  introEyebrow: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  introTitle: {
+    ...typography.heading,
+    marginTop: 2,
+    color: colors.ink,
+  },
+  introBody: {
     ...typography.body,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     color: colors.inkMuted,
-    textAlign: 'center',
   },
   startButton: {
-    minHeight: 54,
+    minHeight: 50,
     width: '100%',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -173,27 +189,27 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.title,
-    marginTop: spacing.xxxl,
     color: colors.ink,
-    textAlign: 'center',
   },
   sectionBody: {
     ...typography.body,
     marginTop: spacing.xs,
     color: colors.inkMuted,
-    textAlign: 'center',
+  },
+  sectionHeader: {
+    marginTop: spacing.xl,
   },
   statsGrid: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   statCard: {
     width: '48.5%',
-    minHeight: 128,
+    minHeight: 112,
     marginBottom: spacing.md,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -218,40 +234,35 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
   guideCard: {
-    marginTop: spacing.md,
-    padding: spacing.xl,
+    marginTop: spacing.sm,
+    padding: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
   },
   guideHeading: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
   },
   guideTitle: {
     ...typography.title,
     color: colors.ink,
   },
   guideRow: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   guideNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.amberSoft,
-  },
-  guideNumberText: {
-    ...typography.caption,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    color: '#9A5A18',
+    backgroundColor: colors.brandSoft,
   },
   guideText: {
     ...typography.body,

@@ -51,7 +51,7 @@ function MediaPlaceholder({ compact = false }: { compact?: boolean }) {
       <View style={[styles.mediaMark, compact && styles.mediaMarkCompact]}>
         <Ionicons name="play" size={compact ? 14 : 24} color={colors.white} />
       </View>
-      {!compact ? <Text style={styles.mediaPlaceholderText}>NKOTANYI</Text> : null}
+      {!compact ? <Text style={styles.mediaPlaceholderText}>IBYAPA</Text> : null}
     </View>
   );
 }

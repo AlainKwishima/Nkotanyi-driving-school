@@ -58,8 +58,8 @@ function LogoHeader({ showTitle, showTagline = false }: { showTitle: boolean; sh
 
   return (
     <View style={styles.logoHeader}>
-      <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(94), height: m.scale(94) }]} resizeMode="contain" />
-      {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22) }]}>{t('language.brand')}</Text> : null}
+      <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(64), height: m.scale(64) }]} resizeMode="contain" />
+      {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(12), lineHeight: m.fontScale(18) }]}>{t('language.brand')}</Text> : null}
       {showTagline ? <Text style={[styles.taglineText, { marginTop: m.verticalScale(2), fontSize: m.fontScale(11), lineHeight: m.fontScale(16) }]}>{t('auth.tagline')}</Text> : null}
     </View>
   );
@@ -137,14 +137,14 @@ export function LoginScreen({ navigation, route }: LoginProps) {
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
-        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
+        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
         <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle={false} />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.welcomeBack')}</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>{t('auth.signInSubtitle')}</Text>
+        <Text style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.welcomeBack')}</Text>
+        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{t('auth.signInSubtitle')}</Text>
 
         <View style={styles.formGroup}>
           <AuthInputField
@@ -242,14 +242,14 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
-        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(22) }]}
+        contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
         <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(10), fontSize: m.fontScale(24), lineHeight: m.fontScale(32) }]}>{t('auth.createTitle')}</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(22) }]}>{t('auth.createSubtitle')}</Text>
+        <Text style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.createTitle')}</Text>
+        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{t('auth.createSubtitle')}</Text>
 
         <View style={styles.formGroup}>
           <AuthInputField
@@ -339,9 +339,21 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
   const m = useMobile();
   const { t } = useI18n();
 
+  const handleEmail = () => {
+    Linking.openURL(`mailto:${t('auth.schoolEmail')}`).catch(() => {
+      Alert.alert(t('common.error'), 'Could not open your email app.');
+    });
+  };
+
+  const handlePhone = () => {
+    Linking.openURL(`tel:${t('auth.schoolPhone')}`).catch(() => {
+      Alert.alert(t('common.error'), 'Could not open the phone app.');
+    });
+  };
+
   const handleWhatsApp = () => {
     Linking.openURL('https://wa.me/0780211466').catch(() => {
-      Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
+      Alert.alert(t('common.error'), 'Could not open WhatsApp. Please make sure it is installed.');
     });
   };
 
@@ -349,45 +361,54 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
-        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(18), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
+        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
         <AuthBackButton navigation={navigation} />
-        <LogoHeader showTitle showTagline />
+        <LogoHeader showTitle={false} />
 
-        <Text style={[styles.secondaryTitle, { marginTop: m.verticalScale(22), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
-          {t('auth.contactAdminTitle')}
-        </Text>
-        <Text style={[styles.secondarySubtitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(14), lineHeight: m.fontScale(22), paddingHorizontal: m.scale(10) }]}>
-          {t('auth.contactAdminMessage')}
-        </Text>
+        <View style={styles.recoveryIntro}>
+          <View style={styles.recoveryBadge}>
+            <MaterialCommunityIcons name="shield-key-outline" size={22} color={colors.brandStrong} />
+          </View>
+          <Text style={[styles.secondaryTitle, { marginTop: m.verticalScale(12), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
+            {t('auth.contactAdminTitle')}
+          </Text>
+          <Text style={[styles.secondarySubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(20), paddingHorizontal: m.scale(6) }]}>
+            {t('auth.contactAdminMessage')}
+          </Text>
+        </View>
 
-        <View style={[styles.contactInfoCard, { marginTop: m.verticalScale(24), padding: m.scale(20) }]}>
-          <View style={styles.contactItem}>
-            <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
-              <Feather name="mail" size={m.scale(20)} color={colors.brand} />
+        <View style={[styles.contactInfoCard, { marginTop: m.verticalScale(18), padding: m.scale(6) }]}>
+          <Pressable style={({ pressed }) => [styles.contactActionRow, pressed && styles.contactActionPressed]} onPress={handleEmail}>
+            <View style={[styles.contactIconBox, { width: m.scale(42), height: m.scale(42), borderRadius: m.scale(12) }]}>
+              <Feather name="mail" size={m.scale(19)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
               <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</Text>
               <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolEmail')}</Text>
             </View>
-          </View>
+            <Feather name="chevron-right" size={18} color={colors.inkSoft} />
+          </Pressable>
 
-          <View style={[styles.contactItem, { marginTop: m.verticalScale(20) }]}>
-            <View style={[styles.contactIconBox, { width: m.scale(40), height: m.scale(40), borderRadius: m.scale(12) }]}>
-              <Feather name="phone" size={m.scale(20)} color={colors.brand} />
+          <View style={styles.contactDivider} />
+
+          <Pressable style={({ pressed }) => [styles.contactActionRow, pressed && styles.contactActionPressed]} onPress={handlePhone}>
+            <View style={[styles.contactIconBox, { width: m.scale(42), height: m.scale(42), borderRadius: m.scale(12) }]}>
+              <Feather name="phone" size={m.scale(19)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
               <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</Text>
               <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolPhone')}</Text>
             </View>
-          </View>
+            <Feather name="chevron-right" size={18} color={colors.inkSoft} />
+          </Pressable>
 
           <Pressable
             onPress={handleWhatsApp}
             style={({ pressed }) => [
               styles.whatsappBtn,
-              { marginTop: m.verticalScale(22), height: m.verticalScale(48), borderRadius: m.scale(12) },
+              { marginTop: m.verticalScale(18), height: m.verticalScale(48), borderRadius: m.scale(12) },
               pressed && { opacity: 0.85 }
             ]}
           >
@@ -398,7 +419,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
           </Pressable>
         </View>
 
-        <Pressable style={styles.backSignInWrap} onPress={() => navigation.navigate('Login')}>
+        <Pressable style={({ pressed }) => [styles.backSignInWrap, pressed && { opacity: 0.78 }]} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.backSignInText}>{t('auth.backSignIn')}</Text>
         </Pressable>
       </ScrollView>
@@ -418,7 +439,7 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
     <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
-        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(14), paddingBottom: m.verticalScale(20), paddingHorizontal: m.scale(20) }]}
+        contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
         <AuthBackButton navigation={navigation} />
@@ -508,15 +529,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   authScroll: {
-    paddingTop: 18,
-    paddingBottom: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
     paddingHorizontal: 22,
     alignItems: 'center',
   },
   authBackRow: {
     width: '100%',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 2,
   },
   authBackBtn: {
     width: 44,
@@ -536,14 +557,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 94,
-    height: 94,
+    width: 64,
+    height: 64,
   },
   brandTitle: {
-    marginTop: 12,
+    marginTop: 4,
     fontFamily: 'PlusJakartaSans-SemiBold',
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.ink,
     textAlign: 'center',
   },
@@ -556,23 +577,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   authTitle: {
-    marginTop: 16,
+    marginTop: 8,
     fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 24,
-    lineHeight: 34,
+    fontSize: 23,
+    lineHeight: 31,
     color: colors.ink,
     textAlign: 'center',
   },
   authSubtitle: {
-    marginTop: 6,
+    marginTop: 4,
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 20,
     color: colors.inkMuted,
     textAlign: 'center',
   },
   formGroup: {
-    marginTop: 24,
+    marginTop: 20,
     width: '100%',
     rowGap: 14,
   },
@@ -647,8 +668,8 @@ const styles = StyleSheet.create({
     color: colors.brand,
   },
   secondaryScroll: {
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
@@ -681,7 +702,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryTitle: {
-    marginTop: 24,
+    marginTop: 14,
     textAlign: 'center',
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 22,
@@ -689,19 +710,19 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   secondarySubtitle: {
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
     fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 14,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.inkMuted,
   },
   secondaryFormGroup: {
-    marginTop: 24,
+    marginTop: 18,
     rowGap: 14,
   },
   backSignInWrap: {
-    marginTop: 20,
+    marginTop: 16,
     alignSelf: 'center',
   },
   backSignInText: {
@@ -716,7 +737,36 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.line,
-    ...shadows.card,
+  },
+  recoveryIntro: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  recoveryBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+    borderWidth: 1,
+    borderColor: '#D7E4F7',
+  },
+  contactActionRow: {
+    minHeight: 70,
+    borderRadius: radii.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contactActionPressed: {
+    backgroundColor: colors.brandSoft,
+  },
+  contactDivider: {
+    height: 1,
+    marginHorizontal: 12,
+    backgroundColor: colors.line,
   },
   contactItem: {
     flexDirection: 'row',
@@ -790,16 +840,16 @@ const styles = StyleSheet.create({
   },
   lockBadge: {
     alignSelf: 'center',
-    marginTop: 16,
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    marginTop: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   resetTitle: {
-    marginTop: 20,
+    marginTop: 14,
     textAlign: 'center',
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 22,
@@ -807,16 +857,16 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   resetSubtitle: {
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
     fontFamily: 'PlusJakartaSans-Medium',
     fontSize: 14,
-    lineHeight: 24,
+    lineHeight: 20,
     color: colors.inkMuted,
   },
   requirementsCard: {
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 16,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,

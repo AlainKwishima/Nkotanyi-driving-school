@@ -1,6 +1,6 @@
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -73,27 +73,30 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.choiceList}>
-              {examTypes.map((type, index) => (
-                <TouchableOpacity
+              {examTypes.map((type) => (
+                <Pressable
                   key={type.mode}
-                  style={[styles.choiceRow, index === 0 ? styles.choiceRowPrimary : styles.choiceRowSecondary]}
+                  style={({ pressed }) => [styles.choiceRow, pressed ? styles.choiceRowActive : styles.choiceRowDefault]}
                   onPress={() => selectExam(type.mode)}
-                  activeOpacity={0.86}
                 >
+                  {({ pressed }) => (
+                    <>
                   <View style={styles.choiceMain}>
                     <View style={styles.choiceTitleLine}>
-                      <Text style={[styles.choiceTitle, index === 0 && styles.choiceTitlePrimary]}>{type.title}</Text>
+                      <Text style={[styles.choiceTitle, pressed && styles.choiceTitleActive]}>{type.title}</Text>
                       <Text style={[styles.choiceBadge, { color: type.color, backgroundColor: type.background }]}>
                         {type.badge}
                       </Text>
                     </View>
-                    <Text style={[styles.choiceSubtitle, index === 0 && styles.choiceTextOnPrimary]}>{type.subtitle}</Text>
-                    <Text style={[styles.choiceDescription, index === 0 && styles.choiceTextOnPrimary]}>
+                    <Text style={[styles.choiceSubtitle, pressed && styles.choiceTextOnActive]}>{type.subtitle}</Text>
+                    <Text style={[styles.choiceDescription, pressed && styles.choiceTextOnActive]}>
                       {type.description}
                     </Text>
                   </View>
-                  <Ionicons name="arrow-forward" size={19} color={index === 0 ? colors.white : colors.brandStrong} />
-                </TouchableOpacity>
+                  <Ionicons name="arrow-forward" size={19} color={pressed ? colors.white : colors.brandStrong} />
+                    </>
+                  )}
+                </Pressable>
               ))}
             </View>
 
@@ -152,11 +155,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1,
   },
-  choiceRowPrimary: {
+  choiceRowActive: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
   },
-  choiceRowSecondary: {
+  choiceRowDefault: {
     backgroundColor: colors.white,
     borderColor: colors.line,
   },
@@ -174,7 +177,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.ink,
   },
-  choiceTitlePrimary: {
+  choiceTitleActive: {
     color: colors.white,
   },
   choiceBadge: {
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     color: colors.inkMuted,
   },
-  choiceTextOnPrimary: {
+  choiceTextOnActive: {
     color: '#DCE8FF',
   },
   footerNote: {

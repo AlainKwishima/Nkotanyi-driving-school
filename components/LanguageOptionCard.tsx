@@ -27,7 +27,7 @@ export function LanguageOptionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { width: '100%', minHeight: m.verticalScale(96), padding: m.scale(16) },
+        { width: '100%', minHeight: m.verticalScale(86), padding: m.scale(14) },
         selected ? styles.cardSelected : styles.cardDefault,
         pressed && styles.cardPressed,
       ]}
@@ -53,11 +53,11 @@ export function LanguageOptionCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    height: 96,
+    minHeight: 86,
     borderRadius: radii.xl,
     borderWidth: 1,
     backgroundColor: colors.surface,
-    padding: 20,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -79,8 +79,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   flagFrame: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
