@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     color: colors.red,
   },
   progressHeader: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
     flexDirection: 'row',
     alignItems: 'flex-end',

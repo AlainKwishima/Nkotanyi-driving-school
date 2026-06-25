@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
   },
   qCard: {
     borderRadius: radii.xl,

@@ -600,7 +600,14 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
   const isCard = method === 'card';
   const isMomo = method === 'momo';
-
+  const locale = localeTagForContentLanguage(contentLanguage);
+  const amountFormatted = amountRwf.toLocaleString(locale, { maximumFractionDigits: 0 });
+  const selectedMethodLabel =
+    method === 'momo'
+      ? t('payment.methodMomo')
+      : method === 'airtel'
+        ? t('payment.methodAirtel')
+        : t('payment.methodCard');
   const clearPendingState = async () => {
     setPendingPayment(null);
     setCheckoutUrl(null);
@@ -957,21 +964,23 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       <Header title={t('payment.title')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.sectionTitle}>{t('profile.subscriptionPlan')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SubscriptionNative')}>
-              <Text style={styles.changeLink}>{t('payment.change')}</Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.subscriptionPlanCard}>
-            <View style={styles.planIconSquare}>
-              <MaterialCommunityIcons name="cog-outline" size={20} color="#F5F8FE" />
+            <View style={styles.planSummaryHeader}>
+              <View style={styles.planIconSquare}>
+                <MaterialCommunityIcons name="calendar-check-outline" size={20} color="#F5F8FE" />
+              </View>
+              <View style={styles.planSummaryCopy}>
+                <Text style={styles.planSummaryLabel}>{t('profile.subscriptionPlan')}</Text>
+                <Text style={styles.standardDaily}>{planTitle}</Text>
+              </View>
+              <TouchableOpacity style={styles.changePill} onPress={() => navigation.navigate('SubscriptionNative')}>
+                <Text style={styles.changeLink}>{t('payment.change')}</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.standardDaily}>{planTitle}</Text>
-            <Text style={styles.amountBlue}>
-              {amountRwf.toLocaleString(localeTagForContentLanguage(contentLanguage))} Rwf
-            </Text>
+            <View style={styles.planSummaryFooter}>
+              <Text style={styles.planSummaryCaption}>{t('payment.amount')}</Text>
+              <Text style={styles.amountBlue}>{amountFormatted} RWF</Text>
+            </View>
           </View>
 
           {pendingPayment ? (
@@ -995,39 +1004,43 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>{t('payment.selectMethod')}</Text>
-          <View style={styles.methodsRow}>
-            {[
-              { key: 'momo' as const, label: t('payment.methodMomo'), brand: 'MTN', icon: 'phone-portrait-outline' as const, iconBg: '#FFCC00', iconColor: '#1F2B54' },
-              { key: 'airtel' as const, label: t('payment.methodAirtel'), brand: 'A', icon: 'radio-outline' as const, iconBg: '#E3242B', iconColor: '#FFFFFF' },
-              { key: 'card' as const, label: t('payment.methodCard'), brand: 'CARD', icon: 'card-outline' as const, iconBg: '#E4E5E8', iconColor: '#4F5564' },
-            ].map((m) => {
-              const active = method === m.key;
-              return (
-                <TouchableOpacity
-                  key={m.key}
-                  style={[styles.methodCard, active && styles.methodCardActive]}
-                  onPress={() => {
-                    setMethod(m.key);
-                    setFieldErrors({});
-                  }}
-                >
-                  <View style={[styles.methodIconWrap, { backgroundColor: m.iconBg }]}>
-                    {m.brand.length === 1 ? (
-                      <Text style={[styles.methodBrandSingle, { color: m.iconColor }]}>{m.brand}</Text>
-                    ) : m.brand === 'MTN' ? (
-                      <Text style={[styles.methodBrand, { color: m.iconColor }]}>{m.brand}</Text>
-                    ) : (
-                      <Ionicons name={m.icon} size={18} color={m.iconColor} />
-                    )}
-                  </View>
-                  <Text style={styles.methodLabel}>{m.label}</Text>
-                  {active ? (
-                    <View style={styles.checkDot}><Ionicons name="checkmark" size={10} color="#FFFFFF" /></View>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+          <View style={styles.paymentSectionCard}>
+            <Text style={styles.sectionTitle}>{t('payment.selectMethod')}</Text>
+            <Text style={styles.sectionSupport}>{t('payment.selectMethodHint')}</Text>
+            <View style={styles.methodsRow}>
+              {[
+                { key: 'momo' as const, label: t('payment.methodMomo'), brand: 'MTN', icon: 'phone-portrait-outline' as const, iconBg: '#FFCC00', iconColor: '#1F2B54' },
+                { key: 'airtel' as const, label: t('payment.methodAirtel'), brand: 'A', icon: 'radio-outline' as const, iconBg: '#E3242B', iconColor: '#FFFFFF' },
+                { key: 'card' as const, label: t('payment.methodCard'), brand: 'CARD', icon: 'card-outline' as const, iconBg: '#E4E5E8', iconColor: '#4F5564' },
+              ].map((m) => {
+                const active = method === m.key;
+                return (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[styles.methodCard, active && styles.methodCardActive]}
+                    onPress={() => {
+                      setMethod(m.key);
+                      setFieldErrors({});
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.methodIconWrap, { backgroundColor: m.iconBg }]}>
+                      {m.brand.length === 1 ? (
+                        <Text style={[styles.methodBrandSingle, { color: m.iconColor }]}>{m.brand}</Text>
+                      ) : m.brand === 'MTN' ? (
+                        <Text style={[styles.methodBrand, { color: m.iconColor }]}>{m.brand}</Text>
+                      ) : (
+                        <Ionicons name={m.icon} size={18} color={m.iconColor} />
+                      )}
+                    </View>
+                    <Text style={styles.methodLabel}>{m.label}</Text>
+                    {active ? (
+                      <View style={styles.checkDot}><Ionicons name="checkmark" size={10} color="#FFFFFF" /></View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <Text style={styles.sectionTitle}>{t('payment.details')}</Text>
@@ -1116,6 +1129,17 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                 <Text style={styles.inputHint}>{isMomo ? t('payment.momoHint') : t('payment.airtelHint')}</Text>
               </>
             )}
+          </View>
+
+          <View style={styles.amountSummaryCard}>
+            <View>
+              <Text style={styles.amountSummaryLabel}>{t('payment.totalDue')}</Text>
+              <Text style={styles.amountSummaryMethod}>{selectedMethodLabel}</Text>
+            </View>
+            <View style={styles.amountSummaryRight}>
+              <Text style={styles.amountSummaryValue}>{amountFormatted}</Text>
+              <Text style={styles.amountSummaryCurrency}>RWF</Text>
+            </View>
           </View>
 
           <TouchableOpacity style={styles.payNowBtn} onPress={() => void submitPayment()} disabled={payBusy || checkingPending}>
@@ -1240,7 +1264,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
   },
-  scrollPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
+  scrollPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   subHeading: {
@@ -1371,19 +1395,58 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: { marginTop: 10, marginBottom: 10, ...typography.title, fontSize: 16, color: colors.ink },
+  sectionSupport: {
+    marginTop: -4,
+    marginBottom: spacing.md,
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
   changeLink: { ...typography.caption, fontFamily: 'PlusJakartaSans-Bold', color: colors.brand },
   subscriptionPlanCard: {
+    marginTop: spacing.md,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    padding: 12,
+    padding: spacing.md,
+    ...shadows.card,
+  },
+  planSummaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  planSummaryCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  planSummaryLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  planSummaryFooter: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  planSummaryCaption: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  changePill: {
+    minHeight: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft,
+  },
   planIconSquare: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  standardDaily: { marginLeft: 12, flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: '#252A35' },
-  amountBlue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, lineHeight: 22, color: colors.brand },
+  standardDaily: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, lineHeight: 22, color: colors.ink },
+  amountBlue: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 18, lineHeight: 24, color: colors.brand },
   pendingCard: {
     marginTop: 14,
     borderRadius: 16,
@@ -1420,16 +1483,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  methodsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  paymentSectionCard: {
+    marginTop: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
+  },
+  methodsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   methodCard: {
     width: '31.4%',
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
-    paddingVertical: 14,
+    minHeight: 96,
+    paddingVertical: 13,
+    paddingHorizontal: 4,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.line,
-    ...shadows.card,
   },
   methodCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   methodIconWrap: {
@@ -1441,8 +1514,8 @@ const styles = StyleSheet.create({
   },
   methodBrand: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 11, lineHeight: 14 },
   methodBrandSingle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 18, lineHeight: 20 },
-  methodLabel: { marginTop: 6, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, lineHeight: 14, color: '#4F5564' },
-  checkDot: { position: 'absolute', top: 6, right: 6, width: 14, height: 14, borderRadius: 7, backgroundColor: '#1F2B54', alignItems: 'center', justifyContent: 'center' },
+  methodLabel: { marginTop: 8, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, lineHeight: 14, color: colors.inkMuted, textAlign: 'center' },
+  checkDot: { position: 'absolute', top: 7, right: 7, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 
   detailsCard: {
     borderRadius: radii.xl,
@@ -1451,6 +1524,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     ...shadows.card,
+  },
+  amountSummaryCard: {
+    marginTop: spacing.lg,
+    minHeight: 74,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.brand,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shadows.card,
+  },
+  amountSummaryLabel: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#DCE7FA',
+  },
+  amountSummaryMethod: {
+    marginTop: 3,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.white,
+  },
+  amountSummaryRight: {
+    alignItems: 'flex-end',
+  },
+  amountSummaryValue: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 24,
+    lineHeight: 29,
+    color: colors.white,
+  },
+  amountSummaryCurrency: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 12,
+    color: '#DCE7FA',
   },
   inputLabel: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
   inputLabelSpacing: { marginTop: 14 },

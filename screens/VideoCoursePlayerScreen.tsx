@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
   },
   centeredGate: {
     flex: 1,

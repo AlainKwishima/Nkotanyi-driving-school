@@ -95,7 +95,7 @@ export function ProfileNativeScreen({ navigation }: Props) {
               icon="globe-outline"
               label={t('profile.language')}
               value={langLabel}
-              onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}
+              onPress={() => navigation.navigate('LanguageSettings')}
             />
             <View style={styles.divider} />
             <AccountRow icon="call-outline" label={t('profile.phone')} value={phone ?? t('common.na')} />
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
   },
   identityCard: {
     minHeight: 108,

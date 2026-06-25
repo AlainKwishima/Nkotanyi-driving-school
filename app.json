@@ -25,7 +25,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fbf8fd"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {

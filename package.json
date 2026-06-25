@@ -9,8 +9,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:apk": "eas build --platform android --profile preview",
-    "build:android:production": "eas build --platform android --profile production",
+    "build:apk": "npx --yes eas-cli build --platform android --profile preview",
+    "build:android:production": "npx --yes eas-cli build --platform android --profile production",
     "audit:colors": "node scripts/audit-colors.cjs"
   },
   "dependencies": {
@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
-    "eas-cli": "^18.6.0",
     "qrcode-terminal": "^0.12.0",
     "typescript": "~5.9.2"
   },

@@ -68,6 +68,10 @@ const stackScreenOptions: NativeStackNavigationOptions = {
   },
 };
 
+const mainTabScreenOptions: NativeStackNavigationOptions = {
+  animation: 'none',
+};
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'PlusJakartaSans-Regular': PlusJakartaSans_400Regular,
@@ -104,19 +108,19 @@ export default function App() {
             <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-            <Stack.Screen name="HomeNative" component={HomeNativeScreen} />
+            <Stack.Screen name="HomeNative" component={HomeNativeScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="ExamNative" component={ExamNativeScreen} />
-            <Stack.Screen name="ExamInstructionsNative" component={ExamInstructionsNativeScreen} />
+            <Stack.Screen name="ExamInstructionsNative" component={ExamInstructionsNativeScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="ExamTypeSelectNative" component={ExamTypeSelectNativeScreen} />
             <Stack.Screen name="StartExamNative" component={StartExamNativeScreen} />
             <Stack.Screen name="PracticeNoSelectedNative" component={PracticeNoSelectedNativeScreen} />
             <Stack.Screen name="PracticeSelectedNative" component={PracticeSelectedNativeScreen} />
             <Stack.Screen name="TestFailedNative" component={TestFailedNativeScreen} />
             <Stack.Screen name="TestPassedNative" component={TestPassedNativeScreen} />
-            <Stack.Screen name="PerformanceNative" component={PerformanceNativeScreen} />
+            <Stack.Screen name="PerformanceNative" component={PerformanceNativeScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="PerformanceDetailNative" component={PerformanceDetailNativeScreen} />
             <Stack.Screen name="PerformanceReviewNative" component={PerformanceReviewNativeScreen} />
-            <Stack.Screen name="ReadingNative" component={ReadingNativeScreen} />
+            <Stack.Screen name="ReadingNative" component={ReadingNativeScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="HelpCenterNative" component={HelpCenterNativeScreen} />
             <Stack.Screen name="SubscriptionNative" component={SubscriptionNativeScreen} />
             <Stack.Screen name="PaymentNative" component={PaymentNativeScreen} />
@@ -124,7 +128,7 @@ export default function App() {
             <Stack.Screen name="ProfileNative" component={ProfileNativeScreen} />
             <Stack.Screen name="ScreensHub" component={ScreensHubScreen} />
             <Stack.Screen name="ReferenceImage" component={ReferenceImageScreen} />
-            <Stack.Screen name="VideoCourseList" component={VideoCourseListScreen} />
+            <Stack.Screen name="VideoCourseList" component={VideoCourseListScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="VideoCoursePlayer" component={VideoCoursePlayerScreen} />
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
             <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />

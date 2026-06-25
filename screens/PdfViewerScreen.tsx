@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
+import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
 import { colors, radii, spacing, typography } from '../constants/theme';
 
@@ -14,10 +15,20 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PdfViewer'>;
 type PreviewState = 'loading' | 'ready' | 'error';
 
 const PDF_JS_VERSION = '3.11.174';
+const PDF_LOAD_TIMEOUT_MS = 30000;
+const IS_WEB = Platform.OS === 'web';
+const webFrameStyle = {
+  borderWidth: 0,
+  borderStyle: 'none',
+  width: '100%',
+  height: '100%',
+  backgroundColor: colors.canvas,
+} as const;
 
-function buildSecurePreviewHtml(fileUrl: string, title: string) {
+function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: string | null) {
   const safeUrl = JSON.stringify(fileUrl);
   const safeTitle = JSON.stringify(title);
+  const safeAuthHeader = JSON.stringify(accessToken ? `Bearer ${accessToken}` : null);
 
   return `<!doctype html>
 <html lang="en">
@@ -162,31 +173,58 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
       <div id="pages" aria-label="Secure document preview"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js"
+      onload="window.__PDF_JS_LOADED__ = true"
+      onerror="window.__PDF_JS_LOAD_FAILED__ = true"
+    ></script>
     <script>
       (function () {
         var fileUrl = ${safeUrl};
         var title = ${safeTitle};
+        var authHeader = ${safeAuthHeader};
         var status = document.getElementById('status');
         var statusTitle = document.getElementById('statusTitle');
         var statusBody = document.getElementById('statusBody');
         var pagesRoot = document.getElementById('pages');
         var pdfjsLib = window['pdfjs-dist/build/pdf'];
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js';
-
         function post(type, payload) {
-          if (!window.ReactNativeWebView || !window.ReactNativeWebView.postMessage) return;
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, payload: payload || null }));
+          var message = JSON.stringify({ type: type, payload: payload || null });
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(message);
+            return;
+          }
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(message, '*');
+          }
         }
 
-        function showError(message) {
+        post('startup', diagnosticPayload('Document viewer started'));
+
+        function showError(message, extra) {
           status.style.display = 'flex';
           pagesRoot.style.display = 'none';
           statusTitle.textContent = 'Preview unavailable';
           statusBody.textContent = message;
-          post('error', { message: message });
+          post('error', diagnosticPayload(message, extra));
+        }
+
+        function diagnosticPayload(message, extra) {
+          return Object.assign({
+            message: message,
+            documentHost: (function () {
+              try { return new URL(fileUrl).host; } catch (_) { return 'invalid-url'; }
+            })(),
+          }, extra || {});
+        }
+
+        function waitForNextFrame() {
+          return new Promise(function (resolve) {
+            window.requestAnimationFrame(function () {
+              resolve();
+            });
+          });
         }
 
         function preventExtraction() {
@@ -213,14 +251,37 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
         async function renderDocument() {
           try {
             preventExtraction();
+            if (window.__PDF_JS_LOAD_FAILED__) {
+              throw new Error('The document reader script could not be loaded. Check your connection and try again.');
+            }
+            if (!pdfjsLib) {
+              throw new Error('The document reader could not load. Check your connection and try again.');
+            }
+
             var loadingTask = pdfjsLib.getDocument({
               url: fileUrl,
               withCredentials: false,
-              disableAutoFetch: true,
+              httpHeaders: authHeader
+                ? {
+                    Authorization: authHeader,
+                    token: authHeader,
+                  }
+                : undefined,
+              disableWorker: true,
+              disableAutoFetch: false,
               disableStream: false,
               disableRange: false,
+              rangeChunkSize: 65536,
+              isEvalSupported: false,
               stopAtErrors: true,
             });
+
+            loadingTask.onProgress = function (progress) {
+              if (!progress || !progress.total) return;
+              var percent = Math.max(1, Math.min(99, Math.round((progress.loaded / progress.total) * 100)));
+              statusBody.textContent = 'Downloading document... ' + percent + '%';
+              post('download-progress', { percent: percent });
+            };
 
             var pdf = await loadingTask.promise;
             pagesRoot.innerHTML = '';
@@ -242,8 +303,11 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
 
               var canvas = document.createElement('canvas');
               var context = canvas.getContext('2d', { alpha: false });
+              if (!context) {
+                throw new Error('This device could not prepare the document canvas.');
+              }
 
-              var outputScale = window.devicePixelRatio || 1;
+              var outputScale = Math.min(window.devicePixelRatio || 1, 1.6);
               canvas.width = Math.floor(scaledViewport.width * outputScale);
               canvas.height = Math.floor(scaledViewport.height * outputScale);
               canvas.style.width = scaledViewport.width + 'px';
@@ -271,7 +335,12 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
               shell.appendChild(meta);
               pagesRoot.appendChild(shell);
 
+              if (pageNumber === 1) {
+                post('first-page-ready', { totalPages: pdf.numPages });
+              }
               post('progress', { page: pageNumber, total: pdf.numPages });
+              if (page.cleanup) page.cleanup();
+              await waitForNextFrame();
             }
 
             post('ready', { totalPages: pdf.numPages });
@@ -280,7 +349,19 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
               error && error.message
                 ? error.message
                 : 'Unable to prepare this document for secure preview.';
-            showError(message);
+            if (window.console && window.console.error) {
+              window.console.error('[PdfViewerHTML] render failed', {
+                name: error && error.name,
+                code: error && error.code,
+                status: error && error.status,
+                message: message,
+              });
+            }
+            showError(message, {
+              name: error && error.name,
+              code: error && error.code,
+              status: error && error.status,
+            });
           }
         }
 
@@ -291,45 +372,103 @@ function buildSecurePreviewHtml(fileUrl: string, title: string) {
 </html>`;
 }
 
+function safeDocumentDiagnostics(rawUrl: string) {
+  try {
+    const parsed = new URL(rawUrl);
+    const cleanPath = parsed.pathname.toLowerCase();
+    const extensionMatch = cleanPath.match(/\.([a-z0-9]+)$/);
+    return {
+      protocol: parsed.protocol.replace(':', ''),
+      host: parsed.host,
+      extension: extensionMatch?.[1] ?? 'none',
+    };
+  } catch {
+    return {
+      protocol: 'invalid',
+      host: 'invalid-url',
+      extension: 'unknown',
+    };
+  }
+}
+
 export function PdfViewerScreen({ navigation, route }: Props) {
   const { title, url } = route.params;
   const { t } = useI18n();
+  const { accessToken } = useAuth();
   const webViewRef = useRef<WebView>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewState, setPreviewState] = useState<PreviewState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [progressLabel, setProgressLabel] = useState(t('pdf.preparing'));
   const [loadVersion, setLoadVersion] = useState(0);
+  const [hasReadablePage, setHasReadablePage] = useState(false);
 
-  const sourceHtml = useMemo(() => buildSecurePreviewHtml(url, title || 'Document'), [title, url]);
+  const sourceHtml = useMemo(
+    () => buildSecurePreviewHtml(url, title || 'Document', accessToken),
+    [accessToken, title, url],
+  );
 
   const handleRetry = () => {
     setPreviewState('loading');
     setError(null);
     setProgressLabel(t('pdf.preparing'));
+    setHasReadablePage(false);
     setLoadVersion((version) => version + 1);
   };
 
-  const handleMessage = (event: { nativeEvent: { data?: string } }) => {
+  const handleViewerMessage = (rawData?: string) => {
     try {
-      const payload = JSON.parse(event.nativeEvent.data ?? '{}') as {
+      const payload = JSON.parse(rawData ?? '{}') as {
         type?: string;
-        payload?: { page?: number; total?: number; totalPages?: number; message?: string } | null;
+        payload?: {
+          page?: number;
+          total?: number;
+          totalPages?: number;
+          message?: string;
+          percent?: number;
+          documentHost?: string;
+        } | null;
       };
 
+      if (__DEV__) {
+        console.log('[PdfViewer] event', {
+          type: payload.type,
+          page: payload.payload?.page,
+          total: payload.payload?.total,
+          percent: payload.payload?.percent,
+          documentHost: payload.payload?.documentHost,
+          message: payload.payload?.message,
+        });
+      }
+
+      if (payload.type === 'download-progress' && payload.payload?.percent) {
+        setPreviewState((state) => (state === 'ready' ? 'ready' : 'loading'));
+        setProgressLabel(t('pdf.downloading', { percent: payload.payload.percent }));
+        return;
+      }
+
       if (payload.type === 'progress' && payload.payload?.page && payload.payload?.total) {
-        setPreviewState('loading');
+        setPreviewState((state) => (state === 'ready' ? 'ready' : 'loading'));
         setProgressLabel(t('pdf.rendering', { page: payload.payload.page, total: payload.payload.total }));
+        return;
+      }
+
+      if (payload.type === 'first-page-ready') {
+        setPreviewState('ready');
+        setError(null);
+        setHasReadablePage(true);
         return;
       }
 
       if (payload.type === 'ready') {
         setPreviewState('ready');
         setError(null);
+        setHasReadablePage(true);
         return;
       }
 
       if (payload.type === 'error') {
-        setPreviewState('error');
+        setPreviewState((state) => (state === 'ready' ? 'ready' : 'error'));
         setError(payload.payload?.message ?? t('pdf.previewErrorBody'));
       }
     } catch {
@@ -338,42 +477,111 @@ export function PdfViewerScreen({ navigation, route }: Props) {
     }
   };
 
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[PdfViewer] opening document', {
+        title,
+        ...safeDocumentDiagnostics(url),
+        hasAccessToken: Boolean(accessToken),
+        strategy: IS_WEB ? 'pdfjs-srcdoc' : 'pdfjs-webview',
+      });
+    }
+  }, [accessToken, title, url]);
+
+  useEffect(() => {
+    if (!IS_WEB || typeof window === 'undefined') return undefined;
+
+    const onWindowMessage = (event: MessageEvent) => {
+      if (typeof event.data === 'string') {
+        handleViewerMessage(event.data);
+      }
+    };
+
+    window.addEventListener('message', onWindowMessage);
+    return () => window.removeEventListener('message', onWindowMessage);
+  });
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (previewState === 'loading' && !hasReadablePage) {
+      timeoutRef.current = setTimeout(() => {
+        setPreviewState('error');
+        setError(t('pdf.timeoutErrorBody'));
+      }, PDF_LOAD_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [hasReadablePage, previewState, t]);
+
+  const handleMessage = (event: { nativeEvent: { data?: string } }) => {
+    handleViewerMessage(event.nativeEvent.data);
+  };
+
   return (
     <ScreenColumn>
       <AppHeader title={title || t('pdf.document')} onBack={() => navigation.goBack()} />
 
       <View style={styles.bodyWrap}>
-        <WebView
-          key={`${url}:${loadVersion}`}
-          ref={webViewRef}
-          source={{ html: sourceHtml, baseUrl: 'https://localhost/' }}
-          style={styles.webview}
-          originWhitelist={['https://*', 'http://*', 'about:blank']}
-          javaScriptEnabled
-          domStorageEnabled
-          cacheEnabled={false}
-          startInLoadingState={false}
-          setSupportMultipleWindows={false}
-          allowsFullscreenVideo={false}
-          allowFileAccess={false}
-          allowFileAccessFromFileURLs={false}
-          allowUniversalAccessFromFileURLs={false}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          onMessage={handleMessage}
-          onShouldStartLoadWithRequest={(request) => {
-            const nextUrl = request.url || '';
-            return (
-              nextUrl === 'about:blank' ||
-              nextUrl.startsWith('https://localhost/') ||
-              nextUrl.startsWith('data:text/html')
-            );
-          }}
-          onError={() => {
-            setPreviewState('error');
-            setError(t('pdf.previewErrorBody'));
-          }}
-        />
+        {IS_WEB ? (
+          React.createElement('iframe', {
+            key: `${url}:${loadVersion}`,
+            srcDoc: sourceHtml,
+            title: title || t('pdf.document'),
+            style: webFrameStyle,
+            sandbox: 'allow-scripts allow-same-origin',
+          })
+        ) : (
+          <WebView
+            key={`${url}:${loadVersion}`}
+            ref={webViewRef}
+            source={{ html: sourceHtml, baseUrl: 'https://localhost/' }}
+            style={styles.webview}
+            originWhitelist={['https://*', 'http://*', 'about:blank']}
+            javaScriptEnabled
+            domStorageEnabled
+            cacheEnabled
+            startInLoadingState={false}
+            setSupportMultipleWindows={false}
+            allowsFullscreenVideo={false}
+            allowFileAccess={false}
+            allowFileAccessFromFileURLs={false}
+            allowUniversalAccessFromFileURLs={false}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            onMessage={handleMessage}
+            onShouldStartLoadWithRequest={(request) => {
+              const nextUrl = request.url || '';
+              return (
+                nextUrl === 'about:blank' ||
+                nextUrl.startsWith('https://localhost/') ||
+                nextUrl.startsWith('data:text/html') ||
+                nextUrl.startsWith('https://') ||
+                nextUrl.startsWith('http://')
+              );
+            }}
+            onError={() => {
+              if (__DEV__) console.log('[PdfViewer] webview_error');
+              setPreviewState('error');
+              setError(t('pdf.previewErrorBody'));
+            }}
+            onHttpError={(event) => {
+              if (__DEV__) {
+                console.log('[PdfViewer] webview_http_error', { statusCode: event.nativeEvent.statusCode });
+              }
+              setPreviewState('error');
+              setError(t('pdf.httpErrorBody', { status: event.nativeEvent.statusCode }));
+            }}
+          />
+        )}
 
         {previewState === 'loading' ? (
           <View style={styles.overlayCard}>

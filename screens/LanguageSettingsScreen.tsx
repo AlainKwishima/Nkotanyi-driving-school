@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     backgroundColor: colors.canvas,
   },
   lockNotice: {

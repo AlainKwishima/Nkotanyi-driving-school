@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxxl,
     alignItems: 'center',
     justifyContent: 'center',

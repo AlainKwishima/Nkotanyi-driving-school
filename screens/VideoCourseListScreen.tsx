@@ -158,7 +158,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
 
   if (!languageAccessGranted) {
     return (
-      <ScreenColumn backgroundColor={colors.brandStrong}>
+      <ScreenColumn>
         <LoadingState message={t('video.loading')} />
       </ScreenColumn>
     );
@@ -167,7 +167,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
   const featured = items[0];
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader
         title={t('video.listTitle')}
         eyebrow={t(`profile.lang.${contentLanguage}`)}
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
   },
   pageTitle: {

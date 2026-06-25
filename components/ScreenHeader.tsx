@@ -42,11 +42,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   curveOverlay: {
-    height: 30,
+    height: 16,
     marginHorizontal: -spacing.lg,
-    marginTop: spacing.xs,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    marginTop: 0,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     backgroundColor: colors.canvas,
   },
   back: {

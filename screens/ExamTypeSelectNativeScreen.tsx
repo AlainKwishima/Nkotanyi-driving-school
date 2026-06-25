@@ -53,7 +53,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
   };
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader
         title={t('examType.title')}
         eyebrow={t('examType.subtitle')}

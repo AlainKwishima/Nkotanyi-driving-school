@@ -37,8 +37,33 @@ type HelpProps = NativeStackScreenProps<RootStackParamList, 'HelpCenterNative'>;
 type ReadTab = 'documents' | 'signs';
 
 function pdfOpenUrl(item: PdfItem): string | undefined {
-  const value = item.file ?? item.pdfURL ?? item.url ?? item.fileUrl;
-  return typeof value === 'string' && value.startsWith('http') ? value : undefined;
+  const candidates = [
+    item.file,
+    item.fileUrl,
+    item.fileURL,
+    item.pdfURL,
+    item.pdfUrl,
+    item.pdf,
+    item.documentUrl,
+    item.documentURL,
+    item.downloadUrl,
+    item.downloadURL,
+    item.url,
+    item.path,
+  ];
+  const value = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim().length > 0);
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.hostname === 'res.cloudinary.com' && parsed.protocol === 'http:') {
+      parsed.protocol = 'https:';
+    }
+    return parsed.href;
+  } catch {
+    return encodeURI(trimmed);
+  }
 }
 
 function pdfLabel(item: PdfItem, index: number, fallback: string): string {
@@ -46,7 +71,7 @@ function pdfLabel(item: PdfItem, index: number, fallback: string): string {
 }
 
 function pdfExtension(item: PdfItem): 'PDF' | 'DOC' | 'PPT' | 'FILE' {
-  const url = (item.file ?? item.pdfURL ?? item.url ?? item.fileUrl ?? '').toLowerCase();
+  const url = (pdfOpenUrl(item) ?? item.name ?? item.title ?? '').toLowerCase();
   if (url.includes('.pdf')) return 'PDF';
   if (url.includes('.doc')) return 'DOC';
   if (url.includes('.ppt')) return 'PPT';
@@ -423,7 +448,7 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
   );
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader
         title={t('reading.title')}
         eyebrow={languageLabel}
@@ -598,7 +623,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   };
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader title={t('menu.help')} onBack={() => navigation.goBack()} navigation={navigation} />
       <View style={styles.body}>
         <ScrollView
@@ -661,7 +686,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
   },
   pageTitle: {

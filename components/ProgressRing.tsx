@@ -19,21 +19,22 @@ export function ProgressRing({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - clamped / 100);
+  const center = size / 2;
 
   return (
     <View style={[styles.root, { width: size, height: size }]}>
       <Svg width={size} height={size} style={styles.svg}>
         <Circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={radius}
           fill="none"
           stroke="rgba(255,255,255,0.16)"
           strokeWidth={strokeWidth}
         />
         <Circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={radius}
           fill="none"
           stroke={colors.amber}
@@ -41,8 +42,9 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={dashOffset}
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
+          rotation={-90}
+          originX={center}
+          originY={center}
         />
       </Svg>
       <View style={styles.center}>

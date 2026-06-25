@@ -40,9 +40,17 @@ export type PdfItem = {
   contentLanguage?: string;
   content_language?: string;
   pdfURL?: string;
+  pdfUrl?: string;
+  pdf?: string;
   url?: string;
   file?: string;
   fileUrl?: string;
+  fileURL?: string;
+  documentUrl?: string;
+  documentURL?: string;
+  downloadUrl?: string;
+  downloadURL?: string;
+  path?: string;
 };
 
 const PDF_CACHE_PREFIX = 'nkotanyi.pdfs.v2';

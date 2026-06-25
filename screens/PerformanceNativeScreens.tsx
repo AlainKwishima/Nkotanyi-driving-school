@@ -206,6 +206,25 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
 
   return (
     <View style={styles.summaryContainer}>
+      <View style={styles.performanceBanner}>
+        <Text style={styles.performanceBannerTitle}>{t('performance.yourScore')}</Text>
+        <Text style={styles.performanceBannerBody}>
+          {t('performance.avgAccuracy')}: {avgAccuracy}%
+        </Text>
+        <View style={styles.performanceBannerStats}>
+          <View style={styles.performanceBannerPill}>
+            <Text style={styles.performanceBannerPillText}>
+              {t('performance.totalExams')}: {total}
+            </Text>
+          </View>
+          <View style={styles.performanceBannerPill}>
+            <Text style={styles.performanceBannerPillText}>
+              {t('performance.passedExams')}: {passedCount}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <View style={styles.summaryGrid}>
         <StatTile label={t('performance.avgAccuracy')} value={`${avgAccuracy}%`} tone={avgAccuracy >= 60 ? 'positive' : 'negative'} />
         <StatTile label={t('performance.passedExams')} value={`${passedCount}`} tone="brand" />
@@ -653,6 +672,49 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xxl,
   },
+  performanceBanner: {
+    minHeight: 110,
+    overflow: 'hidden',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 14,
+    justifyContent: 'center',
+    backgroundColor: colors.brandStrong,
+    ...shadows.card,
+  },
+  performanceBannerTitle: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: -0.25,
+    color: colors.white,
+  },
+  performanceBannerBody: {
+    ...typography.caption,
+    marginTop: 3,
+    color: '#DCE7FA',
+  },
+  performanceBannerStats: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  performanceBannerPill: {
+    minHeight: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  performanceBannerPillText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.white,
+  },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -758,7 +820,7 @@ const styles = StyleSheet.create({
   emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#334155', marginBottom: 8 },
   emptyText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 },
-  listPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
+  listPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   historyTable: {
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
@@ -825,7 +887,7 @@ const styles = StyleSheet.create({
   historyStatusPass: { color: colors.success },
   historyStatusFail: { color: colors.danger },
 
-  detailBody: { flex: 1, paddingHorizontal: 20, paddingTop: 24, backgroundColor: colors.canvas },
+  detailBody: { flex: 1, paddingHorizontal: 20, paddingTop: spacing.md, backgroundColor: colors.canvas },
   detailCard: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: 24, borderWidth: 1, borderColor: colors.line, ...shadows.card },
   detailCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   statusTag: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 10 },

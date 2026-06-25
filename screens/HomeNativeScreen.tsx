@@ -1,14 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
-import { ProgressRing } from '../components/ProgressRing';
 import { SectionHeading } from '../components/SectionHeading';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
@@ -180,16 +179,16 @@ export function HomeNativeScreen({ navigation }: Props) {
   const successRate = totalExams ? Math.round((passed / totalExams) * 100) : 0;
   const lastExam = rows[0];
   const streak = calculateStreak(rows);
-  const readiness = totalExams ? Math.round(average * 0.7 + successRate * 0.3) : 0;
   const welcome = name?.trim() ? t('home.welcome', { name: name.trim() }) : t('home.welcomeGuest');
   const recommendationTitle =
     recommendation?.item.title ?? recommendation?.item.name ?? t('reading.documentFallback');
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader
         title={t('home.title')}
         navigation={navigation}
+        titleOffsetX={6}
         left={
           <TouchableOpacity
             style={styles.headerAvatar}
@@ -224,20 +223,24 @@ export function HomeNativeScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.readinessCard}>
-            <View style={styles.readinessCopy}>
-              <Text style={styles.heroEyebrow}>{t('home.progressTitle')}</Text>
-              <Text style={styles.heroTitle}>
-                {totalExams ? t('home.keepMomentum') : t('home.startJourney')}
-              </Text>
-              <Text style={styles.heroBody}>
-                {totalExams ? t('home.progressBody', { count: totalExams }) : t('home.startJourneyBody')}
-              </Text>
+            <Text style={styles.heroTitle}>
+              {totalExams ? t('home.keepMomentum') : t('home.startJourney')}
+            </Text>
+            <Text style={styles.heroBody}>
+              {totalExams ? t('home.progressBody', { count: totalExams }) : t('home.startJourneyBody')}
+            </Text>
+            <View style={styles.bannerStats}>
+              <View style={styles.bannerPill}>
+                <Text style={styles.bannerPillText}>
+                  {t('performance.totalExams')}: {loading ? '...' : totalExams}
+                </Text>
+              </View>
+              <View style={styles.bannerPill}>
+                <Text style={styles.bannerPillText}>
+                  {t('performance.successRate')}: {loading ? '...' : `${successRate}%`}
+                </Text>
+              </View>
             </View>
-            {loading ? (
-              <ActivityIndicator color={colors.amber} />
-            ) : (
-              <ProgressRing value={readiness} label={t('home.readyLabel')} />
-            )}
           </View>
 
           <View style={styles.metricStrip}>
@@ -416,12 +419,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
   },
   headerAvatar: {
     width: 40,
     height: 40,
+    marginLeft: spacing.sm,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -439,6 +443,7 @@ const styles = StyleSheet.create({
   },
   welcomeCopy: {
     flex: 1,
+    paddingLeft: spacing.xs,
   },
   welcome: {
     ...typography.title,
@@ -465,33 +470,48 @@ const styles = StyleSheet.create({
     color: colors.brandStrong,
   },
   readinessCard: {
-    minHeight: 170,
+    minHeight: 110,
     overflow: 'hidden',
-    padding: spacing.xl,
-    borderRadius: radii.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.ink,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 14,
+    justifyContent: 'center',
+    backgroundColor: colors.brandStrong,
     ...shadows.card,
   },
-  readinessCopy: {
-    flex: 1,
-    paddingRight: spacing.lg,
-  },
-  heroEyebrow: {
-    ...typography.eyebrow,
-    color: '#9FB4D8',
-    textTransform: 'uppercase',
-  },
   heroTitle: {
-    ...typography.heading,
-    marginTop: spacing.sm,
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: -0.25,
     color: colors.white,
   },
   heroBody: {
     ...typography.caption,
-    marginTop: spacing.sm,
-    color: '#C7D0DF',
+    marginTop: 3,
+    maxWidth: 540,
+    color: '#DCE7FA',
+  },
+  bannerStats: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  bannerPill: {
+    minHeight: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  bannerPillText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.white,
   },
   metricStrip: {
     minHeight: 82,

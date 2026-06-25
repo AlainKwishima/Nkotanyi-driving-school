@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
   },
   introCard: {
     padding: spacing.lg,

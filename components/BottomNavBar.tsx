@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 
@@ -13,6 +13,14 @@ import { hasLanguageAccess } from '../utils/subscriptionAccess';
 import { colors, radii, shadows, typography } from '../constants/theme';
 
 export type TabKey = 'home' | 'exam' | 'read' | 'watch' | 'performance';
+
+const webFrostedStyle =
+  Platform.OS === 'web'
+    ? ({
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+      } as any)
+    : null;
 
 type BottomNavBarProps = {
   navigation?: NavigationProp<RootStackParamList>;
@@ -44,7 +52,7 @@ function resolveActive(routeName: string): TabKey | null {
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
   const route = useRoute();
-  const { shortSide } = useResponsiveLayout();
+  const { insets, shortSide } = useResponsiveLayout();
   const { t } = useI18n();
   const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
@@ -53,6 +61,9 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const isWidePhone = shortSide >= 412;
   const iconSize = isCompact ? 20 : 22;
   const labelSize = isCompact ? 9 : isWidePhone ? 11 : 10;
+  const horizontalInset = isCompact ? 8 : 14;
+  const bottomInset = Math.max(insets.bottom, 6) + 4;
+  const navLayerHeight = bottomInset + 86;
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -93,45 +104,60 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   };
 
   return (
-    <View style={styles.tabs}>
-      {tabs.map((tab) => {
-        const isActive = tab.key === activeKey;
-        return (
-          <Pressable
-            key={tab.key}
-            style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
-            onPress={() => onPress(tab.key, tab.route)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
-          >
-            <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
-              <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.brandStrong : colors.inkSoft} />
-            </View>
-            <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
-              {t(tab.labelKey)}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View pointerEvents="box-none" style={[styles.navLayer, { height: navLayerHeight }]}>
+      <View pointerEvents="none" style={[styles.frostedShelf, webFrostedStyle]} />
+      <View style={[styles.tabs, { left: horizontalInset, right: horizontalInset, bottom: bottomInset }]}>
+        {tabs.map((tab) => {
+          const isActive = tab.key === activeKey;
+          return (
+            <Pressable
+              key={tab.key}
+              style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+              onPress={() => onPress(tab.key, tab.route)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+            >
+              <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
+                <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.brandStrong : colors.inkSoft} />
+              </View>
+              <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
+                {t(tab.labelKey)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: {
+  navLayer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    minHeight: 64,
-    backgroundColor: colors.surface,
+    zIndex: 20,
+  },
+  frostedShelf: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(246,247,249,0.84)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(221,226,234,0.72)',
+  },
+  tabs: {
+    position: 'absolute',
+    minHeight: 68,
+    backgroundColor: 'rgba(255,255,255,0.96)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.floating,
   },
   tab: {
     alignItems: 'center',
@@ -142,9 +168,9 @@ const styles = StyleSheet.create({
   },
   tabPressed: { opacity: 0.72 },
   tabBubble: {
-    width: 40,
-    height: 31,
-    borderRadius: 16,
+    width: 42,
+    height: 32,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

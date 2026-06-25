@@ -16,9 +16,10 @@ type AppHeaderProps = {
   left?: React.ReactNode;
   right?: React.ReactNode;
   curveColor?: string;
+  titleOffsetX?: number;
 };
 
-export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas }: AppHeaderProps) {
+export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
   const { insets } = useResponsiveLayout();
 
   return (
@@ -37,7 +38,7 @@ export function AppHeader({ title, navigation, onBack, left, right, curveColor =
             </TouchableOpacity>
           ) : null)}
         </View>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, titleOffsetX !== 0 && { transform: [{ translateX: titleOffsetX }] }]} numberOfLines={1}>
           {title}
         </Text>
         <View style={[styles.side, styles.rightSide]}>
@@ -61,11 +62,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   curveOverlay: {
-    height: 30,
+    height: 16,
     marginHorizontal: -spacing.lg,
-    marginTop: spacing.xs,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    marginTop: 0,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
   },
   side: {
     width: 44,

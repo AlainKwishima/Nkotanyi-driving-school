@@ -56,7 +56,7 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
   };
 
   return (
-    <ScreenColumn backgroundColor={colors.brandStrong}>
+    <ScreenColumn>
       <AppHeader
         title={t('examInstructions.title')}
         eyebrow={t('home.action.exams')}
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
   },
   hero: {
