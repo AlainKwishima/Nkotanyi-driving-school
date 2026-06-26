@@ -30,7 +30,7 @@ import { getPdfsWithFallback, type PdfItem } from '../services/contentApi';
 import { getRoadSigns, markRoadSignViewed, type RoadSignStudyItem } from '../services/roadSignsApi';
 import { ApiError } from '../services/api/types';
 import { useI18n } from '../i18n/useI18n';
-import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { hasLanguageAccess, resolvePaidContentLanguage } from '../utils/subscriptionAccess';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type ReadProps = NativeStackScreenProps<RootStackParamList, 'ReadingNative'>;
@@ -334,9 +334,15 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     subscriptionLanguage,
     contentLanguage,
   });
+  const paidContentLanguage = resolvePaidContentLanguage({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   const loadPdfs = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken || !paidContentLanguage) return;
     setLoading(true);
     setError(null);
     setPdfs([]);
@@ -345,8 +351,7 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     try {
       const result = await getPdfsWithFallback(
         accessToken,
-        contentLanguage,
-        subscriptionLanguage && subscriptionLanguage !== contentLanguage ? [subscriptionLanguage] : [],
+        paidContentLanguage,
       );
       setPdfs(result.items);
       setPdfSourceLanguage(result.resolvedLanguage);
@@ -355,23 +360,22 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
       if (__DEV__) console.warn('[Reading] PDF load failed', loadError);
       setError(
         loadError instanceof ApiError && loadError.code === 'PDF_LANGUAGE_MISMATCH'
-          ? t('reading.languageMismatch', { lang: t(`profile.lang.${contentLanguage}`) })
+          ? t('reading.languageMismatch', { lang: t(`profile.lang.${paidContentLanguage}`) })
           : t('reading.loadError'),
       );
     } finally {
       setLoading(false);
     }
-  }, [accessToken, contentLanguage, subscriptionLanguage, t]);
+  }, [accessToken, paidContentLanguage, t]);
 
   const loadRoadSigns = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken || !paidContentLanguage) return;
     setRoadSignsLoading(true);
     setRoadSignsError(null);
     try {
       const result = await getRoadSigns(
         accessToken,
-        contentLanguage,
-        subscriptionLanguage && subscriptionLanguage !== contentLanguage ? [subscriptionLanguage] : [],
+        paidContentLanguage,
       );
       setRoadSigns(result.items);
       setSelectedRoadSignIndex(null);
@@ -382,14 +386,14 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     } finally {
       setRoadSignsLoading(false);
     }
-  }, [accessToken, contentLanguage, subscriptionLanguage, t]);
+  }, [accessToken, paidContentLanguage, t]);
 
   useEffect(() => {
-    if (languageAccessGranted && accessToken) {
+    if (languageAccessGranted && accessToken && paidContentLanguage) {
       void loadPdfs();
       void loadRoadSigns();
     }
-  }, [accessToken, languageAccessGranted, loadPdfs, loadRoadSigns]);
+  }, [accessToken, languageAccessGranted, loadPdfs, loadRoadSigns, paidContentLanguage]);
 
   useEffect(() => {
     if (!languageAccessGranted && !isSigningOut) {
@@ -420,7 +424,8 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     return roadSigns.filter((item) => item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
   }, [roadSigns, searchQuery]);
   const languageLabel = t(`profile.lang.${contentLanguage}`);
-  const sourceLanguageLabel = pdfSourceLanguage ? t(`profile.lang.${pdfSourceLanguage}`) : languageLabel;
+  const paidLanguageLabel = paidContentLanguage ? t(`profile.lang.${paidContentLanguage}`) : languageLabel;
+  const sourceLanguageLabel = pdfSourceLanguage ? t(`profile.lang.${pdfSourceLanguage}`) : paidLanguageLabel;
   const activeSearchPlaceholder = activeTab === 'documents' ? t('reading.searchDocuments') : t('reading.searchRoadSigns');
   const selectedRoadSign = selectedRoadSignIndex === null ? null : roadSigns[selectedRoadSignIndex] ?? null;
 
@@ -458,7 +463,7 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     <ScreenColumn>
       <AppHeader
         title={t('reading.title')}
-        eyebrow={languageLabel}
+        eyebrow={paidLanguageLabel}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />
@@ -503,6 +508,12 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {paidContentLanguage && paidContentLanguage !== contentLanguage ? (
+            <Text style={styles.subscriptionLanguageNotice}>
+              {t('reading.subscriptionLanguageNotice', { lang: paidLanguageLabel })}
+            </Text>
+          ) : null}
 
           <View style={styles.section}>
             <SectionHeading title={activeTab === 'documents' ? t('reading.pdfSection') : t('reading.roadSigns')} />
@@ -744,6 +755,12 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
   fallbackNotice: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    lineHeight: 18,
+    color: colors.brandStrong,
+  },
+  subscriptionLanguageNotice: {
     ...typography.caption,
     marginTop: spacing.sm,
     lineHeight: 18,

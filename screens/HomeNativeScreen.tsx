@@ -15,7 +15,7 @@ import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
-import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { hasLanguageAccess, resolvePaidContentLanguage } from '../utils/subscriptionAccess';
 import { getPerformanceHistory } from '../services/performanceApi';
 import { readLocalExamRecords } from '../services/examHistoryStorage';
 import { mergePerformanceHistory, type PerformanceHistoryRow } from '../services/performanceHistory';
@@ -114,6 +114,12 @@ export function HomeNativeScreen({ navigation }: Props) {
     subscriptionLanguage,
     contentLanguage,
   });
+  const paidContentLanguage = resolvePaidContentLanguage({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,8 +133,8 @@ export function HomeNativeScreen({ navigation }: Props) {
 
       const [remote, pdfs, videos] = await Promise.all([
         getPerformanceHistory(accessToken).catch(() => []),
-        getPdfs(accessToken, contentLanguage).catch(() => []),
-        getVideos(accessToken, contentLanguage).catch(() => []),
+        paidContentLanguage ? getPdfs(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
+        paidContentLanguage ? getVideos(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
       ]);
       setRows(mergePerformanceHistory(remote, local));
 
@@ -143,7 +149,7 @@ export function HomeNativeScreen({ navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, contentLanguage]);
+  }, [accessToken, paidContentLanguage]);
 
   useFocusEffect(
     useCallback(() => {

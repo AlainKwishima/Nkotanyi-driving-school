@@ -8,9 +8,16 @@ export type SubscriptionAccessState = {
 };
 
 export function hasLanguageAccess(state: SubscriptionAccessState): boolean {
-  if (!state.hasSubscription) return false;
-  if (state.canChangeLanguage) return true;
-  return state.subscriptionLanguage != null && state.subscriptionLanguage === state.contentLanguage;
+  return state.hasSubscription && resolvePaidContentLanguage(state) != null;
+}
+
+/**
+ * Premium learning resources are licensed by the subscription language, not by
+ * the currently selected interface language.
+ */
+export function resolvePaidContentLanguage(state: SubscriptionAccessState): ContentLanguageCode | null {
+  if (!state.hasSubscription) return null;
+  return state.subscriptionLanguage;
 }
 
 /**

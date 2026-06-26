@@ -172,7 +172,6 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   const isFocused = useIsFocused();
   const {
     hasSubscription,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
     isSigningOut,
@@ -180,7 +179,6 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
   const { openGateModal } = useGateModal();
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   });

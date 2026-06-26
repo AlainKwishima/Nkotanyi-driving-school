@@ -16,7 +16,7 @@ import { useGateModal } from '../context/GateModalContext';
 import { getVideos, type VideoItem } from '../services/contentApi';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
-import { hasLanguageAccess } from '../utils/subscriptionAccess';
+import { hasLanguageAccess, resolvePaidContentLanguage } from '../utils/subscriptionAccess';
 import { normalizeHttpUrl, youtubeThumbnailUrl } from '../utils/videoLinks';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
@@ -106,6 +106,12 @@ export function VideoCourseListScreen({ navigation }: Props) {
     subscriptionLanguage,
     contentLanguage,
   });
+  const paidContentLanguage = resolvePaidContentLanguage({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   useEffect(() => {
     if (!languageAccessGranted && !isSigningOut) {
@@ -114,7 +120,7 @@ export function VideoCourseListScreen({ navigation }: Props) {
   }, [isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
   const loadVideos = useCallback(async () => {
-    if (!languageAccessGranted || isSigningOut) {
+    if (!languageAccessGranted || !paidContentLanguage || isSigningOut) {
       setLoading(false);
       return;
     }
@@ -126,13 +132,13 @@ export function VideoCourseListScreen({ navigation }: Props) {
     setLoading(true);
     setError(null);
     try {
-      setItems(await getVideos(accessToken, contentLanguage));
+      setItems(await getVideos(accessToken, paidContentLanguage));
     } catch (loadError) {
       setError(getMessageFromUnknownError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, contentLanguage, isSigningOut, languageAccessGranted, t]);
+  }, [accessToken, isSigningOut, languageAccessGranted, paidContentLanguage, t]);
 
   useEffect(() => {
     void loadVideos();
@@ -165,12 +171,13 @@ export function VideoCourseListScreen({ navigation }: Props) {
   }
 
   const featured = items[0];
+  const paidLanguageLabel = paidContentLanguage ? t(`profile.lang.${paidContentLanguage}`) : '';
 
   return (
     <ScreenColumn>
       <AppHeader
         title={t('video.listTitle')}
-        eyebrow={t(`profile.lang.${contentLanguage}`)}
+        eyebrow={paidContentLanguage ? t(`profile.lang.${paidContentLanguage}`) : undefined}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />
@@ -191,6 +198,11 @@ export function VideoCourseListScreen({ navigation }: Props) {
             <Text style={styles.pageSubtitle}>
               {t('video.librarySubtitle', { count: items.length })}
             </Text>
+            {paidContentLanguage && paidContentLanguage !== contentLanguage ? (
+              <Text style={styles.subscriptionLanguageNotice}>
+                {t('video.subscriptionLanguageNotice', { lang: paidLanguageLabel })}
+              </Text>
+            ) : null}
 
             {featured ? (
               <TouchableOpacity style={styles.featureCard} onPress={() => openLesson(0)} activeOpacity={0.9}>
@@ -268,6 +280,11 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginTop: spacing.xs,
     color: colors.inkMuted,
+  },
+  subscriptionLanguageNotice: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    color: colors.brandStrong,
   },
   featureCard: {
     marginTop: spacing.xxl,

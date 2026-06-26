@@ -8,6 +8,11 @@ export type VideoItem = {
   _id?: string;
   title?: string;
   name?: string;
+  language?: string;
+  lang?: string;
+  locale?: string;
+  contentLanguage?: string;
+  content_language?: string;
   videoURL?: string;
   videoUrl?: string;
   url?: string;
@@ -87,6 +92,12 @@ function pdfLanguage(item: PdfItem): ContentLanguageCode | null {
   );
 }
 
+function videoLanguage(item: VideoItem): ContentLanguageCode | null {
+  return normalizeContentLanguage(
+    item.language ?? item.lang ?? item.locale ?? item.contentLanguage ?? item.content_language,
+  );
+}
+
 function extractContentList<T>(json: unknown, keys: string[]): T[] {
   const data = unwrapApiPayload<any>(json);
   if (Array.isArray(data)) return data;
@@ -107,7 +118,13 @@ export async function getVideos(accessToken: string, language?: ContentLanguageC
     method: 'GET',
     accessToken,
   });
-  return extractContentList<VideoItem>(json, ['videos', 'data', 'allVideos', 'items']);
+  const list = extractContentList<VideoItem>(json, ['videos', 'data', 'allVideos', 'items']);
+  if (!language) return list;
+  const matching = list.filter((item) => videoLanguage(item) === language);
+  const unlabelled = list.filter((item) => videoLanguage(item) === null);
+  if (matching.length > 0) return matching;
+  if (list.length > 0 && unlabelled.length === list.length) return unlabelled;
+  return [];
 }
 
 function uniqueLanguages(languages: Array<ContentLanguageCode | null | undefined>): ContentLanguageCode[] {

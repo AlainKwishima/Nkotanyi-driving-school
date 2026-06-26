@@ -21,7 +21,6 @@ export function ScreensHubScreen({ navigation }: Props) {
   const { t } = useI18n();
   const {
     hasSubscription,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
     hasUsedFreeTrial,
@@ -30,7 +29,6 @@ export function ScreensHubScreen({ navigation }: Props) {
   const { openGateModal } = useGateModal();
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
-    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   });
