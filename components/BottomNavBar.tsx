@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   frostedShelf: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(249,250,251,0.86)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(229,231,235,0.78)',

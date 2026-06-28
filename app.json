@@ -7,16 +7,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "ibyapa",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#fbf8fd"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ibyapa.app",
       "infoPlist": {
-        "UIRequiresFullScreen": false
+        "UIRequiresFullScreen": false,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -39,6 +35,18 @@
       "display": "standalone",
       "orientation": "any"
     },
-    "plugins": ["expo-font", "expo-video"]
+    "plugins": [
+      "expo-font",
+      "expo-video",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#fbf8fd"
+        }
+      ]
+    ]
   }
 }

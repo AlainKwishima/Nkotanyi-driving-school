@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandStrong,
   },
   thumbnailShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(20,33,58,0.22)',
   },
   playButton: {

@@ -393,11 +393,11 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   playerShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(20,33,58,0.42)',
   },
   playerLoader: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 10,
     alignItems: 'center',
     justifyContent: 'center',
