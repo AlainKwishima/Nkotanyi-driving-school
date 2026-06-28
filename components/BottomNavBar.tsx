@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 
@@ -13,14 +13,6 @@ import { hasLanguageAccess } from '../utils/subscriptionAccess';
 import { colors, radii, shadows, typography } from '../constants/theme';
 
 export type TabKey = 'home' | 'exam' | 'read' | 'watch' | 'performance';
-
-const webFrostedStyle =
-  Platform.OS === 'web'
-    ? ({
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      } as any)
-    : null;
 
 type BottomNavBarProps = {
   navigation?: NavigationProp<RootStackParamList>;
@@ -62,8 +54,8 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const iconSize = isCompact ? 20 : 22;
   const labelSize = isCompact ? 9 : isWidePhone ? 11 : 10;
   const horizontalInset = isCompact ? 8 : 14;
-  const bottomInset = Math.max(insets.bottom, 6) + 4;
-  const navLayerHeight = bottomInset + 86;
+  const bottomInset = Math.max(insets.bottom - 20, 0);
+  const navLayerHeight = bottomInset + 70;
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -105,7 +97,6 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
 
   return (
     <View pointerEvents="box-none" style={[styles.navLayer, { height: navLayerHeight }]}>
-      <View pointerEvents="none" style={[styles.frostedShelf, webFrostedStyle]} />
       <View style={[styles.tabs, { left: horizontalInset, right: horizontalInset, bottom: bottomInset }]}>
         {tabs.map((tab) => {
           const isActive = tab.key === activeKey;
@@ -138,12 +129,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 20,
-  },
-  frostedShelf: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(249,250,251,0.86)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(229,231,235,0.78)',
   },
   tabs: {
     position: 'absolute',
