@@ -18,12 +18,13 @@ import { ScreenColumn } from '../components/ScreenColumn';
 import { AppHeader } from '../components/AppHeader';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
+import { useGateModal } from '../context/GateModalContext';
 import { getExamQuestions, getSignQuestions, type TrafficQuestion } from '../services/trafficApi';
 import { appendLocalExamRecord } from '../services/examHistoryStorage';
 import { savePerformance } from '../services/performanceApi';
 import { getMessageFromUnknownError } from '../services/api/client';
 import { useI18n } from '../i18n/useI18n';
-import { resolveExamLanguage } from '../utils/subscriptionAccess';
+import { hasLanguageAccess, resolveExamLanguage } from '../utils/subscriptionAccess';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamNative'>;
@@ -133,15 +134,22 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   const { t } = useI18n();
   const {
     hasSubscription,
-    hasUsedFreeTrial,
-    setHasUsedFreeTrial,
+    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
+    isSigningOut,
   } = useAppFlow();
   const { accessToken } = useAuth();
+  const { openGateModal } = useGateModal();
   const mode = route.params?.mode ?? 'traffic';
   const examLanguage = resolveExamLanguage({
     hasSubscription,
+    subscriptionLanguage,
+    contentLanguage,
+  });
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
     subscriptionLanguage,
     contentLanguage,
   });
@@ -164,7 +172,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   const finishedRef = useRef(false);
   const timeoutSubmittedRef = useRef(false);
   const hasSubscriptionRef = useRef(hasSubscription);
-  const hasUsedFreeTrialRef = useRef(hasUsedFreeTrial);
+  const languageAccessGrantedRef = useRef(languageAccessGranted);
 
   const totalQuestions = questions.length;
   const current = questions[questionIndex];
@@ -179,10 +187,24 @@ export function ExamNativeScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     hasSubscriptionRef.current = hasSubscription;
-    hasUsedFreeTrialRef.current = hasUsedFreeTrial;
-  }, [hasSubscription, hasUsedFreeTrial]);
+    languageAccessGrantedRef.current = languageAccessGranted;
+  }, [hasSubscription, languageAccessGranted]);
 
   const loadQuestions = useCallback(async () => {
+    if (!hasSubscriptionRef.current || !languageAccessGrantedRef.current) {
+      setQuestions([]);
+      setLoadError(t('gate.subscription.exam'));
+      setLoading(false);
+      if (!isSigningOut) {
+        openGateModal(
+          'subscription_exam',
+          () => navigation.replace('SubscriptionNative'),
+          () => navigation.replace('HomeNative'),
+        );
+      }
+      return;
+    }
+
     if (!accessToken) {
       setLoadError(t('exam.needSignIn'));
       setQuestions([]);
@@ -211,19 +233,13 @@ export function ExamNativeScreen({ navigation, route }: Props) {
       setSecondsLeft(EXAM_DURATION_SEC);
       startedAtRef.current = new Date().toISOString();
       deadlineAtRef.current = Date.now() + EXAM_DURATION_SEC * 1000;
-
-      if (!hasSubscriptionRef.current && !hasUsedFreeTrialRef.current) {
-        // Trial is consumed on successful exam start so abandoned attempts cannot be repeated indefinitely.
-        await setHasUsedFreeTrial(true);
-        hasUsedFreeTrialRef.current = true;
-      }
     } catch (error) {
       setQuestions([]);
       setLoadError(getMessageFromUnknownError(error));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, examLanguage, mode, setHasUsedFreeTrial, t]);
+  }, [accessToken, examLanguage, isSigningOut, mode, navigation, openGateModal, t]);
 
   useEffect(() => {
     void loadQuestions();
@@ -562,7 +578,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
                   <Ionicons
                     name={selected ? 'checkmark-circle' : 'ellipse-outline'}
                     size={21}
-                    color={selected ? colors.brand : '#BAC2CF'}
+                    color={selected ? colors.brand : '#6B7280'}
                   />
                 </TouchableOpacity>
               );
@@ -724,7 +740,7 @@ const styles = StyleSheet.create({
   loadingBody: {
     ...typography.body,
     marginTop: spacing.sm,
-    color: '#BFD0E8',
+    color: '#EFF6FF',
     textAlign: 'center',
   },
   body: {
@@ -796,7 +812,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.redSoft,
   },
   timerText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 13,
     color: colors.white,
   },
@@ -820,7 +836,7 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   progressPercent: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 16,
     color: colors.brand,
   },
@@ -830,7 +846,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     overflow: 'hidden',
     borderRadius: 3,
-    backgroundColor: '#DCE2DD',
+    backgroundColor: '#E5E7EB',
   },
   progressFill: {
     height: '100%',
@@ -856,7 +872,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   questionChipAnswered: {
-    borderColor: '#B8D8C9',
+    borderColor: '#10B981',
     backgroundColor: colors.greenSoft,
   },
   questionChipActive: {
@@ -865,7 +881,7 @@ const styles = StyleSheet.create({
   },
   questionChipText: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     color: colors.inkMuted,
   },
   questionChipTextAnswered: {
@@ -928,7 +944,7 @@ const styles = StyleSheet.create({
     height: '94%',
   },
   questionText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 17,
     lineHeight: 26,
     marginTop: spacing.lg,
@@ -965,7 +981,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF0EC',
+    backgroundColor: '#F3F4F6',
   },
   optionMarkerSelected: {
     backgroundColor: colors.brand,
@@ -984,7 +1000,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   optionTextSelected: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     color: colors.brandStrong,
   },
   lockedControl: {

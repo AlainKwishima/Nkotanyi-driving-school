@@ -43,10 +43,10 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
     <style>
       :root {
         color-scheme: light only;
-        --page-bg: #f3f5fa;
-        --card-bg: #ffffff;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
+        --page-bg: #F9FAFB;
+        --card-bg: #FFFFFF;
+        --text-main: #111827;
+        --text-muted: #6B7280;
         --watermark: rgba(107, 114, 128, 0.22);
         --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
       }
@@ -111,7 +111,7 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
         width: 100%;
         overflow: hidden;
         border-radius: 12px;
-        background: #ffffff;
+        background: #FFFFFF;
       }
       canvas {
         display: block;
@@ -162,7 +162,7 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
         margin-top: 10px;
         font-size: 11px;
         font-weight: 700;
-        color: #94a3b8;
+        color: #6B7280;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         text-align: right;
@@ -172,7 +172,7 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
         height: 44px;
         border-radius: 22px;
         border: 4px solid rgba(74, 120, 208, 0.18);
-        border-top-color: #4a78d0;
+        border-top-color: #2563EB;
         animation: spin 1s linear infinite;
       }
       @keyframes spin {
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   retryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: '#FFFFFF',
   },

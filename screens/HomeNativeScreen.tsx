@@ -48,7 +48,7 @@ const LEARNING_PATHS: LearningPath[] = [
     titleKey: 'video.listTitle',
     subtitleKey: 'nav.watch',
     icon: 'play-circle-outline',
-    color: '#A55F1D',
+    color: '#2563EB',
     background: colors.amberSoft,
   },
   {
@@ -94,7 +94,6 @@ export function HomeNativeScreen({ navigation }: Props) {
   const { accessToken, name } = useAuth();
   const { openGateModal } = useGateModal();
   const {
-    hasUsedFreeTrial,
     hasSubscription,
     canChangeLanguage,
     subscriptionLanguage,
@@ -159,7 +158,7 @@ export function HomeNativeScreen({ navigation }: Props) {
 
   const handleLearningRoute = (route: LearningRoute) => {
     if (route === 'ExamInstructionsNative') {
-      if (!isSigningOut && ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial))) {
+      if (!isSigningOut && (!hasSubscription || !languageAccessGranted)) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
         return;
       }
@@ -400,16 +399,12 @@ export function HomeNativeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('SubscriptionNative')}
               activeOpacity={0.85}
             >
-              <Ionicons name="sparkles-outline" size={21} color="#9A5A18" />
+              <Ionicons name="sparkles-outline" size={21} color="#2563EB" />
               <View style={styles.planCopy}>
-                <Text style={styles.planTitle}>
-                  {hasUsedFreeTrial ? t('home.trialUsedTitle') : t('home.trialAvailableTitle')}
-                </Text>
-                <Text style={styles.planBody}>
-                  {hasUsedFreeTrial ? t('home.trialUsedBody') : t('home.trialAvailableBody')}
-                </Text>
+                <Text style={styles.planTitle}>{t('gate.subscription.title')}</Text>
+                <Text style={styles.planBody}>{t('gate.subscription.exam')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#9A5A18" />
+              <Ionicons name="chevron-forward" size={18} color="#2563EB" />
             </TouchableOpacity>
           ) : null}
         </ScrollView>
@@ -436,11 +431,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FB7B7B',
+    backgroundColor: '#F05252',
   },
   headerAvatarText: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     color: colors.white,
   },
   welcomeRow: {
@@ -487,7 +482,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   heroTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 18,
     lineHeight: 24,
     letterSpacing: -0.25,
@@ -497,7 +492,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     marginTop: 3,
     maxWidth: 540,
-    color: '#DCE7FA',
+    color: '#EFF6FF',
   },
   bannerStats: {
     marginTop: spacing.md,
@@ -515,7 +510,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
   },
   bannerPillText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 12,
     lineHeight: 16,
     color: colors.white,
@@ -536,7 +531,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   metricValue: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 18,
     color: colors.ink,
   },
@@ -576,7 +571,7 @@ const styles = StyleSheet.create({
   },
   primaryEyebrow: {
     ...typography.eyebrow,
-    color: '#C9D8F0',
+    color: '#EFF6FF',
     textTransform: 'uppercase',
   },
   primaryTitle: {
@@ -682,7 +677,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scoreValue: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 15,
   },
   insightCopy: {
@@ -707,7 +702,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#C9D1C7',
+    borderColor: '#E5E7EB',
   },
   emptyInsightText: {
     ...typography.body,
@@ -723,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.amberSoft,
     borderWidth: 1,
-    borderColor: '#F1D39F',
+    borderColor: '#E5E7EB',
   },
   planCopy: {
     flex: 1,
@@ -731,11 +726,11 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     ...typography.bodyStrong,
-    color: '#774817',
+    color: '#1E3A8A',
   },
   planBody: {
     ...typography.caption,
     marginTop: 3,
-    color: '#93642E',
+    color: '#374151',
   },
 });

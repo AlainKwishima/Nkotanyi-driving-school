@@ -22,7 +22,7 @@ type HeaderMenuProps = {
 
 export function HeaderMenu({
   navigation,
-  iconColor = '#F6F8FE',
+  iconColor = colors.white,
   topOffset = 84,
   rightOffset = 14,
 }: HeaderMenuProps) {
@@ -83,7 +83,7 @@ export function HeaderMenu({
                   onPress={() => void onSelect(item.route)}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name={item.icon} size={16} color="#2C355C" />
+                  <Ionicons name={item.icon} size={16} color={colors.textSecondary} />
                   <Text style={styles.menuText}>{t(item.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
@@ -111,11 +111,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20,33,58,0.22)',
+    backgroundColor: colors.overlaySoft,
   },
   dropdown: {
     position: 'absolute',

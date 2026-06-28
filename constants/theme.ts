@@ -1,33 +1,58 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  brand: '#315FAE',
-  brandStrong: '#214986',
-  brandSoft: '#EAF1FC',
-  canvas: '#F6F7F9',
+  primary: '#2563EB',
+  secondary: '#2D5FBF',
+  darkEmphasis: '#1E3A8A',
+  background: '#F9FAFB',
   surface: '#FFFFFF',
-  surfaceAlt: '#F1F3F6',
-  ink: '#172238',
-  inkMuted: '#526078',
-  inkSoft: '#7A879A',
-  line: '#DDE2EA',
-  success: '#247A55',
-  successSoft: '#E8F3ED',
-  danger: '#B54747',
-  dangerSoft: '#F8EAEA',
+  surfaceAlt: '#F3F4F6',
+  blueTint: '#EFF6FF',
+  textPrimary: '#111827',
+  textSecondary: '#374151',
+  textMuted: '#6B7280',
+  border: '#E5E7EB',
+  success: '#10B981',
+  successSoft: '#DCFCE7',
+  warning: '#F59E0B',
+  warningSoft: '#FFFBEB',
+  error: '#F05252',
+  errorSoft: '#FDE8E8',
+  info: '#1C64F2',
+  infoSoft: '#EFF6FF',
   white: '#FFFFFF',
   black: '#000000',
+  overlay: 'rgba(17,24,39,0.48)',
+  overlaySoft: 'rgba(17,24,39,0.12)',
+  focus: '#2563EB',
   providerMtn: '#FFCC00',
   providerAirtel: '#E3242B',
-  // Compatibility aliases keep older screens on the reduced semantic palette
-  // while their layouts are migrated incrementally.
-  amber: '#315FAE',
-  amberSoft: '#EAF1FC',
-  green: '#247A55',
-  greenSoft: '#E8F3ED',
-  red: '#B54747',
-  redSoft: '#F8EAEA',
-  brandMist: '#EAF1FC',
+
+  // Compatibility aliases keep existing screens compiling while mapping the
+  // older mobile names onto the new IBYAPA web-led palette.
+  brand: '#2563EB',
+  brandStrong: '#2D5FBF',
+  brandSoft: '#EFF6FF',
+  brandMist: '#EFF6FF',
+  canvas: '#F9FAFB',
+  ink: '#111827',
+  inkMuted: '#374151',
+  inkSoft: '#6B7280',
+  line: '#E5E7EB',
+  danger: '#F05252',
+  dangerSoft: '#FDE8E8',
+  amber: '#F59E0B',
+  amberSoft: '#FFFBEB',
+  green: '#10B981',
+  greenSoft: '#DCFCE7',
+  red: '#F05252',
+  redSoft: '#FDE8E8',
+} as const;
+
+export const gradients = {
+  header: [colors.darkEmphasis, colors.secondary] as const,
+  hero: [colors.blueTint, colors.surface] as const,
+  cta: [colors.primary, colors.secondary] as const,
 } as const;
 
 export const spacing = {
@@ -42,64 +67,73 @@ export const spacing = {
 
 export const radii = {
   sm: 8,
-  md: 10,
-  lg: 12,
-  xl: 16,
-  sheet: 0,
+  md: 12,
+  lg: 14,
+  xl: 18,
+  xxl: 24,
+  sheet: 24,
   pill: 999,
+} as const;
+
+const font = {
+  regular: 'Poppins-Regular',
+  medium: 'Poppins-Medium',
+  semiBold: 'Poppins-SemiBold',
+  bold: 'Poppins-Bold',
+  extraBold: 'Poppins-ExtraBold',
 } as const;
 
 export const typography = {
   caption: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: font.medium,
     fontSize: 12,
     lineHeight: 17,
   },
   body: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: font.regular,
     fontSize: 14,
     lineHeight: 21,
   },
   bodyStrong: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: font.semiBold,
     fontSize: 14,
     lineHeight: 20,
   },
   sectionTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: font.bold,
     fontSize: 17,
     lineHeight: 23,
   },
   screenTitle: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: font.bold,
     fontSize: 18,
     lineHeight: 24,
   },
   heading: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: font.bold,
     fontSize: 22,
-    lineHeight: 29,
+    lineHeight: 30,
     letterSpacing: -0.25,
   },
   result: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: font.extraBold,
     fontSize: 30,
     lineHeight: 38,
     letterSpacing: -0.5,
   },
   eyebrow: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: font.bold,
     fontSize: 11,
     lineHeight: 16,
     letterSpacing: 0.6,
   },
   title: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: font.bold,
     fontSize: 17,
     lineHeight: 23,
   },
   display: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: font.extraBold,
     fontSize: 30,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -107,17 +141,40 @@ export const typography = {
 } as const;
 
 export const shadows = {
-  card: {},
-  floating: Platform.select({
+  card: Platform.select({
     ios: {
-      shadowColor: '#172238',
+      shadowColor: '#111827',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
+      shadowOpacity: 0.06,
       shadowRadius: 18,
     },
     default: {
+      elevation: 2,
+      shadowColor: '#111827',
+    },
+  }),
+  subtle: Platform.select({
+    ios: {
+      shadowColor: '#111827',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+    },
+    default: {
+      elevation: 1,
+      shadowColor: '#111827',
+    },
+  }),
+  floating: Platform.select({
+    ios: {
+      shadowColor: '#111827',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.14,
+      shadowRadius: 24,
+    },
+    default: {
       elevation: 8,
-      shadowColor: '#172238',
+      shadowColor: '#111827',
     },
   }),
 } as const;

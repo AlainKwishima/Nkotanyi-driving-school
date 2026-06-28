@@ -56,7 +56,7 @@ export function AppHeader({ title, navigation, onBack, eyebrow, left, right, cur
 const styles = StyleSheet.create({
   root: {
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.brandStrong,
+    backgroundColor: colors.darkEmphasis,
   },
   row: {
     minHeight: 54,
@@ -65,11 +65,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   curveOverlay: {
-    height: 16,
+    height: 18,
     marginHorizontal: -spacing.lg,
     marginTop: 0,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   side: {
     width: 44,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...typography.eyebrow,
     marginBottom: 1,
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.78)',
     textAlign: 'center',
     textTransform: 'uppercase',
   },

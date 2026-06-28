@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,8 +18,17 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ExamTypeSelectNative'>;
 export function ExamTypeSelectNativeScreen({ navigation }: Props) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
-  const { hasSubscription, hasUsedFreeTrial, isSigningOut } = useAppFlow();
+  const { hasSubscription, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
+
+  useEffect(() => {
+    if (hasSubscription || isSigningOut) return;
+    openGateModal(
+      'subscription_exam',
+      () => navigation.navigate('SubscriptionNative'),
+      () => navigation.replace('HomeNative'),
+    );
+  }, [hasSubscription, isSigningOut, navigation, openGateModal]);
 
   const examTypes = [
     {
@@ -43,7 +52,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
   ];
 
   const selectExam = (mode: 'traffic' | 'signs') => {
-    if (!hasSubscription && hasUsedFreeTrial) {
+    if (!hasSubscription) {
       if (!isSigningOut) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
       }
@@ -139,7 +148,7 @@ const styles = StyleSheet.create({
   panelBody: {
     ...typography.caption,
     marginTop: spacing.xs,
-    color: '#DCE8FF',
+    color: '#EFF6FF',
   },
   choiceList: {
     gap: spacing.sm,
@@ -186,7 +195,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.pill,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
   },
   choiceSubtitle: {
     ...typography.caption,
@@ -199,7 +208,7 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   choiceTextOnActive: {
-    color: '#DCE8FF',
+    color: '#EFF6FF',
   },
   footerNote: {
     marginHorizontal: spacing.lg,

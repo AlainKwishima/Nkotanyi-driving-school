@@ -186,6 +186,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (forceLogout) {
                 await clearStoredSession('bootstrap_profile_invalid_session');
               } else {
+                await setHasSubscription(false);
+                await setHasTimeBasedSubscription(false);
+                await setCanChangeLanguage(false);
+                await setSubscriptionLanguage(null);
                 logAuthEvent('bootstrap_profile_failed_kept_session', {
                   error: getMessageFromUnknownError(e),
                   status: e instanceof ApiError ? e.status : undefined,
@@ -201,7 +205,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void load();
     return () => { cancelled = true; };
     // Empty dependency array ensures this single-fire bootstrap logic doesn't repeatedly trigger.
-  }, [applyProfile, clearStoredSession, scheduleTokenExpiryCheck, setSignedIn, setSigningOut]);
+  }, [
+    applyProfile,
+    clearStoredSession,
+    scheduleTokenExpiryCheck,
+    setCanChangeLanguage,
+    setHasSubscription,
+    setHasTimeBasedSubscription,
+    setSignedIn,
+    setSigningOut,
+    setSubscriptionLanguage,
+  ]);
 
   const login = useCallback(
     async (accountRaw: string, password: string) => {
@@ -223,13 +237,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         await applyProfile(token, uid);
       } catch (e) {
+        await setHasSubscription(false);
+        await setHasTimeBasedSubscription(false);
+        await setCanChangeLanguage(false);
+        await setSubscriptionLanguage(null);
         logAuthEvent('login_profile_failed_kept_session', {
           error: getMessageFromUnknownError(e),
           status: e instanceof ApiError ? e.status : undefined,
         });
       }
     },
-    [applyProfile, scheduleTokenExpiryCheck, setSignedIn, setSigningOut],
+    [
+      applyProfile,
+      scheduleTokenExpiryCheck,
+      setCanChangeLanguage,
+      setHasSubscription,
+      setHasTimeBasedSubscription,
+      setSignedIn,
+      setSigningOut,
+      setSubscriptionLanguage,
+    ],
   );
 
   const signup = useCallback(

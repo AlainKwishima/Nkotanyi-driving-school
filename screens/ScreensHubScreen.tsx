@@ -23,7 +23,6 @@ export function ScreensHubScreen({ navigation }: Props) {
     hasSubscription,
     subscriptionLanguage,
     contentLanguage,
-    hasUsedFreeTrial,
     isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
@@ -35,7 +34,7 @@ export function ScreensHubScreen({ navigation }: Props) {
 
   const gateIfNeeded = (kind: 'exam' | 'read' | 'watch', next: () => void) => {
     if (kind === 'exam') {
-      if (!isSigningOut && ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial))) {
+      if (!isSigningOut && (!hasSubscription || !languageAccessGranted)) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
         return;
       }
@@ -133,10 +132,6 @@ export function ScreensHubScreen({ navigation }: Props) {
               }
               if (screen.key === 'payment') {
                 navigation.navigate('PaymentNative');
-                return;
-              }
-              if (screen.key === 'paymentConfirmation') {
-                navigation.navigate('PaymentConfirmationNative');
                 return;
               }
               if (screen.key === 'profile') {

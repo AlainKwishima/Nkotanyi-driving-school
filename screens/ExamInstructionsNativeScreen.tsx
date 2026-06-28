@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,8 +32,17 @@ const GUIDE_KEYS = [
 export function ExamInstructionsNativeScreen({ navigation }: Props) {
   const { t } = useI18n();
   const { tabScrollBottomPad } = useResponsiveLayout();
-  const { hasSubscription, hasUsedFreeTrial, isSigningOut } = useAppFlow();
+  const { hasSubscription, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
+
+  useEffect(() => {
+    if (hasSubscription || isSigningOut) return;
+    openGateModal(
+      'subscription_exam',
+      () => navigation.navigate('SubscriptionNative'),
+      () => navigation.replace('HomeNative'),
+    );
+  }, [hasSubscription, isSigningOut, navigation, openGateModal]);
 
   const stats = useMemo(
     () =>
@@ -46,7 +55,7 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
   );
 
   const startExam = () => {
-    if (!hasSubscription && hasUsedFreeTrial) {
+    if (!hasSubscription) {
       if (!isSigningOut) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
       }

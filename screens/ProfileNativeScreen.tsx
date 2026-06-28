@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FB7B7B',
+    backgroundColor: '#F05252',
   },
   avatarText: {
     ...typography.title,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   planPillText: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
   },
   planPillTextActive: {
     color: colors.success,

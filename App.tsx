@@ -6,12 +6,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts,
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 
 import { HelpCenterScreen } from './screens/HelpCenterScreen';
 import { CreateAccountScreen, ForgotPasswordScreen, LoginScreen, ResetPasswordScreen } from './screens/AuthScreens';
@@ -22,7 +22,7 @@ import { LanguageSettingsScreen } from './screens/LanguageSettingsScreen';
 import { PracticeNoSelectedNativeScreen, PracticeSelectedNativeScreen } from './screens/PracticeNativeScreen';
 import { PerformanceNativeScreen, PerformanceReviewNativeScreen } from './screens/PerformanceNativeScreens';
 import { HelpCenterNativeScreen } from './screens/LearningNativeScreens';
-import { PaymentConfirmationNativeScreen, PaymentNativeScreen, SubscriptionNativeScreen } from './screens/PaymentNativeScreens';
+import { PaymentNativeScreen, SubscriptionNativeScreen } from './screens/PaymentNativeScreens';
 import { ProfileNativeScreen } from './screens/ProfileNativeScreen';
 import { RootStackParamList } from './navigation/types';
 import { ReferenceImageScreen } from './screens/ReferenceImageScreen';
@@ -74,11 +74,11 @@ const mainTabScreenOptions: NativeStackNavigationOptions = {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    'PlusJakartaSans-Regular': PlusJakartaSans_400Regular,
-    'PlusJakartaSans-Medium': PlusJakartaSans_500Medium,
-    'PlusJakartaSans-SemiBold': PlusJakartaSans_600SemiBold,
-    'PlusJakartaSans-Bold': PlusJakartaSans_700Bold,
-    'PlusJakartaSans-ExtraBold': PlusJakartaSans_800ExtraBold,
+    'Poppins-Regular': Poppins_400Regular,
+    'Poppins-Medium': Poppins_500Medium,
+    'Poppins-SemiBold': Poppins_600SemiBold,
+    'Poppins-Bold': Poppins_700Bold,
+    'Poppins-ExtraBold': Poppins_800ExtraBold,
   });
 
   if (!fontsLoaded) {
@@ -123,7 +123,6 @@ export default function App() {
             <Stack.Screen name="HelpCenterNative" component={HelpCenterNativeScreen} />
             <Stack.Screen name="SubscriptionNative" component={SubscriptionNativeScreen} />
             <Stack.Screen name="PaymentNative" component={PaymentNativeScreen} />
-            <Stack.Screen name="PaymentConfirmationNative" component={PaymentConfirmationNativeScreen} />
             <Stack.Screen name="ProfileNative" component={ProfileNativeScreen} />
             <Stack.Screen name="ScreensHub" component={ScreensHubScreen} />
             <Stack.Screen name="ReferenceImage" component={ReferenceImageScreen} />

@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   mediaPlaceholderText: {
     ...typography.eyebrow,
     marginTop: spacing.md,
-    color: '#BFD0EE',
+    color: '#EFF6FF',
   },
   nowPlaying: {
     padding: spacing.xl,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.caption,
     marginTop: spacing.sm,
-    color: '#BCC6D8',
+    color: '#6B7280',
     textAlign: 'center',
   },
   retryButton: {

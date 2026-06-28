@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 
@@ -37,8 +37,19 @@ import { colors, radii, shadows, spacing, typography } from '../constants/theme'
 
 type SubscriptionProps = NativeStackScreenProps<RootStackParamList, 'SubscriptionNative'>;
 type PaymentProps = NativeStackScreenProps<RootStackParamList, 'PaymentNative'>;
-type ConfirmationProps = NativeStackScreenProps<RootStackParamList, 'PaymentConfirmationNative'>;
-type Nav = SubscriptionProps['navigation'] | PaymentProps['navigation'] | ConfirmationProps['navigation'];
+type Nav = SubscriptionProps['navigation'] | PaymentProps['navigation'];
+type PaymentStatusKind = 'processing' | 'pending' | 'success' | 'failed' | 'cancelled' | 'timeout';
+type PaymentStatusModalState = {
+  kind: PaymentStatusKind;
+  title: string;
+  message?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  dismissible?: boolean;
+};
+
+const PAYMENT_POLL_INTERVAL_MS = 3000;
+const PAYMENT_POLL_ATTEMPTS = 24;
 
 function Header({ title, onBack, navigation }: { title: string; onBack: () => void; navigation: Nav }) {
   return <AppHeader title={title} onBack={onBack} navigation={navigation} />;
@@ -46,6 +57,152 @@ function Header({ title, onBack, navigation }: { title: string; onBack: () => vo
 
 function BottomTabs({ navigation }: { navigation: Nav }) {
   return <BottomNavBar navigation={navigation} />;
+}
+
+function PaymentStatusModal({
+  state,
+  onDismiss,
+}: {
+  state: PaymentStatusModalState | null;
+  onDismiss: () => void;
+}) {
+  const visible = Boolean(state);
+  const kind = state?.kind ?? 'processing';
+  const isProcessing = kind === 'processing';
+  const isSuccess = kind === 'success';
+  const isFailed = kind === 'failed';
+  const isCancelled = kind === 'cancelled';
+  const isTimeout = kind === 'timeout';
+  const iconName = isSuccess
+    ? 'checkmark'
+    : isFailed
+      ? 'alert-outline'
+      : isCancelled
+        ? 'close'
+        : kind === 'pending' || isTimeout
+          ? 'time-outline'
+          : null;
+
+  const handleAction = () => {
+    if (state?.onAction) {
+      state.onAction();
+      return;
+    }
+    onDismiss();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={state?.dismissible === false ? undefined : onDismiss}
+    >
+      <Pressable
+        style={styles.statusBackdrop}
+        onPress={state?.dismissible === false ? undefined : onDismiss}
+      >
+        <Pressable style={styles.statusCard} onPress={(event) => event.stopPropagation()}>
+          <View
+            style={[
+              styles.statusIconWrap,
+              isSuccess
+                ? styles.statusIconSuccess
+                : isFailed || isCancelled
+                  ? styles.statusIconFailed
+                  : isTimeout
+                    ? styles.statusIconTimeout
+                    : styles.statusIconProcessing,
+            ]}
+          >
+            {isProcessing ? (
+              <ProcessingDots />
+            ) : (
+              <Ionicons
+                name={iconName as React.ComponentProps<typeof Ionicons>['name']}
+                size={30}
+                color={isSuccess ? colors.success : isFailed || isCancelled ? colors.error : colors.primary}
+              />
+            )}
+          </View>
+          <Text style={styles.statusTitle}>{state?.title}</Text>
+          {state?.message ? <Text style={styles.statusMessage}>{state.message}</Text> : null}
+          {!isProcessing && state?.actionLabel ? (
+            <TouchableOpacity
+              style={[
+                styles.statusAction,
+                isSuccess ? styles.statusActionSuccess : isFailed || isCancelled ? styles.statusActionFailed : styles.statusActionPrimary,
+              ]}
+              onPress={handleAction}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.statusActionText}>{state.actionLabel}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function ProcessingDots() {
+  const dots = useRef([new Animated.Value(0.3), new Animated.Value(0.3), new Animated.Value(0.3)]).current;
+
+  useEffect(() => {
+    const animations = dots.map((dot, index) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(index * 160),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 340,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0.3,
+            duration: 340,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.delay((dots.length - index) * 120),
+        ]),
+      ),
+    );
+    animations.forEach((animation) => animation.start());
+    return () => animations.forEach((animation) => animation.stop());
+  }, [dots]);
+
+  return (
+    <View style={styles.processingDots}>
+      {dots.map((dot, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.processingDot,
+            {
+              opacity: dot,
+              transform: [
+                {
+                  translateY: dot.interpolate({
+                    inputRange: [0.3, 1],
+                    outputRange: [2, -3],
+                  }),
+                },
+                {
+                  scale: dot.interpolate({
+                    inputRange: [0.3, 1],
+                    outputRange: [0.86, 1.14],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
 }
 
 type Plan = {
@@ -242,6 +399,26 @@ function looksLikePendingPayment(payload: unknown): boolean {
   return false;
 }
 
+function looksLikeCancelledPayment(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  const root = payload as Record<string, unknown>;
+  const objs: Record<string, unknown>[] = [root];
+  if (root.data && typeof root.data === 'object' && !Array.isArray(root.data)) objs.push(root.data as Record<string, unknown>);
+  if (root.payment && typeof root.payment === 'object' && !Array.isArray(root.payment)) objs.push(root.payment as Record<string, unknown>);
+  if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
+  for (const obj of objs) {
+    const status = String(obj.status ?? obj.state ?? obj.paymentStatus ?? '').toLowerCase().trim();
+    const message = String(obj.message ?? obj.msg ?? obj.error ?? obj.reason ?? '').toLowerCase();
+    if (['cancelled', 'canceled', 'cancelled_by_user', 'canceled_by_user', 'user_cancelled', 'user_canceled', 'aborted'].includes(status)) {
+      return true;
+    }
+    if (message.includes('cancelled') || message.includes('canceled') || message.includes('cancel')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function looksLikeFailedPayment(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
   const root = payload as Record<string, unknown>;
@@ -251,11 +428,23 @@ function looksLikeFailedPayment(payload: unknown): boolean {
   if (root.result && typeof root.result === 'object' && !Array.isArray(root.result)) objs.push(root.result as Record<string, unknown>);
   for (const obj of objs) {
     const status = String(obj.status ?? obj.state ?? obj.paymentStatus ?? '').toLowerCase().trim();
-    if (['failed', 'cancelled', 'canceled', 'rejected', 'expired', 'declined', 'unsuccessful'].includes(status)) {
+    if (['failed', 'rejected', 'expired', 'declined', 'unsuccessful', 'error'].includes(status)) {
       return true;
     }
+    const message = String(obj.message ?? obj.msg ?? obj.error ?? obj.reason ?? '').toLowerCase();
+    if (message.includes('failed') || message.includes('declined') || message.includes('rejected') || message.includes('expired')) return true;
   }
   return false;
+}
+
+type PaymentStatusResolution = 'success' | 'pending' | 'cancelled' | 'failed' | 'unknown';
+
+function resolvePaymentStatus(payload: unknown): PaymentStatusResolution {
+  if (looksLikeSuccessfulPayment(payload)) return 'success';
+  if (looksLikeCancelledPayment(payload)) return 'cancelled';
+  if (looksLikeFailedPayment(payload)) return 'failed';
+  if (looksLikePendingPayment(payload)) return 'pending';
+  return 'unknown';
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -264,7 +453,7 @@ async function sleep(ms: number): Promise<void> {
 
 async function waitForPaymentConfirmation(
   probe: Record<string, unknown>,
-  attempts = 8,
+  attempts = PAYMENT_POLL_ATTEMPTS,
 ): Promise<unknown> {
   let last: unknown = null;
   const reqRef = typeof probe.req_ref === 'string'
@@ -276,14 +465,15 @@ async function waitForPaymentConfirmation(
         : '';
   for (let i = 0; i < attempts; i += 1) {
     last = await checkPaymentStatus(reqRef ? { req_ref: reqRef } : probe);
-    if (looksLikeSuccessfulPayment(last)) {
+    const status = resolvePaymentStatus(last);
+    if (status === 'success' || status === 'cancelled' || status === 'failed') {
       return last;
     }
-    if (!looksLikePendingPayment(last) && i > 0) {
+    if (status === 'unknown' && i > 0) {
       return last;
     }
     if (i < attempts - 1) {
-      await sleep(3500);
+      await sleep(PAYMENT_POLL_INTERVAL_MS);
     }
   }
   return last;
@@ -369,7 +559,7 @@ function PlanCard({
         <View style={styles.planFeatures}>
           {featureTexts.map((text) => (
             <View key={text} style={styles.featureRow}>
-              <Ionicons name="checkmark-circle" size={14} color="#D5E4FF" />
+              <Ionicons name="checkmark-circle" size={14} color="#EFF6FF" />
               <Text style={styles.featureText}>{text}</Text>
             </View>
           ))}
@@ -455,7 +645,7 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
 
           {hasSubscription ? (
             <View style={styles.renewBanner}>
-              <Ionicons name="information-circle-outline" size={20} color="#1F2B54" />
+              <Ionicons name="information-circle-outline" size={20} color="#1E3A8A" />
               <Text style={styles.renewBannerText}>{t('payment.activePlanRenewHint')}</Text>
             </View>
           ) : null}
@@ -531,6 +721,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [checkingPending, setCheckingPending] = useState(false);
+  const [statusModal, setStatusModal] = useState<PaymentStatusModalState | null>(null);
   const autoResumeKeyRef = useRef<string | null>(null);
   const recentRecoveryKeyRef = useRef<string | null>(null);
 
@@ -616,6 +807,101 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       : method === 'airtel'
         ? t('payment.methodAirtel')
         : t('payment.methodCard');
+  const showProcessingModal = () => {
+    setStatusModal({
+      kind: 'processing',
+      title: t('payment.status.processingTitle'),
+      dismissible: false,
+    });
+  };
+  const showPendingModal = (message = t('payment.pendingNotice'), record?: PendingPaymentRecord | null) => {
+    setStatusModal({
+      kind: 'pending',
+      title: t('payment.status.pendingTitle'),
+      message,
+      actionLabel: t('payment.resumePending'),
+      onAction: () => {
+        setStatusModal(null);
+        const resumable = record ?? pendingPayment;
+        if (resumable) {
+          void resumePendingPayment(resumable);
+        }
+      },
+    });
+  };
+  const showFailedModal = (message?: string) => {
+    setStatusModal({
+      kind: 'failed',
+      title: t('payment.status.failedTitle'),
+      message: message ?? t('payment.status.failedBody'),
+      actionLabel: t('payment.status.failedAction'),
+      onAction: () => setStatusModal(null),
+    });
+  };
+  const showCancelledModal = (message?: string) => {
+    setStatusModal({
+      kind: 'cancelled',
+      title: t('payment.status.cancelledTitle'),
+      message: message ?? t('payment.status.cancelledBody'),
+      actionLabel: t('payment.status.failedAction'),
+      onAction: () => setStatusModal(null),
+    });
+  };
+  const showTimeoutModal = (record?: PendingPaymentRecord | null) => {
+    setStatusModal({
+      kind: 'timeout',
+      title: t('payment.status.timeoutTitle'),
+      message: t('payment.status.timeoutBody'),
+      actionLabel: t('payment.status.timeoutAction'),
+      onAction: () => {
+        setStatusModal(null);
+        const resumable = record ?? pendingPayment;
+        if (resumable) {
+          void resumePendingPayment(resumable);
+        }
+      },
+    });
+  };
+  const showSuccessModal = () => {
+    setStatusModal({
+      kind: 'success',
+      title: t('payment.status.successTitle'),
+      message: t('payment.status.successBody'),
+      actionLabel: t('payment.startExam'),
+      dismissible: false,
+      onAction: () => {
+        setStatusModal(null);
+        navigation.navigate('ExamInstructionsNative');
+      },
+    });
+  };
+  const handleTerminalPaymentStatus = async (
+    payload: unknown,
+    fallbackReceipt: ReturnType<typeof extractPaymentReceipt>,
+    record?: PendingPaymentRecord | null,
+  ): Promise<boolean> => {
+    const status = resolvePaymentStatus(payload);
+    if (status === 'success') {
+      const receipt = extractPaymentReceipt(payload, paymentLanguage);
+      await finalizeSuccessfulPayment(receipt.orderId ? receipt : fallbackReceipt);
+      return true;
+    }
+    if (status === 'cancelled') {
+      await clearPendingState();
+      showCancelledModal(extractPaymentMessage(payload) ?? t('payment.status.cancelledBody'));
+      return true;
+    }
+    if (status === 'failed') {
+      await clearPendingState();
+      showFailedModal(extractPaymentMessage(payload) ?? t('payment.status.failedBody'));
+      return true;
+    }
+    if (status === 'pending') {
+      showTimeoutModal(record);
+      return true;
+    }
+    return false;
+  };
   const clearPendingState = async () => {
     setPendingPayment(null);
     setCheckoutUrl(null);
@@ -638,12 +924,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     await setCanChangeLanguage(subscriptionType === 'monthly');
     await setSubscriptionLanguage(paymentLanguage);
     await clearPendingState();
-    navigation.navigate('PaymentConfirmationNative', {
-      planTitle,
-      amountRwf,
-      orderId: receipt.orderId,
-      paidAtLabel: receipt.paidAtLabel,
-    });
+    showSuccessModal();
   };
 
   const persistPending = async (
@@ -651,7 +932,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     receipt: ReturnType<typeof extractPaymentReceipt>,
     nextCheckoutUrl?: string | null,
     phone?: string | null,
-  ) => {
+  ): Promise<PendingPaymentRecord> => {
     const record: PendingPaymentRecord = {
       reqRef,
       method,
@@ -668,14 +949,16 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     await savePendingPayment(record);
     setPendingPayment(record);
     setCheckoutUrl(nextCheckoutUrl ?? null);
+    return record;
   };
 
   const resumePendingPayment = async (record: PendingPaymentRecord, receiptOverride?: ReturnType<typeof extractPaymentReceipt>) => {
     if (!accessToken) {
-      Alert.alert(t('payment.title'), t('payment.needSignIn'));
+      showFailedModal(t('payment.needSignIn'));
       return;
     }
     setCheckingPending(true);
+    showProcessingModal();
     try {
       const statusPayload = await waitForPaymentConfirmation({
         reqRef: record.reqRef,
@@ -685,27 +968,20 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         lang: record.language,
       }, 10);
 
-      if (looksLikeSuccessfulPayment(statusPayload)) {
-        const receipt = receiptOverride ?? extractPaymentReceipt(statusPayload, record.language);
-        await finalizeSuccessfulPayment(receipt);
-        return;
-      }
-
-      if (looksLikeFailedPayment(statusPayload)) {
-        await clearPendingState();
-        Alert.alert(t('payment.failed'), extractPaymentMessage(statusPayload) ?? t('payment.failed'));
+      if (await handleTerminalPaymentStatus(statusPayload, receiptOverride ?? extractPaymentReceipt(statusPayload, record.language), record)) {
         return;
       }
 
       if (record.checkoutUrl) {
+        setStatusModal(null);
         setCheckoutUrl(record.checkoutUrl);
         setCheckoutVisible(true);
         return;
       }
 
-      Alert.alert(t('payment.title'), t('payment.pendingNotice'));
+      showTimeoutModal(record);
     } catch (e) {
-      Alert.alert(t('payment.failed'), getMessageFromUnknownError(e));
+      showFailedModal(getMessageFromUnknownError(e));
     } finally {
       setCheckingPending(false);
     }
@@ -735,6 +1011,12 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         return true;
       }
 
+      const status = resolvePaymentStatus(statusPayload);
+      if (status === 'cancelled' || status === 'failed') {
+        await handleTerminalPaymentStatus(statusPayload, receipt, null);
+        return true;
+      }
+
       if ((looksLikePendingPayment(statusPayload) || nextCheckoutUrl) && recoveredReqRef) {
         const record: PendingPaymentRecord = {
           reqRef: recoveredReqRef,
@@ -753,10 +1035,11 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         setPendingPayment(record);
         setCheckoutUrl(nextCheckoutUrl ?? null);
         if (nextCheckoutUrl) {
+          setStatusModal(null);
           setCheckoutVisible(true);
           return true;
         }
-        Alert.alert(t('payment.title'), t('payment.pendingNotice'));
+        showPendingModal(t('payment.pendingNotice'), record);
         return true;
       }
     } catch {
@@ -784,6 +1067,11 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
       if (looksLikeSuccessfulPayment(recentPayload)) {
         await finalizeSuccessfulPayment(receipt);
+        return;
+      }
+
+      if (resolvePaymentStatus(recentPayload) === 'cancelled' || resolvePaymentStatus(recentPayload) === 'failed') {
+        await clearPendingState();
         return;
       }
 
@@ -828,11 +1116,11 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
   const submitPayment = async () => {
     if (!accessToken) {
-      Alert.alert(t('payment.title'), t('payment.needSignIn'));
+      showFailedModal(t('payment.needSignIn'));
       return;
     }
     if (amountRwf <= 0) {
-      Alert.alert(t('payment.title'), t('payment.loadingPlans'));
+      showPendingModal(t('payment.loadingPlans'));
       return;
     }
     if (pendingPayment) {
@@ -852,6 +1140,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       }
       setFieldErrors({});
       setPayBusy(true);
+      showProcessingModal();
       try {
         const body = {
           amount: amountRwf,
@@ -872,8 +1161,9 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           ? { reqRef, req_ref: reqRef, requestRef: reqRef, language: paymentLanguage, lang: paymentLanguage }
           : buildPaymentProbe(body, reference);
 
+        let createdPending: PendingPaymentRecord | null = null;
         if (reqRef) {
-          await persistPending(reqRef, receipt, null, local);
+          createdPending = await persistPending(reqRef, receipt, null, local);
         }
 
         const confirmedPayload = looksLikeSuccessfulPayment(paymentPayload)
@@ -882,20 +1172,10 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             ? await waitForPaymentConfirmation(probe)
             : paymentPayload;
 
-        const confirmed = looksLikeSuccessfulPayment(confirmedPayload);
-        if (!confirmed) {
-          const pending = looksLikePendingPayment(confirmedPayload);
-          if (pending) {
-            Alert.alert(t('payment.title'), t('payment.pendingNotice'));
-            return;
-          }
-          if (looksLikeFailedPayment(confirmedPayload)) {
-            await clearPendingState();
-          }
-          throw new Error(extractPaymentMessage(confirmedPayload) ?? getMessageFromUnknownError(confirmedPayload));
+        if (await handleTerminalPaymentStatus(confirmedPayload, receipt, createdPending)) {
+          return;
         }
-        const finalReceipt = extractPaymentReceipt(confirmedPayload, paymentLanguage);
-        await finalizeSuccessfulPayment(finalReceipt.orderId ? finalReceipt : receipt);
+        throw new Error(extractPaymentMessage(confirmedPayload) ?? getMessageFromUnknownError(confirmedPayload));
       } catch (e) {
         if (e instanceof ApiError && (e.status === 0 || e.status === 408)) {
           const recovered = await recoverAmbiguousPayment(
@@ -916,7 +1196,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           if (recovered) return;
         }
         const msg = getMessageFromUnknownError(e);
-        Alert.alert(t('payment.failed'), msg);
+        showFailedModal(msg);
       } finally {
         setPayBusy(false);
       }
@@ -937,12 +1217,13 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       return;
     }
     if (!fallbackCardPhone) {
-      Alert.alert(t('payment.failed'), t('payment.phoneInvalid'));
+      showFailedModal(t('payment.phoneInvalid'));
       return;
     }
     setFieldErrors({});
 
     setPayBusy(true);
+    showProcessingModal();
     try {
       const paymentPayload = await initiateCardPayment(
         {
@@ -969,11 +1250,13 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
       }
 
       if (nextCheckoutUrl) {
+        setStatusModal(null);
         setCheckoutVisible(true);
       }
 
-      if (looksLikeSuccessfulPayment(paymentPayload)) {
-        await finalizeSuccessfulPayment(receipt);
+      const immediateStatus = resolvePaymentStatus(paymentPayload);
+      if (immediateStatus === 'success' || immediateStatus === 'cancelled' || immediateStatus === 'failed') {
+        await handleTerminalPaymentStatus(paymentPayload, receipt, null);
         return;
       }
 
@@ -995,13 +1278,12 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             },
             receipt,
           );
+        } else if (!nextCheckoutUrl && !reqRef) {
+          showTimeoutModal(null);
         }
         return;
       }
 
-      if (looksLikeFailedPayment(paymentPayload)) {
-        await clearPendingState();
-      }
       throw new Error(reference ? `${t('payment.failed')} (${reference})` : t('payment.failed'));
     } catch (e) {
       if (e instanceof ApiError && (e.status === 0 || e.status === 408)) {
@@ -1022,7 +1304,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         );
         if (recovered) return;
       }
-      Alert.alert(t('payment.failed'), getMessageFromUnknownError(e));
+      showFailedModal(getMessageFromUnknownError(e));
     } finally {
       setPayBusy(false);
     }
@@ -1036,7 +1318,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           <View style={styles.subscriptionPlanCard}>
             <View style={styles.planSummaryHeader}>
               <View style={styles.planIconSquare}>
-                <MaterialCommunityIcons name="calendar-check-outline" size={20} color="#F5F8FE" />
+                <MaterialCommunityIcons name="calendar-check-outline" size={20} color="#FFFFFF" />
               </View>
               <View style={styles.planSummaryCopy}>
                 <Text style={styles.planSummaryLabel}>{t('profile.subscriptionPlan')}</Text>
@@ -1052,35 +1334,14 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             </View>
           </View>
 
-          {pendingPayment ? (
-            <View style={styles.pendingCard}>
-              <View style={styles.pendingHeaderRow}>
-                <Ionicons name="time-outline" size={18} color="#1D4ED8" />
-                <Text style={styles.pendingTitle}>{t('payment.pendingTitle')}</Text>
-              </View>
-              <Text style={styles.pendingBody}>{t('payment.pendingBody')}</Text>
-              <TouchableOpacity
-                style={styles.pendingActionBtn}
-                disabled={checkingPending}
-                onPress={() => void resumePendingPayment(pendingPayment)}
-              >
-                {checkingPending ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.pendingActionText}>{t('payment.resumePending')}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
           <View style={styles.paymentSectionCard}>
             <Text style={styles.sectionTitle}>{t('payment.selectMethod')}</Text>
             <Text style={styles.sectionSupport}>{t('payment.selectMethodHint')}</Text>
             <View style={styles.methodsRow}>
               {[
-                { key: 'momo' as const, label: t('payment.methodMomo'), brand: 'MTN', icon: 'phone-portrait-outline' as const, iconBg: '#FFCC00', iconColor: '#1F2B54' },
+                { key: 'momo' as const, label: t('payment.methodMomo'), brand: 'MTN', icon: 'phone-portrait-outline' as const, iconBg: '#FFCC00', iconColor: '#1E3A8A' },
                 { key: 'airtel' as const, label: t('payment.methodAirtel'), brand: 'A', icon: 'radio-outline' as const, iconBg: '#E3242B', iconColor: '#FFFFFF' },
-                { key: 'card' as const, label: t('payment.methodCard'), brand: 'CARD', icon: 'card-outline' as const, iconBg: '#E4E5E8', iconColor: '#4F5564' },
+                { key: 'card' as const, label: t('payment.methodCard'), brand: 'CARD', icon: 'card-outline' as const, iconBg: '#F3F4F6', iconColor: '#374151' },
               ].map((m) => {
                 const active = method === m.key;
                 return (
@@ -1120,7 +1381,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                 <TextInput
                   style={styles.inputField}
                   placeholder="1234 5678 9012 3456"
-                  placeholderTextColor="#A6ACB9"
+                  placeholderTextColor="#6B7280"
                   keyboardType="number-pad"
                   value={cardNumber}
                   onChangeText={(v) => {
@@ -1134,7 +1395,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                 <TextInput
                   style={styles.inputField}
                   placeholder={t('payment.placeholderName')}
-                  placeholderTextColor="#A6ACB9"
+                  placeholderTextColor="#6B7280"
                   value={cardHolder}
                   onChangeText={(v) => {
                     setCardHolder(v);
@@ -1149,7 +1410,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                     <TextInput
                       style={styles.inputField}
                       placeholder="MM/YY"
-                      placeholderTextColor="#A6ACB9"
+                      placeholderTextColor="#6B7280"
                       value={cardExpiry}
                       onChangeText={(v) => {
                         setCardExpiry(v);
@@ -1163,7 +1424,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                     <TextInput
                       style={styles.inputField}
                       placeholder="123"
-                      placeholderTextColor="#A6ACB9"
+                      placeholderTextColor="#6B7280"
                       keyboardType="number-pad"
                       secureTextEntry
                       value={cardCvv}
@@ -1183,7 +1444,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                 <TextInput
                   style={styles.inputField}
                   placeholder={t('payment.phonePh')}
-                  placeholderTextColor="#A6ACB9"
+                  placeholderTextColor="#6B7280"
                   keyboardType="phone-pad"
                   value={phoneInput}
                   onChangeText={(v) => {
@@ -1213,10 +1474,10 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
           <TouchableOpacity style={styles.payNowBtn} onPress={() => void submitPayment()} disabled={payBusy || checkingPending}>
             {payBusy || checkingPending ? (
-              <ActivityIndicator color="#F5F8FE" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <MaterialCommunityIcons name="lock-outline" size={16} color="#F5F8FE" />
+                <MaterialCommunityIcons name="lock-outline" size={16} color="#FFFFFF" />
                 <Text style={styles.payNowText}>
                   {pendingPayment
                     ? t('payment.resumePending')
@@ -1237,7 +1498,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             <View style={styles.checkoutHeader}>
               <Text style={styles.checkoutTitle}>{t('payment.checkoutTitle')}</Text>
               <TouchableOpacity onPress={() => setCheckoutVisible(false)} style={styles.checkoutCloseBtn}>
-                <Ionicons name="close" size={22} color="#1E293B" />
+                <Ionicons name="close" size={22} color="#111827" />
               </TouchableOpacity>
             </View>
             {checkoutUrl ? (
@@ -1258,72 +1519,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
           </View>
         </View>
       </Modal>
-    </ScreenColumn>
-  );
-}
-
-export function PaymentConfirmationNativeScreen({ navigation, route }: ConfirmationProps) {
-  const { t } = useI18n();
-  const { tabScrollBottomPad } = useResponsiveLayout();
-  const { contentLanguage } = useAppFlow();
-  const planTitle = route.params?.planTitle ?? t('payment.confirmPlanFallback');
-  const amountRwf = route.params?.amountRwf ?? 0;
-  const locale = localeTagForContentLanguage(contentLanguage);
-  const fallbackReceipt = useMemo(() => extractPaymentReceipt({}, contentLanguage), [contentLanguage]);
-  const orderIdDisplay = route.params?.orderId ?? fallbackReceipt.orderId;
-  const paidAtDisplay = route.params?.paidAtLabel ?? fallbackReceipt.paidAtLabel;
-  const amountFormatted = amountRwf.toLocaleString(locale, { maximumFractionDigits: 0 });
-
-  return (
-    <ScreenColumn>
-      <Header title={t('payment.title')} onBack={() => navigation.goBack()} navigation={navigation} />
-      <View style={styles.body}>
-        <ScrollView contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad }]} showsVerticalScrollIndicator={false}>
-          <View style={styles.successSquare}>
-            <Ionicons name="checkmark-circle" size={28} color="#F5F8FE" />
-          </View>
-
-          <Text style={styles.successTitle}>{t('payment.confirmTitle')}</Text>
-          <Text style={styles.successSubtitle}>{t('payment.confirmSubtitle', { plan: planTitle })}</Text>
-
-          <View style={styles.confirmationCard}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.confirmHeader}>{planTitle.toUpperCase()}</Text>
-              <View style={styles.activePill}>
-                <Text style={styles.activePillText}>{t('payment.active').toUpperCase()}</Text>
-              </View>
-            </View>
-
-            <View style={styles.confirmRow}>
-              <Text style={styles.confirmKey}>{t('payment.orderId')}</Text>
-              <Text style={styles.confirmValue}>{orderIdDisplay}</Text>
-            </View>
-            <View style={styles.confirmRow}>
-              <Text style={styles.confirmKey}>{t('payment.amount')}</Text>
-              <Text style={styles.confirmValue}>{amountFormatted} RWF</Text>
-            </View>
-            <View style={styles.confirmRow}>
-              <Text style={styles.confirmKey}>{t('payment.date')}</Text>
-              <Text style={styles.confirmValue}>{paidAtDisplay}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.payNowBtn} onPress={() => navigation.navigate('HomeNative')}>
-            <Text style={styles.payNowText}>{t('payment.goHome')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.startExamOutline} onPress={() => navigation.navigate('ExamInstructionsNative')}>
-            <Text style={styles.startExamOutlineText}>{t('payment.startExam')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.startExamOutline} onPress={() => navigation.navigate('SubscriptionNative')}>
-            <Text style={styles.startExamOutlineText}>{t('payment.managePlans')}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.receiptNote}>{t('payment.receiptNote')}</Text>
-        </ScrollView>
-      </View>
-      <BottomTabs navigation={navigation} />
+      <PaymentStatusModal state={statusModal} onDismiss={() => setStatusModal(null)} />
     </ScreenColumn>
   );
 }
@@ -1334,11 +1530,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   scrollPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   subHeading: {
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 20,
     lineHeight: 28,
     color: colors.ink,
@@ -1346,7 +1541,7 @@ const styles = StyleSheet.create({
   subLead: {
     marginTop: 10,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Regular',
+    fontFamily: 'Poppins-Regular',
     fontSize: 12,
     lineHeight: 18,
     color: colors.inkMuted,
@@ -1362,7 +1557,7 @@ const styles = StyleSheet.create({
   renewBannerText: {
     flex: 1,
     marginLeft: 10,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 18,
     color: colors.brandStrong,
@@ -1397,10 +1592,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     marginBottom: 4,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 10,
     lineHeight: 12,
-    color: '#F6F8FF',
+    color: '#FFFFFF',
   },
   planTitle: { ...typography.title, fontSize: 20, color: colors.ink },
   planTitleActive: { color: '#FFFFFF' },
@@ -1408,11 +1603,11 @@ const styles = StyleSheet.create({
   planPriceRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
   planPrice: { ...typography.display, fontSize: 32, color: colors.ink },
   planPriceActive: { color: '#FFFFFF' },
-  planCurrency: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#64748B' },
-  planCurrencyActive: { color: '#BFDBFE' },
+  planCurrency: { fontFamily: 'Poppins-Bold', fontSize: 14, color: '#6B7280' },
+  planCurrencyActive: { color: '#EFF6FF' },
   planFeatures: { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 16 },
   featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  featureText: { marginLeft: 10, fontFamily: 'PlusJakartaSans-Medium', fontSize: 13, color: '#E0E7FF' },
+  featureText: { marginLeft: 10, fontFamily: 'Poppins-Medium', fontSize: 13, color: '#EFF6FF' },
   startNowBtn: {
     marginTop: 20,
     height: 48,
@@ -1424,7 +1619,7 @@ const styles = StyleSheet.create({
   startNowBtnActive: {
     backgroundColor: colors.surface,
   },
-  startNowText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: colors.brand },
+  startNowText: { fontFamily: 'Poppins-ExtraBold', fontSize: 15, color: colors.brand },
   startNowTextActive: { color: colors.brand },
   customPlanCard: {
     marginTop: 14,
@@ -1434,7 +1629,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   customPlanTitle: { ...typography.title, color: colors.ink },
-  customPlanText: { marginTop: 4, textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, lineHeight: 17, color: '#5D6678' },
+  customPlanText: { marginTop: 4, textAlign: 'center', fontFamily: 'Poppins-Regular', fontSize: 12, lineHeight: 17, color: '#6B7280' },
   pricingStatusCard: {
     marginTop: 12,
     borderRadius: 10,
@@ -1450,17 +1645,17 @@ const styles = StyleSheet.create({
   pricingStatusText: {
     marginTop: 10,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 17,
-    color: '#41506E',
+    color: '#374151',
   },
   pricingStatusError: {
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 17,
-    color: '#B03030',
+    color: '#F05252',
   },
 
   sectionTitle: { marginTop: 10, marginBottom: 10, ...typography.title, fontSize: 16, color: colors.ink },
@@ -1470,7 +1665,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.inkMuted,
   },
-  changeLink: { ...typography.caption, fontFamily: 'PlusJakartaSans-Bold', color: colors.brand },
+  changeLink: { ...typography.caption, fontFamily: 'Poppins-Bold', color: colors.brand },
   subscriptionPlanCard: {
     marginTop: spacing.md,
     borderRadius: radii.lg,
@@ -1514,43 +1709,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft,
   },
   planIconSquare: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  standardDaily: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, lineHeight: 22, color: colors.ink },
-  amountBlue: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 18, lineHeight: 24, color: colors.brand },
-  pendingCard: {
-    marginTop: 14,
-    borderRadius: 16,
-    backgroundColor: colors.brandSoft,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#C5D7F2',
-  },
-  pendingHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  pendingTitle: {
-    marginLeft: 8,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    color: '#1E3A8A',
-  },
-  pendingBody: {
-    marginTop: 8,
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#1E3A8A',
-  },
-  pendingActionBtn: {
-    marginTop: 12,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingActionText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
+  standardDaily: { fontFamily: 'Poppins-ExtraBold', fontSize: 16, lineHeight: 22, color: colors.ink },
+  amountBlue: { fontFamily: 'Poppins-ExtraBold', fontSize: 18, lineHeight: 24, color: colors.brand },
 
   paymentSectionCard: {
     marginTop: spacing.lg,
@@ -1581,9 +1741,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodBrand: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 11, lineHeight: 14 },
-  methodBrandSingle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 18, lineHeight: 20 },
-  methodLabel: { marginTop: 8, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, lineHeight: 14, color: colors.inkMuted, textAlign: 'center' },
+  methodBrand: { fontFamily: 'Poppins-ExtraBold', fontSize: 11, lineHeight: 14 },
+  methodBrandSingle: { fontFamily: 'Poppins-ExtraBold', fontSize: 18, lineHeight: 20 },
+  methodLabel: { marginTop: 8, fontFamily: 'Poppins-Bold', fontSize: 10, lineHeight: 14, color: colors.inkMuted, textAlign: 'center' },
   checkDot: { position: 'absolute', top: 7, right: 7, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 
   detailsCard: {
@@ -1606,14 +1766,14 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   amountSummaryLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 12,
     lineHeight: 16,
-    color: '#DCE7FA',
+    color: '#EFF6FF',
   },
   amountSummaryMethod: {
     marginTop: 3,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 15,
     lineHeight: 20,
     color: colors.white,
@@ -1622,17 +1782,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amountSummaryValue: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 24,
     lineHeight: 29,
     color: colors.white,
   },
   amountSummaryCurrency: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 12,
-    color: '#DCE7FA',
+    color: '#EFF6FF',
   },
-  inputLabel: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputLabel: { fontFamily: 'Poppins-ExtraBold', fontSize: 12, color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
   inputLabelSpacing: { marginTop: 14 },
   inputField: {
     height: 48,
@@ -1641,7 +1801,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     backgroundColor: colors.surfaceAlt,
     paddingHorizontal: 14,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: colors.ink,
   },
@@ -1651,23 +1811,23 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#E1E2E8',
-    backgroundColor: '#F5F6F8',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
   flag: { fontSize: 12 },
-  countryCode: { marginLeft: 6, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 16, color: '#434956' },
-  phoneDivider: { width: 1, height: 18, backgroundColor: '#DADDE4', marginHorizontal: 8 },
-  phoneInput: { flex: 1, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 16, color: '#434956', paddingVertical: 0 },
-  inputHint: { marginTop: 8, fontFamily: 'PlusJakartaSans-Regular', fontStyle: 'italic', fontSize: 11, lineHeight: 16, color: '#737A89' },
+  countryCode: { marginLeft: 6, fontFamily: 'Poppins-Medium', fontSize: 12, lineHeight: 16, color: '#374151' },
+  phoneDivider: { width: 1, height: 18, backgroundColor: '#E5E7EB', marginHorizontal: 8 },
+  phoneInput: { flex: 1, fontFamily: 'Poppins-Medium', fontSize: 12, lineHeight: 16, color: '#374151', paddingVertical: 0 },
+  inputHint: { marginTop: 8, fontFamily: 'Poppins-Regular', fontStyle: 'italic', fontSize: 11, lineHeight: 16, color: '#6B7280' },
   fieldError: {
     marginTop: 6,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 11,
     lineHeight: 15,
-    color: '#B03030',
+    color: '#F05252',
   },
 
   payNowBtn: {
@@ -1684,8 +1844,103 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  payNowText: { marginLeft: 8, fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, color: '#FFFFFF' },
+  payNowText: { marginLeft: 8, fontFamily: 'Poppins-ExtraBold', fontSize: 16, color: '#FFFFFF' },
   secureInfo: { marginTop: 16, textAlign: 'center', ...typography.caption, color: colors.inkSoft },
+  statusBackdrop: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  statusCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 22,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.floating,
+  },
+  statusIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  statusIconProcessing: {
+    width: 96,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.blueTint,
+    borderColor: colors.line,
+  },
+  statusIconSuccess: {
+    backgroundColor: colors.successSoft,
+    borderColor: colors.successSoft,
+  },
+  statusIconFailed: {
+    backgroundColor: colors.errorSoft,
+    borderColor: colors.errorSoft,
+  },
+  statusIconTimeout: {
+    backgroundColor: colors.blueTint,
+    borderColor: colors.line,
+  },
+  processingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  processingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  statusTitle: {
+    marginTop: spacing.xl,
+    textAlign: 'center',
+    ...typography.heading,
+    fontSize: 20,
+    lineHeight: 28,
+    color: colors.textPrimary,
+  },
+  statusMessage: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  statusAction: {
+    width: '100%',
+    minHeight: 56,
+    marginTop: spacing.xl,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.subtle,
+  },
+  statusActionPrimary: {
+    backgroundColor: colors.primary,
+  },
+  statusActionSuccess: {
+    backgroundColor: colors.success,
+  },
+  statusActionFailed: {
+    backgroundColor: colors.error,
+  },
+  statusActionText: {
+    ...typography.bodyStrong,
+    color: colors.white,
+    fontSize: 16,
+  },
   checkoutBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -1708,7 +1963,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   checkoutTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 16,
     color: colors.ink,
   },
@@ -1718,55 +1973,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
   },
-
-  successSquare: {
-    marginTop: 24,
-    alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  successTitle: { marginTop: 24, textAlign: 'center', ...typography.heading, color: colors.ink },
-  successSubtitle: { marginTop: 8, textAlign: 'center', ...typography.body, color: colors.inkMuted },
-
-  confirmationCard: {
-    marginTop: 24,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.line,
-    ...shadows.card,
-  },
-  confirmHeader: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15, color: '#475569' },
-  activePill: { borderRadius: 12, backgroundColor: colors.green, paddingHorizontal: 12, paddingVertical: 4 },
-  activePillText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 10, color: '#FFFFFF' },
-  confirmRow: { marginTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  confirmKey: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
-  confirmValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#1E293B' },
-
-  startExamOutline: {
-    marginTop: 12,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  startExamOutlineText: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16, color: '#475569' },
-  receiptNote: { marginTop: 20, textAlign: 'center', fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#94A3B8' },
 
   tabs: {
     position: 'absolute',
@@ -1776,7 +1984,7 @@ const styles = StyleSheet.create({
     height: 74,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    backgroundColor: '#EFF0F4',
+    backgroundColor: '#F3F4F6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -1785,6 +1993,6 @@ const styles = StyleSheet.create({
   tab: { alignItems: 'center' },
   tabBubble: { width: 46, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   tabBubbleActive: { backgroundColor: colors.brand },
-  tabText: { marginTop: 2, fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, lineHeight: 14, color: '#8A98B2' },
+  tabText: { marginTop: 2, fontFamily: 'Poppins-Medium', fontSize: 12, lineHeight: 14, color: '#6B7280' },
   tabTextActive: { color: colors.brand },
 });

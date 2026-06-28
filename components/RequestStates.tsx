@@ -25,6 +25,9 @@ export function EmptyState({ title, message }: StateProps) {
   const { t } = useI18n();
   return (
     <View style={styles.state}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+      </View>
       <Text style={styles.title}>{title ?? t('error.emptyTitle')}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
@@ -59,6 +62,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  emptyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.blueTint,
   },
   title: {
     ...typography.sectionTitle,

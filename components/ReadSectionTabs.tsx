@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft,
   },
   countText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 10,
   },
   countTextActive: {

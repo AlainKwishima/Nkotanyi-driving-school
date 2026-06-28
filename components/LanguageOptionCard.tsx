@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 13,
     lineHeight: 18,
     color: colors.inkMuted,

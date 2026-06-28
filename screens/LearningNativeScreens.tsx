@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   extensionText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 10,
   },
   openText: {
@@ -954,7 +954,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft,
   },
   detailViewedText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 10,
   },
   detailViewedTextDone: {
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     marginTop: spacing.sm,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 20,
     lineHeight: 27,
     color: colors.ink,
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
   },
   imageErrorText: {
     marginTop: spacing.sm,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     color: colors.inkMuted,
     textAlign: 'center',
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   meaningLabel: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 10,
     color: colors.brand,
     letterSpacing: 1,
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   description: {
     marginTop: spacing.sm,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 22,
     color: colors.inkMuted,
@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
   },
   errorState: {
     backgroundColor: colors.redSoft,
-    borderColor: '#F1CACA',
+    borderColor: '#FDE8E8',
   },
   emptyIcon: {
     width: 58,
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF0EC',
+    backgroundColor: '#F3F4F6',
   },
   stateTitle: {
     ...typography.title,

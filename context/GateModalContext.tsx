@@ -118,29 +118,39 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
         <TouchableWithoutFeedback onPress={closeGateModal}>
           <Animated.View style={[styles.overlay, { opacity: fade }]}>
             <TouchableWithoutFeedback>
-              <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
-                <View style={[styles.iconWrap, config.isSubscription ? styles.iconWrapSubscription : styles.iconWrapReady]}>
-                  <Ionicons
-                    name={config.isSubscription ? 'shield-checkmark-outline' : 'flag-outline'}
-                    size={34}
-                    color={config.isSubscription ? colors.amber : colors.brand}
-                  />
-                </View>
-                <Text style={styles.eyebrow}>
-                  {config.isSubscription ? t('subscription.title') : t('exam.title')}
-                </Text>
+              {config.isSubscription ? (
+                <Animated.View style={[styles.subscriptionCard, { transform: [{ scale }, { translateY }] }]}>
+                  <View style={styles.subscriptionNotice}>
+                    <View style={styles.warningIcon}>
+                      <Ionicons name="warning-outline" size={18} color={colors.warning} />
+                    </View>
+                    <Text style={styles.subscriptionMessage}>{config.message}</Text>
+                  </View>
+                  <View style={styles.subscriptionActionWrap}>
+                    <TouchableOpacity style={styles.subscriptionButton} onPress={onConfirm} activeOpacity={0.88}>
+                      <Text style={styles.subscriptionButtonText}>{config.confirmLabel}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+              ) : (
+                <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
+                  <View style={[styles.iconWrap, styles.iconWrapReady]}>
+                    <Ionicons name="flag-outline" size={34} color={colors.brand} />
+                  </View>
+                  <Text style={styles.eyebrow}>{t('exam.title')}</Text>
 
-                <Text style={styles.title}>{config.title}</Text>
-                <Text style={styles.message}>{config.message}</Text>
+                  <Text style={styles.title}>{config.title}</Text>
+                  <Text style={styles.message}>{config.message}</Text>
 
-                <TouchableOpacity style={styles.primaryBtn} onPress={onConfirm}>
-                  <Text style={styles.primaryText}>{config.confirmLabel}</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity style={styles.primaryBtn} onPress={onConfirm}>
+                    <Text style={styles.primaryText}>{config.confirmLabel}</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity onPress={closeGateModal}>
-                  <Text style={styles.secondaryText}>{t('gate.notNow')}</Text>
-                </TouchableOpacity>
-              </Animated.View>
+                  <TouchableOpacity onPress={closeGateModal}>
+                    <Text style={styles.secondaryText}>{t('gate.notNow')}</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
             </TouchableWithoutFeedback>
           </Animated.View>
         </TouchableWithoutFeedback>
@@ -160,9 +170,67 @@ export function useGateModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(20,33,58,0.62)',
+    backgroundColor: 'rgba(249,250,251,0.86)',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  subscriptionCard: {
+    width: '100%',
+    maxWidth: 336,
+    overflow: 'hidden',
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    ...shadows.floating,
+  },
+  subscriptionNotice: {
+    minHeight: 68,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warningSoft,
+  },
+  warningIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.warningSoft,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  subscriptionMessage: {
+    flex: 1,
+    marginLeft: spacing.md,
+    fontFamily: 'Poppins-ExtraBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textPrimary,
+  },
+  subscriptionActionWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  subscriptionButton: {
+    minHeight: 40,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    ...shadows.subtle,
+  },
+  subscriptionButtonText: {
+    fontFamily: 'Poppins-ExtraBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.white,
   },
   card: {
     width: '100%',
@@ -183,9 +251,6 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrapSubscription: {
-    backgroundColor: colors.amberSoft,
   },
   iconWrapReady: {
     backgroundColor: colors.brandSoft,
@@ -224,7 +289,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     marginTop: 16,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 15,
     lineHeight: 24,
     color: colors.brand,

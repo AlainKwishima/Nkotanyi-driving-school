@@ -47,7 +47,7 @@ export function LanguageSettingsScreen({ navigation }: Props) {
       <View style={styles.body}>
         {!canChangeLanguage ? (
           <View style={styles.lockNotice}>
-            <Ionicons name="lock-closed-outline" size={16} color="#475569" />
+            <Ionicons name="lock-closed-outline" size={16} color="#374151" />
             <Text style={styles.lockNoticeText}>{t('language.lockedBody')}</Text>
           </View>
         ) : null}
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.amberSoft,
     borderWidth: 1,
-    borderColor: '#F1D7A7',
+    borderColor: '#E5E7EB',
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   lockNoticeText: {
     marginLeft: 8,
     flex: 1,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 18,
     color: colors.inkMuted,

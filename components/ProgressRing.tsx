@@ -67,14 +67,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   value: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 19,
     color: colors.white,
   },
   label: {
     marginTop: -1,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 10,
-    color: '#C9D6EC',
+    color: '#EFF6FF',
   },
 });

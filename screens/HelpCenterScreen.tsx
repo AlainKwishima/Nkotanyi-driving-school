@@ -60,7 +60,7 @@ export function HelpCenterScreen({ navigation }: Props) {
               activeOpacity={0.78}
             >
               <View style={[styles.contactIcon, styles.contactIconAmber]}>
-                <Ionicons name="call-outline" size={21} color="#9A641B" />
+                <Ionicons name="call-outline" size={21} color="#2563EB" />
               </View>
               <View style={styles.contactCopy}>
                 <Text style={styles.contactLabel}>{t('help.phoneNumber')}</Text>
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   faqNumberText: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     color: colors.amber,
   },
   faqText: {

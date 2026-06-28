@@ -204,7 +204,7 @@ export function LoginScreen({ navigation, route }: LoginProps) {
             }
           }}
         />
-        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#4C7DDD" /> : null}
+        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
 
         <Pressable style={styles.forgotLinkWrap} onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.forgotLink}>{t('auth.forgot')}</Text>
@@ -324,7 +324,7 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
             }
           }}
         />
-        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#4C7DDD" /> : null}
+        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
 
         <Pressable style={styles.bottomLinkRowCreate} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.bottomLinkHint}>{t('auth.haveAccount')} </Text>
@@ -444,7 +444,7 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
       >
         <AuthBackButton navigation={navigation} />
         <View style={styles.lockBadge}>
-          <MaterialCommunityIcons name="lock-reset" size={24} color="#F0F6FF" />
+          <MaterialCommunityIcons name="lock-reset" size={24} color="#EFF6FF" />
         </View>
 
         <Text style={styles.resetTitle}>{t('auth.newPasswordTitle')}</Text>
@@ -562,23 +562,23 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     marginTop: 4,
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 12,
     lineHeight: 18,
     color: colors.ink,
     textAlign: 'center',
   },
   taglineText: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 18,
-    color: '#64748B',
+    color: '#6B7280',
     textAlign: 'center',
     letterSpacing: 0.2,
   },
   authTitle: {
     marginTop: 8,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 23,
     lineHeight: 31,
     color: colors.ink,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   },
   authSubtitle: {
     marginTop: 4,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkMuted,
@@ -608,12 +608,12 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
   },
   rememberText: {
     marginLeft: 10,
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkMuted,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   forgotLink: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     lineHeight: 22,
     color: colors.brand,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   separatorText: {
     marginHorizontal: 14,
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkSoft,
@@ -656,13 +656,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomLinkHint: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkMuted,
   },
   bottomLinkAction: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: colors.brand,
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topBarTitle: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     lineHeight: 24,
     color: colors.ink,
@@ -704,15 +704,15 @@ const styles = StyleSheet.create({
   secondaryTitle: {
     marginTop: 14,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 22,
     lineHeight: 32,
-    color: '#1E293B',
+    color: '#111827',
   },
   secondarySubtitle: {
     marginTop: 6,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 13,
     lineHeight: 20,
     color: colors.inkMuted,
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   backSignInText: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     lineHeight: 24,
     color: colors.brand,
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.brandSoft,
     borderWidth: 1,
-    borderColor: '#D7E4F7',
+    borderColor: '#E5E7EB',
   },
   contactActionRow: {
     minHeight: 70,
@@ -781,14 +781,14 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   contactLabel: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 11,
     letterSpacing: 0.5,
     color: colors.inkSoft,
     marginBottom: 4,
   },
   contactValue: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     color: colors.ink,
   },
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   whatsappBtnText: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     color: '#FFFFFF',
   },
@@ -826,17 +826,17 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   helpTitle: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: '#1E293B',
+    color: '#111827',
   },
   helpSubtitle: {
     marginTop: 4,
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 13,
     lineHeight: 18,
-    color: '#64748B',
+    color: '#6B7280',
   },
   lockBadge: {
     alignSelf: 'center',
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   resetTitle: {
     marginTop: 14,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 22,
     lineHeight: 30,
     color: colors.ink,
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
   resetSubtitle: {
     marginTop: 6,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkMuted,
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   requirementsHeading: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 12,
     lineHeight: 18,
     textTransform: 'uppercase',
@@ -884,14 +884,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   reqDone: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 15,
     lineHeight: 22,
     color: colors.green,
     marginBottom: 6,
   },
   reqTodo: {
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 15,
     lineHeight: 22,
     color: colors.inkMuted,
@@ -910,13 +910,13 @@ const styles = StyleSheet.create({
   supportText: {
     marginTop: 12,
     textAlign: 'center',
-    fontFamily: 'PlusJakartaSans-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 22,
     color: colors.inkMuted,
   },
   supportAction: {
     color: colors.brand,
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
   },
 });

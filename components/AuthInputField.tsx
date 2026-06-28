@@ -57,10 +57,10 @@ export function AuthInputField({
           hasError && styles.inputWrapError,
         ]}
       >
-        <Feather name={leftIcon} size={m.scale(18)} color={colors.inkSoft} />
+        <Feather name={leftIcon} size={m.scale(18)} color={colors.textMuted} />
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor={colors.inkSoft}
+          placeholderTextColor={colors.textMuted}
           secureTextEntry={secureTextEntry ? isSecure : false}
           value={value}
           onChangeText={onChangeText}
@@ -79,7 +79,7 @@ export function AuthInputField({
             <Feather
               name={secureTextEntry ? (isSecure ? rightIcon : 'eye-off') : rightIcon}
               size={m.scale(17)}
-              color={colors.inkSoft}
+              color={colors.textMuted}
             />
           </Pressable>
         ) : null}
@@ -94,11 +94,11 @@ export function AuthInputField({
 const styles = StyleSheet.create({
   label: {
     marginBottom: 8,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 12,
     lineHeight: 20,
     letterSpacing: 0.5,
-    color: colors.inkMuted,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
   },
   inputWrap: {
@@ -119,17 +119,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   inputWrapError: {
-    borderColor: colors.red,
+    borderColor: colors.error,
   },
   errorText: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    color: colors.red,
+    fontFamily: 'Poppins-Medium',
+    color: colors.error,
   },
   input: {
     flex: 1,
     marginHorizontal: 10,
     ...typography.bodyStrong,
-    color: colors.ink,
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
 });

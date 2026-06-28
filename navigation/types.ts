@@ -80,16 +80,6 @@ export type RootStackParamList = {
         paymentLanguage?: 'en' | 'rw' | 'fr';
       }
     | undefined;
-  PaymentConfirmationNative:
-    | {
-        planTitle?: string;
-        amountRwf?: number;
-        /** Display reference from API when available; otherwise client-generated */
-        orderId?: string;
-        /** Localized date/time string for receipt */
-        paidAtLabel?: string;
-      }
-    | undefined;
   ProfileNative: undefined;
   ScreensHub: undefined;
   ReferenceImage: { key: ReferenceScreenKey };

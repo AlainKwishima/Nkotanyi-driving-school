@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   cancelButtonText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: colors.inkMuted,
   },
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.red,
   },
   confirmButtonText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: colors.white,
   },

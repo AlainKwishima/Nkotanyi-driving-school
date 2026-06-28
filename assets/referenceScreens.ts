@@ -16,7 +16,6 @@ export type ReferenceScreenKey =
   | 'testPassed'
   | 'profile'
   | 'payment'
-  | 'paymentConfirmation'
   | 'subscription'
   | 'performance'
   | 'performanceReview'
@@ -82,11 +81,6 @@ export const REFERENCE_SCREENS: ReferenceScreenMeta[] = [
   },
   { key: 'profile', title: 'Profile Screen', source: require('./screenRefs/profile screen.jpg') },
   { key: 'payment', title: 'Payment Screen', source: require('./screenRefs/Payment screen.png') },
-  {
-    key: 'paymentConfirmation',
-    title: 'Payment Confirmation Screen',
-    source: require('./screenRefs/Payment confirmation screen.png'),
-  },
   {
     key: 'subscription',
     title: 'Subscription Screen',

@@ -33,23 +33,52 @@ for (const sourceDir of sourceDirs) {
 }
 
 const approved = new Map([
-  ['#315FAE', 'Primary blue'],
-  ['#214986', 'Dark blue'],
-  ['#EAF1FC', 'Soft blue'],
-  ['#F6F7F9', 'Canvas'],
+  ['#2563EB', 'Primary blue'],
+  ['#2D5FBF', 'Secondary / deep blue'],
+  ['#1E3A8A', 'Dark emphasis'],
+  ['#F9FAFB', 'Background'],
   ['#FFFFFF', 'Surface / white'],
-  ['#F1F3F6', 'Alternative surface'],
-  ['#172238', 'Primary text'],
-  ['#526078', 'Muted text'],
-  ['#7A879A', 'Soft text'],
-  ['#DDE2EA', 'Border'],
-  ['#247A55', 'Success'],
-  ['#E8F3ED', 'Success surface'],
-  ['#B54747', 'Error'],
-  ['#F8EAEA', 'Error surface'],
+  ['#F3F4F6', 'Surface alt'],
+  ['#EFF6FF', 'Light blue tint / info soft'],
+  ['#111827', 'Text primary'],
+  ['#374151', 'Text secondary'],
+  ['#6B7280', 'Text muted'],
+  ['#E5E7EB', 'Border'],
+  ['#10B981', 'Success'],
+  ['#DCFCE7', 'Success surface'],
+  ['#F59E0B', 'Warning'],
+  ['#FFFBEB', 'Warning surface'],
+  ['#F05252', 'Error'],
+  ['#FDE8E8', 'Error surface'],
+  ['#1C64F2', 'Info / link tint'],
   ['#000000', 'Black media surface'],
+  ['#000', 'Black media surface shorthand'],
   ['#FFCC00', 'Approved MTN provider mark'],
   ['#E3242B', 'Approved Airtel provider mark'],
+  ['RGBA(0,0,0,0.05)', 'Subtle technical border/shadow transparency'],
+  ['RGBA(107, 114, 128, 0.22)', 'PDF watermark transparency'],
+  ['RGBA(15, 23, 42, 0.08)', 'PDF rendering shadow transparency'],
+  ['RGBA(15, 23, 42, 0.45)', 'Modal/media overlay transparency'],
+  ['RGBA(15, 23, 42, 0.62)', 'Modal overlay transparency'],
+  ['RGBA(15, 23, 42, 0.65)', 'Modal overlay transparency'],
+  ['RGBA(17,24,39,0.12)', 'Theme overlay soft token'],
+  ['RGBA(17,24,39,0.48)', 'Theme overlay token'],
+  ['RGBA(20,33,58,0.22)', 'Modal overlay transparency'],
+  ['RGBA(20,33,58,0.42)', 'Media overlay transparency'],
+  ['RGBA(20,33,58,0.62)', 'Gate modal overlay transparency'],
+  ['RGBA(221,226,234,0.92)', 'Exam modal border transparency'],
+  ['RGBA(229,231,235,0.78)', 'Floating nav border transparency'],
+  ['RGBA(23, 34, 56, 0.46)', 'Road-sign modal overlay transparency'],
+  ['RGBA(249,250,251,0.86)', 'Floating nav frosted shelf transparency'],
+  ['RGBA(255,255,255,0.12)', 'Header/card surface transparency'],
+  ['RGBA(255,255,255,0.13)', 'Header/card surface transparency'],
+  ['RGBA(255,255,255,0.14)', 'Header/card surface transparency'],
+  ['RGBA(255,255,255,0.16)', 'Header/card surface transparency'],
+  ['RGBA(255,255,255,0.22)', 'Header/card surface transparency'],
+  ['RGBA(255,255,255,0.25)', 'Media card border transparency'],
+  ['RGBA(255,255,255,0.78)', 'Header eyebrow text transparency'],
+  ['RGBA(255,255,255,0.98)', 'Floating nav surface transparency'],
+  ['RGBA(74, 120, 208, 0.18)', 'PDF spinner transparency'],
 ]);
 
 function recommendation(color) {
@@ -77,11 +106,12 @@ The pre-refinement scan contained **141 unique color values across 305 occurrenc
 
 ## Approved Palette
 
-- Primary blue: \`#315FAE\`
-- Dark blue: \`#214986\`
-- Soft blue: \`#EAF1FC\`
+- Primary blue: \`#2563EB\`
+- Secondary / deep blue: \`#2D5FBF\`
+- Dark emphasis: \`#1E3A8A\`
+- Light blue tint: \`#EFF6FF\`
 - Neutral canvas, surfaces, text, and borders from \`constants/theme.ts\`
-- Green and red only for meaningful success and error states
+- Green, amber, and red only for meaningful success, warning, and error states
 - \`#FFCC00\` and \`#E3242B\` only for MTN and Airtel provider identifiers
 
 ## Current Inventory

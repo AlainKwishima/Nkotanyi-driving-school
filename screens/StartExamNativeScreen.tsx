@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
+import { hasLanguageAccess } from '../utils/subscriptionAccess';
 import { colors } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StartExamNative'>;
@@ -13,10 +14,18 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
   const openedRef = useRef(false);
   const {
     hasSubscription,
-    hasUsedFreeTrial,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
     isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
+  const languageAccessGranted = hasLanguageAccess({
+    hasSubscription,
+    canChangeLanguage,
+    subscriptionLanguage,
+    contentLanguage,
+  });
 
   useEffect(() => {
     if (openedRef.current) return;
@@ -25,8 +34,18 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
     const gateFor = route.params?.gateFor ?? 'exam';
     const requiresSubscription =
       gateFor === 'exam'
-        ? !hasSubscription && hasUsedFreeTrial
-        : false;
+        ? !hasSubscription || !languageAccessGranted
+        : !languageAccessGranted;
+
+    if (!requiresSubscription && gateFor === 'read') {
+      navigation.replace('ReadingNative');
+      return;
+    }
+
+    if (!requiresSubscription && gateFor === 'watch') {
+      navigation.replace('VideoCourseList');
+      return;
+    }
 
     const kind =
       gateFor === 'read'
@@ -58,7 +77,7 @@ export function StartExamNativeScreen({ navigation, route }: Props) {
         () => navigation.goBack(),
       );
     }
-  }, [hasSubscription, hasUsedFreeTrial, isSigningOut, navigation, openGateModal, route.params?.gateFor]);
+  }, [hasSubscription, isSigningOut, languageAccessGranted, navigation, openGateModal, route.params?.gateFor]);
 
   return <View style={styles.blank} />;
 }

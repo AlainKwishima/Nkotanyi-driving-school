@@ -15,7 +15,7 @@ export function PdfDocumentIcon({ size = 64 }: PdfDocumentIconProps) {
       <Svg width={documentWidth} height={documentHeight} viewBox="0 0 42 52" accessibilityRole="image">
         <Path
           d="M7 0h20l15 15v32a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V5a5 5 0 0 1 5-5Z"
-          fill="#E5252A"
+          fill="#F05252"
         />
         <Path d="M27 1v14h14" fill="#FFFFFF" opacity={0.9} />
         <Path
@@ -35,6 +35,6 @@ const styles = StyleSheet.create({
   root: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FDE9EA',
+    backgroundColor: '#FDE8E8',
   },
 });

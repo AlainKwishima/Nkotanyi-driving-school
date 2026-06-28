@@ -305,14 +305,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ringValue: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 56,
     color: colors.ink,
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
   ringPercent: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 24,
     color: colors.inkMuted,
     marginLeft: 2,
@@ -350,13 +350,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 20,
     color: colors.ink,
   },
   statLabel: {
     marginTop: 4,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 10,
     color: colors.inkSoft,
     letterSpacing: 0.5,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   primaryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
     color: colors.white,
   },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
     color: colors.inkMuted,
   },
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tertiaryText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: colors.brand,
   },

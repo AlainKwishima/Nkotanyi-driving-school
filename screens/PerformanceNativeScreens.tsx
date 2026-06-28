@@ -298,7 +298,7 @@ function HistoryBackground({
           {rows.length === 0 && !loading ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <Ionicons name="document-text-outline" size={32} color="#94A3B8" />
+                <Ionicons name="document-text-outline" size={32} color="#6B7280" />
               </View>
               <Text style={styles.emptyTitle}>{t('performance.emptyTitle')}</Text>
               <Text style={styles.emptyText}>{t('performance.empty')}</Text>
@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   performanceBannerTitle: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 18,
     lineHeight: 24,
     letterSpacing: -0.25,
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   performanceBannerBody: {
     ...typography.caption,
     marginTop: 3,
-    color: '#DCE7FA',
+    color: '#EFF6FF',
   },
   performanceBannerStats: {
     marginTop: spacing.md,
@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
   },
   performanceBannerPillText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 12,
     lineHeight: 16,
     color: colors.white,
@@ -817,12 +817,12 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     color: colors.inkMuted,
   },
   statValue: {
     marginTop: spacing.xs,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 26,
     lineHeight: 32,
   },
@@ -844,13 +844,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   scoreBandMin: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 18,
     lineHeight: 24,
     color: colors.danger,
   },
   scoreBandMax: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 18,
     lineHeight: 24,
     color: colors.brand,
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   scoreAverageValue: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     color: colors.danger,
   },
   sectionHeader: {
@@ -897,13 +897,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { ...typography.title, color: colors.ink },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  refreshText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: colors.brand },
+  refreshText: { fontFamily: 'Poppins-Bold', fontSize: 13, color: colors.brand },
   errorBox: { marginBottom: 16, padding: 12, borderRadius: radii.md, backgroundColor: colors.redSoft },
   inlineError: { ...typography.caption, color: colors.red },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 40 },
-  emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#334155', marginBottom: 8 },
-  emptyText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 },
+  emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontFamily: 'Poppins-Bold', fontSize: 18, color: '#374151', marginBottom: 8 },
+  emptyText: { fontFamily: 'Poppins-Medium', fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
   listPad: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   historyTable: {
     borderRadius: radii.lg,
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   tableHeaderText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 10,
     lineHeight: 14,
     color: colors.inkMuted,
@@ -942,13 +942,13 @@ const styles = StyleSheet.create({
   },
   historyIndex: {
     width: 34,
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 13,
     color: colors.brandStrong,
   },
   historyMeta: { flex: 1, paddingRight: spacing.md },
-  historyTitle: { fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 13, lineHeight: 18, color: colors.ink },
-  historyDate: { marginTop: 2, fontFamily: 'PlusJakartaSans-Medium', fontSize: 11, lineHeight: 16, color: colors.inkMuted },
+  historyTitle: { fontFamily: 'Poppins-ExtraBold', fontSize: 13, lineHeight: 18, color: colors.ink },
+  historyDate: { marginTop: 2, fontFamily: 'Poppins-Medium', fontSize: 11, lineHeight: 16, color: colors.inkMuted },
   historyScoreColumn: { width: 86, alignItems: 'flex-end' },
   scoreChip: {
     minWidth: 54,
@@ -959,12 +959,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scoreChipText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 13,
   },
   historyStatus: {
     marginTop: spacing.xs,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 11,
     lineHeight: 15,
   },
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     overflow: 'hidden',
     borderRadius: 3,
-    backgroundColor: '#DCE2DD',
+    backgroundColor: '#E5E7EB',
   },
   reviewExamProgressFill: {
     height: '100%',
@@ -1023,11 +1023,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   reviewQuestionChipCorrect: {
-    borderColor: '#B8D8C9',
+    borderColor: '#10B981',
     backgroundColor: colors.successSoft,
   },
   reviewQuestionChipWrong: {
-    borderColor: '#E9B9B9',
+    borderColor: '#F05252',
     backgroundColor: colors.dangerSoft,
   },
   reviewQuestionChipActive: {
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
   },
   reviewQuestionChipText: {
     ...typography.caption,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
   },
   reviewQuestionChipTextCorrect: {
     color: colors.success,
@@ -1095,34 +1095,34 @@ const styles = StyleSheet.create({
   detailCard: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: 24, borderWidth: 1, borderColor: colors.line, ...shadows.card },
   detailCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   statusTag: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 10 },
-  statusTagPass: { backgroundColor: '#22C55E' },
-  statusTagFail: { backgroundColor: '#EF4444' },
-  statusTagText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, color: '#FFFFFF' },
+  statusTagPass: { backgroundColor: '#10B981' },
+  statusTagFail: { backgroundColor: '#F05252' },
+  statusTagText: { fontFamily: 'Poppins-Bold', fontSize: 10, color: '#FFFFFF' },
   statusTagTextPass: { color: '#FFFFFF' },
   statusTagTextFail: { color: '#FFFFFF' },
-  detailExamTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 24, color: '#0F172A', marginBottom: 6 },
-  detailDate: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B' },
+  detailExamTitle: { fontFamily: 'Poppins-Bold', fontSize: 24, color: '#111827', marginBottom: 6 },
+  detailDate: { fontFamily: 'Poppins-Medium', fontSize: 14, color: '#6B7280' },
   detailStatsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   detailStatItem: { flex: 1, alignItems: 'center' },
-  detailStatVal: { marginTop: 8, fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#1E293B' },
-  detailStatLab: { marginTop: 2, fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, color: '#94A3B8' },
-  detailInfoBox: { marginBottom: 24, padding: 14, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  detailStatVal: { marginTop: 8, fontFamily: 'Poppins-Bold', fontSize: 16, color: '#111827' },
+  detailStatLab: { marginTop: 2, fontFamily: 'Poppins-Bold', fontSize: 10, color: '#6B7280' },
+  detailInfoBox: { marginBottom: 24, padding: 14, borderRadius: 16, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
   detailInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  detailInfoLabel: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 11, color: '#64748B', textTransform: 'uppercase' },
-  detailInfoValue: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 12, color: '#0F172A', flexShrink: 1, textAlign: 'right', marginLeft: 8 },
-  detailDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 24 },
-  breakdownTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 11, color: '#94A3B8', letterSpacing: 1, marginBottom: 16 },
+  detailInfoLabel: { fontFamily: 'Poppins-Bold', fontSize: 11, color: '#6B7280', textTransform: 'uppercase' },
+  detailInfoValue: { fontFamily: 'Poppins-Medium', fontSize: 12, color: '#111827', flexShrink: 1, textAlign: 'right', marginLeft: 8 },
+  detailDivider: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 24 },
+  breakdownTitle: { fontFamily: 'Poppins-Bold', fontSize: 11, color: '#6B7280', letterSpacing: 1, marginBottom: 16 },
   progressRow: { marginBottom: 12 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  progressTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
-  progressValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
-  progressTrack: { marginTop: 8, height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden' },
+  progressTitle: { fontFamily: 'Poppins-Bold', fontSize: 14, color: '#111827' },
+  progressValue: { fontFamily: 'Poppins-Bold', fontSize: 14, color: '#111827' },
+  progressTrack: { marginTop: 8, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: 8, backgroundColor: colors.brand, borderRadius: 4 },
   detailActions: { marginTop: 32, gap: 12 },
   detailPrimaryBtn: { height: 56, borderRadius: 28, backgroundColor: colors.brand, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', ...shadows.card },
-  detailPrimaryBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#FFFFFF' },
-  detailSecondaryBtn: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
-  detailSecondaryBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#475569' },
+  detailPrimaryBtnText: { fontFamily: 'Poppins-Bold', fontSize: 16, color: '#FFFFFF' },
+  detailSecondaryBtn: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
+  detailSecondaryBtnText: { fontFamily: 'Poppins-Bold', fontSize: 16, color: '#374151' },
 
   correctionOverview: {
     marginBottom: spacing.lg,
@@ -1144,14 +1144,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.22)',
   },
   correctionScore: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 28,
     lineHeight: 34,
     color: colors.white,
   },
   correctionScoreLabel: {
     ...typography.caption,
-    color: '#DCE7FA',
+    color: '#EFF6FF',
   },
   correctionStats: {
     flex: 1,
@@ -1171,9 +1171,9 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   reviewStepBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  reviewStepText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: '#64748B' },
+  reviewStepText: { fontFamily: 'Poppins-Bold', fontSize: 13, color: '#6B7280' },
   reviewStepScore: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 13,
     color: colors.brand,
   },
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerSoft,
   },
   currentStatusText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 11,
   },
   currentStatusTextCorrect: {
@@ -1202,10 +1202,10 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   reviewStepDots: { flexDirection: 'row', gap: 4 },
-  stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E2E8F0' },
+  stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E5E7EB' },
   stepDotActive: { width: 16, backgroundColor: colors.brand },
   questionCard: { borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3 },
-  questionText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#0F172A', marginBottom: 18, lineHeight: 26 },
+  questionText: { fontFamily: 'Poppins-Bold', fontSize: 18, color: '#111827', marginBottom: 18, lineHeight: 26 },
   reviewQuestionCard: {
     padding: spacing.xl,
     borderRadius: radii.xl,
@@ -1227,7 +1227,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   reviewQuestionText: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 17,
     lineHeight: 26,
     marginTop: spacing.lg,
@@ -1245,7 +1245,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
   },
-  diagramContainer: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, alignItems: 'center' },
+  diagramContainer: { backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, alignItems: 'center' },
   diagram: { width: '100%', height: 200 },
   optionsSection: { gap: 10, marginBottom: 24 },
   reviewChooseLabel: {
@@ -1294,7 +1294,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   reviewOptionMarkerNeutral: {
-    backgroundColor: '#EDF0EC',
+    backgroundColor: '#F3F4F6',
   },
   reviewOptionMarkerText: {
     ...typography.bodyStrong,
@@ -1329,19 +1329,19 @@ const styles = StyleSheet.create({
     height: 90,
     marginTop: spacing.sm,
   },
-  answerOption: { minHeight: 64, borderRadius: 16, backgroundColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  correctOption: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#22C55E' },
-  wrongOption: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#EF4444' },
-  optionMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  answerOption: { minHeight: 64, borderRadius: 16, backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  correctOption: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#10B981' },
+  wrongOption: { backgroundColor: '#FDE8E8', borderWidth: 1, borderColor: '#F05252' },
+  optionMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   answerStack: { flex: 1, paddingVertical: 12 },
-  answerLabel: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, color: '#64748B', textTransform: 'uppercase', marginBottom: 3 },
-  markerText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: '#475569' },
-  answerLight: { flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
-  answerDark: { flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
-  explanationBox: { backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, marginBottom: spacing.md },
+  answerLabel: { fontFamily: 'Poppins-Bold', fontSize: 10, color: '#6B7280', textTransform: 'uppercase', marginBottom: 3 },
+  markerText: { fontFamily: 'Poppins-Bold', fontSize: 12, color: '#374151' },
+  answerLight: { flex: 1, fontFamily: 'Poppins-Bold', fontSize: 14, color: '#111827' },
+  answerDark: { flex: 1, fontFamily: 'Poppins-Bold', fontSize: 14, color: '#111827' },
+  explanationBox: { backgroundColor: '#EFF6FF', borderRadius: 16, padding: 16, marginBottom: spacing.md },
   explainHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  explainTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: colors.brand, letterSpacing: 0.5 },
-  explainText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#334155', lineHeight: 22 },
+  explainTitle: { fontFamily: 'Poppins-Bold', fontSize: 12, color: colors.brand, letterSpacing: 0.5 },
+  explainText: { fontFamily: 'Poppins-Medium', fontSize: 14, color: '#374151', lineHeight: 22 },
   correctionListTitle: {
     ...typography.sectionTitle,
     color: colors.ink,
@@ -1382,7 +1382,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerSoft,
   },
   correctionIndexText: {
-    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontFamily: 'Poppins-ExtraBold',
     fontSize: 13,
   },
   correctionIndexTextCorrect: {
@@ -1395,14 +1395,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   correctionRowQuestion: {
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 13,
     lineHeight: 18,
     color: colors.ink,
   },
   correctionRowStatus: {
     marginTop: 2,
-    fontFamily: 'PlusJakartaSans-Bold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 11,
   },
   correctionRowStatusCorrect: {
@@ -1412,18 +1412,18 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   reviewNav: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20 },
-  reviewNavBtn: { flex: 1, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  reviewNavBtn: { flex: 1, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   reviewNavBtnPrimary: { backgroundColor: colors.brand, borderColor: colors.brand },
-  reviewNavBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#475569' },
+  reviewNavBtnText: { fontFamily: 'Poppins-Bold', fontSize: 14, color: '#374151' },
   navBtnDisabled: { opacity: 0.45 },
   reviewPad: { paddingVertical: 20 },
   reviewSummaryBox: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  reviewSummaryTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#0F172A', marginBottom: 12 },
+  reviewSummaryTitle: { fontFamily: 'Poppins-Bold', fontSize: 18, color: '#111827', marginBottom: 12 },
   reviewSummaryGrid: { flexDirection: 'row', gap: 12 },
-  reviewSummaryItem: { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12 },
-  reviewSummaryLabel: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 10, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 },
-  reviewSummaryValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: '#1E293B' },
+  reviewSummaryItem: { flex: 1, backgroundColor: '#F9FAFB', borderRadius: 14, padding: 12 },
+  reviewSummaryLabel: { fontFamily: 'Poppins-Bold', fontSize: 10, color: '#6B7280', textTransform: 'uppercase', marginBottom: 4 },
+  reviewSummaryValue: { fontFamily: 'Poppins-Bold', fontSize: 12, color: '#111827' },
   emptyReviewBox: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 20 },
-  emptyReviewTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#0F172A', marginBottom: 8 },
-  emptyReviewText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#64748B', textAlign: 'center' },
+  emptyReviewTitle: { fontFamily: 'Poppins-Bold', fontSize: 18, color: '#111827', marginBottom: 8 },
+  emptyReviewText: { fontFamily: 'Poppins-Medium', fontSize: 14, color: '#6B7280', textAlign: 'center' },
 });

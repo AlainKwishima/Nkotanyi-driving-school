@@ -89,6 +89,20 @@ function paymentLanguage(payment: unknown): ContentLanguageCode | null {
   );
 }
 
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
+  'approved',
+  'active',
+  'completed',
+  'success',
+  'paid',
+  'successful',
+  'confirmed',
+  'valid',
+  'activated',
+  'subscribed',
+  'enabled',
+]);
+
 export async function getUserAndPayment(userId: string, accessToken: string): Promise<UserAndPayment> {
   const json = await apiRequest<unknown>(`/api/user/get-user-and-payment/${userId}`, {
     method: 'GET',
@@ -161,11 +175,7 @@ function paymentNotExpired(o: Record<string, unknown>): boolean {
 export function paymentsIndicateActiveSubscription(payments: unknown): boolean {
   if (!Array.isArray(payments) || payments.length === 0) return false;
 
-  const activeStatuses = new Set([
-    'approved', 'active', 'completed', 'success', 'paid',
-    'successful', 'confirmed', 'valid', 'activated',
-    'subscribed', 'enabled', 'processing',
-  ]);
+  const activeStatuses = ACTIVE_SUBSCRIPTION_STATUSES;
 
   return payments.some((p) => {
     if (!p || typeof p !== 'object') return false;
@@ -198,7 +208,7 @@ export function paymentsIndicateActiveSubscription(payments: unknown): boolean {
       o.validUntil != null ||
       o.endDate != null ||
       o.end_date != null;
-    if (hasExpiry) return paymentNotExpired(o);
+    if (hasExpiry) return false;
 
     return false;
   });
@@ -223,32 +233,32 @@ export function profileIndicatesActiveSubscription(profile: UserAndPayment): boo
     return true;
   }
 
+  const userExpiry = u.subscriptionExpiry ?? u.subscriptionExpiresAt ?? u.expiresAt;
+  const userNotExpired = userExpiry == null || expiryIsValid(userExpiry);
+
   // 2. Direct boolean flags on the user object
-  if (u.isSubscribed === true) return true;
-  if (u.subscriptionActive === true) return true;
-  if (u.hasActiveSubscription === true) return true;
+  if ((u.isSubscribed === true || u.subscriptionActive === true || u.hasActiveSubscription === true) && userNotExpired) {
+    return true;
+  }
 
   // 3. Subscription status string on the user object
   const uStatus = String(u.subscriptionStatus ?? '').toLowerCase().trim();
-  if (uStatus && uStatus !== 'none' && uStatus !== 'inactive' && uStatus !== 'expired' && uStatus !== 'cancelled') {
+  if (uStatus && ACTIVE_SUBSCRIPTION_STATUSES.has(uStatus) && userNotExpired) {
     return true;
   }
 
   // 4. Non-null plan stored on user + valid expiry
   if (u.plan != null && u.plan !== '' && u.plan !== false) {
-    const expiry = u.subscriptionExpiry ?? u.subscriptionExpiresAt ?? u.expiresAt;
-    if (expiry == null || expiryIsValid(expiry)) return true;
+    if (userExpiry != null && userNotExpired) return true;
   }
 
   // 5. Plan name stored on user (non-empty, non-"none")
   if (u.planName && u.planName.trim() !== '' && u.planName.toLowerCase() !== 'none') {
-    const expiry = u.subscriptionExpiry ?? u.subscriptionExpiresAt ?? u.expiresAt;
-    if (expiry == null || expiryIsValid(expiry)) return true;
+    if (userExpiry != null && userNotExpired) return true;
   }
 
   // 6. Expiry date on user object is in the future
-  const userExpiry = u.subscriptionExpiry ?? u.subscriptionExpiresAt ?? u.expiresAt;
-  if (userExpiry != null && expiryIsValid(userExpiry)) return true;
+  if (userExpiry != null && userNotExpired) return false;
 
   // 7. Fall back to scanning the payment array
   return paymentsIndicateActiveSubscription(profile.payment);
@@ -263,6 +273,10 @@ export function profileHasHighestSubscription(profile: UserAndPayment): boolean 
     return true;
   }
 
+  if (!profileIndicatesActiveSubscription(profile)) {
+    return false;
+  }
+
   const userPlanRaw = String(profile.user.planName ?? profile.user.plan ?? '').toLowerCase();
   const userLooksMonthly =
     userPlanRaw.includes('monthly') ||
@@ -274,6 +288,7 @@ export function profileHasHighestSubscription(profile: UserAndPayment): boolean 
   return profile.payment.some((p) => {
     if (!p || typeof p !== 'object') return false;
     const o = p as Record<string, unknown>;
+    if (!paymentsIndicateActiveSubscription([o])) return false;
     const subType = String(o.subscription_type ?? o.subscriptionType ?? o.planType ?? '').toLowerCase().trim();
     if (subType === 'monthly') return true;
     const planName = String(o.planName ?? o.plan ?? '').toLowerCase();
@@ -288,6 +303,10 @@ export function profileHasHighestSubscription(profile: UserAndPayment): boolean 
 export function profileHasTimeBasedSubscription(profile: UserAndPayment): boolean {
   if (profileHasPrivilegedAccess(profile)) {
     return true;
+  }
+
+  if (!profileIndicatesActiveSubscription(profile)) {
+    return false;
   }
 
   const userExpiry = profile.user.subscriptionExpiry ?? profile.user.subscriptionExpiresAt ?? profile.user.expiresAt;
@@ -308,7 +327,7 @@ export function profileHasTimeBasedSubscription(profile: UserAndPayment): boolea
       o.validUntil != null ||
       o.endDate != null ||
       o.end_date != null;
-    return hasExpiry && paymentNotExpired(o);
+    return hasExpiry && paymentNotExpired(o) && paymentsIndicateActiveSubscription([o]);
   });
 }
 
@@ -327,14 +346,14 @@ export function latestActiveSubscriptionLanguage(profile: UserAndPayment): Conte
     .filter((payment) => {
       if (!payment || typeof payment !== 'object') return false;
       const o = payment as Record<string, unknown>;
-      return (
+      return paymentNotExpired(o) && (
         o.paymentStatus === true ||
         o.isActive === true ||
         o.subscriptionActive === true ||
         o.hasActiveSubscription === true ||
         o.isSubscribed === true ||
         o.active === true ||
-        ['approved', 'active', 'completed', 'success', 'paid', 'successful', 'confirmed', 'valid', 'activated', 'processing'].includes(
+        Array.from(ACTIVE_SUBSCRIPTION_STATUSES).includes(
           String(o.status ?? o.state ?? o.paymentStatus ?? '').toLowerCase().trim(),
         )
       );

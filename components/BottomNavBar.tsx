@@ -54,7 +54,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const route = useRoute();
   const { insets, shortSide } = useResponsiveLayout();
   const { t } = useI18n();
-  const { hasSubscription, hasUsedFreeTrial, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
+  const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
   const activeKey = active ?? resolveActive(route.name);
   const isCompact = shortSide <= 360;
@@ -85,7 +85,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
       return;
     }
     if (navigation) {
-      if (tab === 'exam' && !isSigningOut && ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial))) {
+      if (tab === 'exam' && !isSigningOut && (!hasSubscription || !languageAccessGranted)) {
         openGateModal('subscription_exam', () => (navigation as any).navigate('SubscriptionNative'));
         return;
       }
@@ -118,7 +118,7 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
               accessibilityState={{ selected: isActive }}
             >
               <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
-                <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.brandStrong : colors.inkSoft} />
+                <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.primary : colors.textMuted} />
               </View>
               <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
                 {t(tab.labelKey)}
@@ -141,14 +141,14 @@ const styles = StyleSheet.create({
   },
   frostedShelf: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(246,247,249,0.84)',
+    backgroundColor: 'rgba(249,250,251,0.86)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(221,226,234,0.72)',
+    borderTopColor: 'rgba(229,231,235,0.78)',
   },
   tabs: {
     position: 'absolute',
     minHeight: 68,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.98)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -174,14 +174,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabBubbleActive: { backgroundColor: colors.brandSoft },
+  tabBubbleActive: { backgroundColor: colors.blueTint },
   tabText: {
     ...typography.caption,
     marginTop: 1,
-    color: colors.inkSoft,
+    color: colors.textMuted,
   },
   tabTextActive: {
-    color: colors.brandStrong,
-    fontFamily: 'PlusJakartaSans-Bold',
+    color: colors.primary,
+    fontFamily: 'Poppins-Bold',
   },
 });

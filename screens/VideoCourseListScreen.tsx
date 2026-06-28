@@ -73,7 +73,7 @@ function Thumbnail({
         <Image source={{ uri }} style={styles.thumbnailImage} resizeMode="cover" />
       ) : (
         <View style={styles.thumbnailFallback}>
-          <Ionicons name="videocam-outline" size={large ? 42 : 26} color="#B7C9E6" />
+          <Ionicons name="videocam-outline" size={large ? 42 : 26} color="#6B7280" />
         </View>
       )}
       <View style={styles.thumbnailShade} />
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   featureDuration: {
     ...typography.caption,
-    color: '#B8C4D5',
+    color: '#6B7280',
   },
   featureTitle: {
     ...typography.title,
