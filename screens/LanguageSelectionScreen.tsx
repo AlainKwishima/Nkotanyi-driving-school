@@ -8,9 +8,12 @@ import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { LanguageOptionCard } from '../components/LanguageOptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useMobile } from '../hooks/useMobile';
+import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
 import type { ContentLanguageCode } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
+import { getMessageFromUnknownError } from '../services/api/client';
+import { updateUserProfile } from '../services/userApi';
 import { colors, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSelection'>;
@@ -40,6 +43,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
   const m = useMobile();
   const { t } = useI18n();
   const { setContentLanguage, contentLanguage, commitLanguageSelection } = useAppFlow();
+  const { accessToken, userId, refreshProfile } = useAuth();
   const changeOnly = Boolean(route.params?.changeOnly);
   const insets = useSafeAreaInsets();
 
@@ -109,6 +113,16 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
                 const lang = apiLang(selectedLanguage);
                 if (changeOnly) {
                   await setContentLanguage(lang);
+                  if (accessToken && userId) {
+                    try {
+                      await updateUserProfile(userId, accessToken, { lang });
+                      await refreshProfile();
+                    } catch (e) {
+                      if (__DEV__) {
+                        console.warn('[LanguageSelection] backend language update failed', getMessageFromUnknownError(e));
+                      }
+                    }
+                  }
                   navigation.goBack();
                   return;
                 }

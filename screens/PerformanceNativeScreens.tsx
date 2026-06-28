@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -18,13 +18,17 @@ import { useI18n } from '../i18n/useI18n';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type PerfProps = NativeStackScreenProps<RootStackParamList, 'PerformanceNative'>;
-type DetailProps = NativeStackScreenProps<RootStackParamList, 'PerformanceDetailNative'>;
+type DetailProps = NativeStackScreenProps<RootStackParamList, 'PerformanceReviewNative'>;
 type ReviewProps = NativeStackScreenProps<RootStackParamList, 'PerformanceReviewNative'>;
 
 type ReviewAttempt = NonNullable<PerformanceHistoryRow>;
+const REVIEW_OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 function coerceReviewAttempt(params?: ReviewProps['route']['params']): ReviewAttempt | null {
   if (!params) return null;
+  const hasAnswerDetails = Array.isArray(params.answerDetails) && params.answerDetails.length > 0;
+  const hasAttemptIdentity = Boolean(params.title || params.dateLabel || params.startedAt || params.finishedAt);
+  if (!hasAnswerDetails && !hasAttemptIdentity) return null;
   const correct = Number(params.correct ?? 0);
   const total = Number(params.total ?? 0);
   const percent = Number(params.percent ?? (total > 0 ? Math.round((correct / total) * 100) : 0));
@@ -106,14 +110,14 @@ function TopHeader({
 }: {
   title: string;
   onBack: () => void;
-  navigation: PerfProps['navigation'] | DetailProps['navigation'] | ReviewProps['navigation'];
+  navigation: PerfProps['navigation'] | ReviewProps['navigation'];
 }) {
   return (
     <AppHeader title={title} onBack={onBack} navigation={navigation} />
   );
 }
 
-function BottomTabs({ navigation }: { navigation: PerfProps['navigation'] | DetailProps['navigation'] | ReviewProps['navigation'] }) {
+function BottomTabs({ navigation }: { navigation: PerfProps['navigation'] | ReviewProps['navigation'] }) {
   return <BottomNavBar navigation={navigation} />;
 }
 
@@ -268,7 +272,7 @@ function HistoryBackground({
   loadError,
   onRetry,
 }: {
-  navigation: PerfProps['navigation'] | DetailProps['navigation'];
+  navigation: PerfProps['navigation'];
   rows: PerformanceHistoryRow[];
   loading: boolean;
   loadError: string | null;
@@ -313,7 +317,7 @@ function HistoryBackground({
                   item={item}
                   index={idx}
                   onPress={() =>
-                    navigation.navigate('PerformanceDetailNative', {
+                    navigation.navigate('PerformanceReviewNative', {
                       correct: item.correct,
                       total: item.total,
                       percent: item.percent,
@@ -392,7 +396,7 @@ export function PerformanceNativeScreen({ navigation }: PerfProps) {
   );
 }
 
-export function PerformanceDetailNativeScreen({ navigation, route }: DetailProps) {
+function PerformanceDetailNativeScreen({ navigation, route }: DetailProps) {
   const { t, lang } = useI18n();
   const p = route.params;
   const passed = p?.passed ?? true;
@@ -507,7 +511,6 @@ export function PerformanceDetailNativeScreen({ navigation, route }: DetailProps
 
 export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps) {
   const { t, lang } = useI18n();
-  const { tabScrollBottomPad } = useResponsiveLayout();
   const [attempt, setAttempt] = useState<ReviewAttempt | null>(() => coerceReviewAttempt(route.params));
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -544,120 +547,201 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
   const finishedLabel = attempt?.finishedAt ? formatHistoryDateForLanguage(attempt.finishedAt, lang, t('common.na')) : t('common.na');
   const durationLabel = attempt?.duration ?? t('common.na');
   const reviewTitle = attempt?.title?.startsWith('performance.') ? t(attempt.title) : attempt?.title ?? t('test.results');
-  const selectedAnswerText = currentQuestion?.selectedOptionText ?? t('performance.noAnswer');
-  const correctAnswerText = currentQuestion?.correctOptionText ?? t('common.na');
   const selectedIsCorrect = Boolean(currentQuestion?.isCorrect);
+  const reviewOptions =
+    currentQuestion?.options && currentQuestion.options.length > 0
+      ? currentQuestion.options
+      : [
+          ...(currentQuestion?.selectedOptionText
+            ? [{
+                id: currentQuestion.selectedOptionId ?? 'selected',
+                text: currentQuestion.selectedOptionText,
+                imageUrl: null,
+                isCorrect: selectedIsCorrect,
+              }]
+            : []),
+          ...(!selectedIsCorrect && currentQuestion?.correctOptionText
+            ? [{
+                id: currentQuestion.correctOptionId ?? 'correct',
+                text: currentQuestion.correctOptionText,
+                imageUrl: null,
+                isCorrect: true,
+              }]
+            : []),
+        ];
+  const incorrectCount = answerDetails.filter((item) => !item.isCorrect).length;
+  const correctionPercent = attempt?.percent ?? (attempt ? Math.round((attempt.correct / Math.max(attempt.total, 1)) * 100) : 0);
+  const returnToExamInstructions = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'ExamInstructionsNative' }],
+    });
+  };
 
   return (
     <ScreenColumn>
-      <TopHeader title={t('test.results')} onBack={() => navigation.goBack()} navigation={navigation} />
-      <View style={styles.detailBody}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.reviewPad, { paddingBottom: tabScrollBottomPad }]}>
-          {attempt ? (
-            <View style={styles.reviewSummaryBox}>
-              <Text style={styles.reviewSummaryTitle}>{reviewTitle}</Text>
-              <View style={styles.reviewSummaryGrid}>
-                <View style={styles.reviewSummaryItem}>
-                  <Text style={styles.reviewSummaryLabel}>{t('performance.startedAt')}</Text>
-                  <Text style={styles.reviewSummaryValue}>{startedLabel}</Text>
-                </View>
-                <View style={styles.reviewSummaryItem}>
-                  <Text style={styles.reviewSummaryLabel}>{t('performance.finishedAt')}</Text>
-                  <Text style={styles.reviewSummaryValue}>{finishedLabel}</Text>
-                </View>
-                <View style={styles.reviewSummaryItem}>
-                  <Text style={styles.reviewSummaryLabel}>{t('performance.duration')}</Text>
-                  <Text style={styles.reviewSummaryValue}>{durationLabel}</Text>
-                </View>
+      <TopHeader title={t('test.results')} onBack={returnToExamInstructions} navigation={navigation} />
+      <View style={styles.reviewExamBody}>
+        {currentQuestion ? (
+          <>
+            <View style={styles.reviewExamProgressHeader}>
+              <View>
+                <Text style={styles.reviewExamQuestionPosition}>{currentLabel}</Text>
+                <Text style={styles.reviewExamAnsweredLabel}>
+                  {t('exam.answeredCount', { answered: attempt?.answeredCount ?? answerDetails.length, total: totalQuestions })}
+                </Text>
+              </View>
+              <View style={[styles.currentStatusChip, selectedIsCorrect ? styles.currentStatusCorrect : styles.currentStatusWrong]}>
+                <Ionicons
+                  name={selectedIsCorrect ? 'checkmark-circle' : 'close-circle'}
+                  size={14}
+                  color={selectedIsCorrect ? colors.success : colors.danger}
+                />
+                <Text style={[styles.currentStatusText, selectedIsCorrect ? styles.currentStatusTextCorrect : styles.currentStatusTextWrong]}>
+                  {selectedIsCorrect ? t('performance.correct') : t('performance.incorrect')}
+                </Text>
               </View>
             </View>
-          ) : null}
-
-          <View style={styles.reviewStepBox}>
-            <Text style={styles.reviewStepText}>
-              {currentLabel}
-            </Text>
-            <View style={styles.reviewStepDots}>
-              {answerDetails.slice(0, 5).map((_, i) => (
-                <View key={i} style={[styles.stepDot, i === currentIndex && styles.stepDotActive]} />
-              ))}
+            <View style={styles.reviewExamProgressTrack}>
+              <View style={[styles.reviewExamProgressFill, { width: `${((currentIndex + 1) / totalQuestions) * 100}%` }]} />
             </View>
-          </View>
 
-          {currentQuestion ? (
-            <>
-              <View style={styles.questionCard}>
-                <Text style={styles.questionText}>{currentQuestion.questionText}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.reviewQuestionNav}
+              contentContainerStyle={styles.reviewQuestionNavContent}
+            >
+              {answerDetails.map((detail, index) => {
+                const active = index === currentIndex;
+                const correct = Boolean(detail.isCorrect);
+                return (
+                  <TouchableOpacity
+                    key={`${detail.questionId}-chip-${index}`}
+                    style={[
+                      styles.reviewQuestionChip,
+                      correct ? styles.reviewQuestionChipCorrect : styles.reviewQuestionChipWrong,
+                      active && styles.reviewQuestionChipActive,
+                    ]}
+                    onPress={() => setCurrentIndex(index)}
+                    activeOpacity={0.78}
+                  >
+                    <Text
+                      style={[
+                        styles.reviewQuestionChipText,
+                        correct ? styles.reviewQuestionChipTextCorrect : styles.reviewQuestionChipTextWrong,
+                        active && styles.reviewQuestionChipTextActive,
+                      ]}
+                    >
+                      {index + 1}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.reviewExamScroll}
+              contentContainerStyle={styles.reviewExamContent}
+            >
+              <View style={styles.reviewQuestionCard}>
+                {currentQuestion.questionImageUrls?.[0] ? (
+                  <View style={styles.reviewImageStage}>
+                    <Image source={{ uri: currentQuestion.questionImageUrls[0] }} style={styles.reviewQuestionImage} resizeMode="contain" />
+                  </View>
+                ) : null}
+                <Text style={styles.reviewQuestionText}>{currentQuestion.questionText}</Text>
               </View>
 
-              <View style={styles.optionsSection}>
-                <View style={[styles.answerOption, selectedIsCorrect ? styles.correctOption : styles.wrongOption]}>
-                  <View style={styles.optionMarker}>
-                    <Ionicons
-                      name={selectedIsCorrect ? 'checkmark-circle' : 'close-circle'}
-                      size={20}
-                      color="#FFFFFF"
-                    />
-                  </View>
-                  <View style={styles.answerStack}>
-                    <Text style={styles.answerLabel}>{t('performance.yourAnswer')}</Text>
-                    <Text style={styles.answerLight}>{selectedAnswerText}</Text>
-                  </View>
-                </View>
-
-                <View style={[styles.answerOption, styles.correctOption]}>
-                  <View style={styles.optionMarker}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.answerStack}>
-                    <Text style={styles.answerLabel}>{t('performance.correctAnswer')}</Text>
-                    <Text style={styles.answerLight}>{correctAnswerText}</Text>
-                  </View>
-                </View>
+              <Text style={styles.reviewChooseLabel}>{t('exam.chooseAnswer')}</Text>
+              <View style={styles.reviewOptionList}>
+                {reviewOptions.map((option, index) => {
+                  const isSelected = option.id === currentQuestion.selectedOptionId || option.text === currentQuestion.selectedOptionText;
+                  const isCorrect = Boolean(option.isCorrect);
+                  const isWrongSelection = isSelected && !isCorrect;
+                  const optionTone = isCorrect
+                    ? styles.reviewOptionCorrect
+                    : isWrongSelection
+                      ? styles.reviewOptionWrong
+                      : styles.reviewOptionNeutral;
+                  const markerTone = isCorrect
+                    ? styles.reviewOptionMarkerCorrect
+                    : isWrongSelection
+                      ? styles.reviewOptionMarkerWrong
+                      : styles.reviewOptionMarkerNeutral;
+                  return (
+                    <View key={`${option.id}-${index}`} style={[styles.reviewOptionCard, optionTone]}>
+                      <View style={[styles.reviewOptionMarker, markerTone]}>
+                        {isCorrect || isWrongSelection ? (
+                          <Ionicons
+                            name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                        ) : (
+                          <Text style={styles.reviewOptionMarkerText}>{REVIEW_OPTION_LABELS[index] ?? index + 1}</Text>
+                        )}
+                      </View>
+                      <View style={styles.reviewAnswerStack}>
+                        <View style={styles.reviewAnswerLabelRow}>
+                          {isSelected ? <Text style={styles.reviewAnswerLabel}>{t('performance.yourAnswer')}</Text> : null}
+                          {isCorrect ? <Text style={styles.reviewCorrectLabel}>{t('performance.correctAnswer')}</Text> : null}
+                        </View>
+                        <Text style={styles.reviewAnswerText}>{option.text}</Text>
+                        {option.imageUrl ? (
+                          <Image source={{ uri: option.imageUrl }} style={styles.reviewOptionImage} resizeMode="contain" />
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
 
               <View style={styles.explanationBox}>
                 <View style={styles.explainHeader}>
                   <Ionicons name="bulb-outline" size={16} color={colors.brand} />
-                  <Text style={styles.explainTitle}>{t('performance.review')}</Text>
+                  <Text style={styles.explainTitle}>{t('performance.feedback')}</Text>
                 </View>
                 <Text style={styles.explainText}>
-                  {t('performance.reviewExplanation')}
+                  {currentQuestion.explanation ?? t('performance.reviewExplanation')}
                 </Text>
               </View>
-            </>
-          ) : (
-            <View style={styles.emptyReviewBox}>
-              <Text style={styles.emptyReviewTitle}>{t('performance.emptyTitle')}</Text>
-              <Text style={styles.emptyReviewText}>{t('performance.empty')}</Text>
+            </ScrollView>
+
+            <View style={styles.reviewExamFooter}>
+              <TouchableOpacity
+                style={[styles.reviewExamNavButton, currentIndex === 0 && styles.navBtnDisabled]}
+                onPress={() => setCurrentIndex((idx) => Math.max(idx - 1, 0))}
+                disabled={currentIndex === 0}
+              >
+                <Ionicons name="arrow-back" size={19} color={currentIndex === 0 ? colors.inkSoft : colors.ink} />
+                <Text style={[styles.reviewExamNavText, currentIndex === 0 && styles.navTextDisabled]}>{t('exam.previous')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.reviewExamNavButton, styles.reviewExamNavButtonPrimary]}
+                onPress={() => {
+                  if (currentIndex < answerDetails.length - 1) {
+                    setCurrentIndex((idx) => Math.min(idx + 1, answerDetails.length - 1));
+                    return;
+                  }
+                  navigation.navigate('PerformanceNative');
+                }}
+              >
+                <Text style={[styles.reviewExamNavText, styles.reviewExamNavTextPrimary]}>
+                  {currentIndex >= answerDetails.length - 1 ? t('performance.finishReview') : t('exam.next')}
+                </Text>
+                <Ionicons name="arrow-forward" size={19} color={colors.white} />
+              </TouchableOpacity>
             </View>
-          )}
-
-          <View style={styles.reviewNav}>
-            <TouchableOpacity
-              style={[styles.reviewNavBtn, currentIndex === 0 && styles.navBtnDisabled]}
-              onPress={() => setCurrentIndex((idx) => Math.max(idx - 1, 0))}
-              disabled={currentIndex === 0}
-            >
-              <Ionicons name="chevron-back" size={20} color="#475569" />
-              <Text style={styles.reviewNavBtnText}>{t('exam.previous')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.reviewNavBtn, styles.reviewNavBtnPrimary, currentIndex >= answerDetails.length - 1 && styles.navBtnDisabled]}
-              onPress={() => {
-                if (currentIndex < answerDetails.length - 1) {
-                  setCurrentIndex((idx) => Math.min(idx + 1, answerDetails.length - 1));
-                  return;
-                }
-                navigation.navigate('PerformanceNative');
-              }}
-            >
-              <Text style={[styles.reviewNavBtnText, { color: '#FFFFFF' }]}>{t('exam.next')}</Text>
-              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.emptyReviewBox}>
+            <Text style={styles.emptyReviewTitle}>{t('performance.reviewUnavailableTitle')}</Text>
+            <Text style={styles.emptyReviewText}>{t('performance.reviewUnavailableBody')}</Text>
           </View>
-        </ScrollView>
+        )}
       </View>
     </ScreenColumn>
   );
@@ -888,6 +972,126 @@ const styles = StyleSheet.create({
   historyStatusFail: { color: colors.danger },
 
   detailBody: { flex: 1, paddingHorizontal: 20, paddingTop: spacing.md, backgroundColor: colors.canvas },
+  reviewExamBody: {
+    flex: 1,
+    backgroundColor: colors.canvas,
+  },
+  reviewExamProgressHeader: {
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  reviewExamQuestionPosition: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  reviewExamAnsweredLabel: {
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.inkMuted,
+  },
+  reviewExamProgressTrack: {
+    height: 5,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.xl,
+    overflow: 'hidden',
+    borderRadius: 3,
+    backgroundColor: '#DCE2DD',
+  },
+  reviewExamProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+  },
+  reviewQuestionNav: {
+    flexGrow: 0,
+    marginTop: spacing.lg,
+  },
+  reviewQuestionNavContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  reviewQuestionChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  reviewQuestionChipCorrect: {
+    borderColor: '#B8D8C9',
+    backgroundColor: colors.successSoft,
+  },
+  reviewQuestionChipWrong: {
+    borderColor: '#E9B9B9',
+    backgroundColor: colors.dangerSoft,
+  },
+  reviewQuestionChipActive: {
+    borderColor: colors.brandStrong,
+    backgroundColor: colors.brandStrong,
+  },
+  reviewQuestionChipText: {
+    ...typography.caption,
+    fontFamily: 'PlusJakartaSans-Bold',
+  },
+  reviewQuestionChipTextCorrect: {
+    color: colors.success,
+  },
+  reviewQuestionChipTextWrong: {
+    color: colors.danger,
+  },
+  reviewQuestionChipTextActive: {
+    color: colors.white,
+  },
+  reviewExamScroll: {
+    flex: 1,
+  },
+  reviewExamContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  reviewExamFooter: {
+    minHeight: 76,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  reviewExamNavButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceAlt,
+  },
+  reviewExamNavButtonPrimary: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
+  },
+  reviewExamNavText: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  reviewExamNavTextPrimary: {
+    color: colors.white,
+  },
+  navTextDisabled: {
+    color: colors.inkSoft,
+  },
   detailCard: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: 24, borderWidth: 1, borderColor: colors.line, ...shadows.card },
   detailCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   statusTag: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 10 },
@@ -920,16 +1124,211 @@ const styles = StyleSheet.create({
   detailSecondaryBtn: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
   detailSecondaryBtnText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, color: '#475569' },
 
+  correctionOverview: {
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    backgroundColor: colors.brandStrong,
+  },
+  correctionScoreBlock: {
+    width: 92,
+    height: 92,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  correctionScore: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 28,
+    lineHeight: 34,
+    color: colors.white,
+  },
+  correctionScoreLabel: {
+    ...typography.caption,
+    color: '#DCE7FA',
+  },
+  correctionStats: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  correctionStatPill: {
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  correctionStatText: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
   reviewStepBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   reviewStepText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 13, color: '#64748B' },
+  reviewStepScore: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+    color: colors.brand,
+  },
+  currentStatusChip: {
+    minHeight: 28,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  currentStatusCorrect: {
+    backgroundColor: colors.successSoft,
+  },
+  currentStatusWrong: {
+    backgroundColor: colors.dangerSoft,
+  },
+  currentStatusText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 11,
+  },
+  currentStatusTextCorrect: {
+    color: colors.success,
+  },
+  currentStatusTextWrong: {
+    color: colors.danger,
+  },
   reviewStepDots: { flexDirection: 'row', gap: 4 },
   stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E2E8F0' },
   stepDotActive: { width: 16, backgroundColor: colors.brand },
   questionCard: { borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3 },
   questionText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, color: '#0F172A', marginBottom: 18, lineHeight: 26 },
+  reviewQuestionCard: {
+    padding: spacing.xl,
+    borderRadius: radii.xl,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadows.card,
+  },
+  reviewQuestionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  reviewQuestionLabel: {
+    ...typography.eyebrow,
+    color: colors.brand,
+    textTransform: 'uppercase',
+  },
+  reviewQuestionText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 17,
+    lineHeight: 26,
+    marginTop: spacing.lg,
+    color: colors.ink,
+  },
+  reviewImageStage: {
+    minHeight: 180,
+    marginTop: spacing.lg,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  reviewQuestionImage: {
+    width: '100%',
+    height: 180,
+  },
   diagramContainer: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, alignItems: 'center' },
   diagram: { width: '100%', height: 200 },
   optionsSection: { gap: 10, marginBottom: 24 },
+  reviewChooseLabel: {
+    ...typography.eyebrow,
+    marginBottom: spacing.md,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
+  },
+  reviewOptionList: {
+    gap: spacing.sm,
+    marginBottom: spacing.xxl,
+  },
+  reviewOptionCard: {
+    minHeight: 66,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  reviewOptionCorrect: {
+    borderColor: colors.success,
+    backgroundColor: colors.successSoft,
+  },
+  reviewOptionWrong: {
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerSoft,
+  },
+  reviewOptionNeutral: {
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  reviewOptionMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewOptionMarkerCorrect: {
+    backgroundColor: colors.success,
+  },
+  reviewOptionMarkerWrong: {
+    backgroundColor: colors.danger,
+  },
+  reviewOptionMarkerNeutral: {
+    backgroundColor: '#EDF0EC',
+  },
+  reviewOptionMarkerText: {
+    ...typography.bodyStrong,
+    color: colors.inkMuted,
+  },
+  reviewAnswerStack: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  reviewAnswerLabelRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  reviewAnswerLabel: {
+    ...typography.eyebrow,
+    color: colors.danger,
+    textTransform: 'uppercase',
+  },
+  reviewCorrectLabel: {
+    ...typography.eyebrow,
+    color: colors.success,
+    textTransform: 'uppercase',
+  },
+  reviewAnswerText: {
+    ...typography.bodyStrong,
+    marginTop: 2,
+    color: colors.ink,
+  },
+  reviewOptionImage: {
+    width: '100%',
+    height: 90,
+    marginTop: spacing.sm,
+  },
   answerOption: { minHeight: 64, borderRadius: 16, backgroundColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
   correctOption: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#22C55E' },
   wrongOption: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#EF4444' },
@@ -939,10 +1338,79 @@ const styles = StyleSheet.create({
   markerText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: '#475569' },
   answerLight: { flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
   answerDark: { flex: 1, fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, color: '#1E293B' },
-  explanationBox: { backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, marginBottom: 32 },
+  explanationBox: { backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, marginBottom: spacing.md },
   explainHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   explainTitle: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 12, color: colors.brand, letterSpacing: 0.5 },
   explainText: { fontFamily: 'PlusJakartaSans-Medium', fontSize: 14, color: '#334155', lineHeight: 22 },
+  correctionListTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    marginBottom: spacing.md,
+  },
+  correctionList: {
+    overflow: 'hidden',
+    marginBottom: spacing.xxl,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  correctionRow: {
+    minHeight: 74,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  correctionRowActive: {
+    backgroundColor: colors.brandSoft,
+  },
+  correctionIndex: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  correctionIndexCorrect: {
+    backgroundColor: colors.successSoft,
+  },
+  correctionIndexWrong: {
+    backgroundColor: colors.dangerSoft,
+  },
+  correctionIndexText: {
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    fontSize: 13,
+  },
+  correctionIndexTextCorrect: {
+    color: colors.success,
+  },
+  correctionIndexTextWrong: {
+    color: colors.danger,
+  },
+  correctionRowBody: {
+    flex: 1,
+  },
+  correctionRowQuestion: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.ink,
+  },
+  correctionRowStatus: {
+    marginTop: 2,
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 11,
+  },
+  correctionRowStatusCorrect: {
+    color: colors.success,
+  },
+  correctionRowStatusWrong: {
+    color: colors.danger,
+  },
   reviewNav: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20 },
   reviewNavBtn: { flex: 1, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   reviewNavBtnPrimary: { backgroundColor: colors.brand, borderColor: colors.brand },

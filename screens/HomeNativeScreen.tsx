@@ -159,7 +159,7 @@ export function HomeNativeScreen({ navigation }: Props) {
 
   const handleLearningRoute = (route: LearningRoute) => {
     if (route === 'ExamInstructionsNative') {
-      if (hasSubscription && !languageAccessGranted && !isSigningOut) {
+      if (!isSigningOut && ((hasSubscription && !languageAccessGranted) || (!hasSubscription && hasUsedFreeTrial))) {
         openGateModal('subscription_exam', () => navigation.navigate('SubscriptionNative'));
         return;
       }
@@ -433,10 +433,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     marginLeft: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.brand,
+    backgroundColor: '#FB7B7B',
   },
   headerAvatarText: {
     ...typography.caption,

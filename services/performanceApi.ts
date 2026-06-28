@@ -16,3 +16,20 @@ export async function getPerformanceHistory(accessToken: string): Promise<unknow
     return [];
   }
 }
+
+export async function savePerformance(
+  accessToken: string,
+  body: { examName: string; marks: number },
+): Promise<unknown> {
+  const raw = await apiRequest<unknown>(`/api/performance`, {
+    method: 'POST',
+    accessToken,
+    body,
+    headers: { token: `Bearer ${accessToken}` },
+  });
+  try {
+    return unwrapApiPayload(raw);
+  } catch {
+    return raw;
+  }
+}

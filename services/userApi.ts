@@ -101,6 +101,24 @@ export async function getUserAndPayment(userId: string, accessToken: string): Pr
   return data;
 }
 
+export async function updateUserProfile(
+  userId: string,
+  accessToken: string,
+  body: { name?: string; phone?: string; lang?: ContentLanguageCode },
+): Promise<unknown> {
+  const json = await apiRequest<unknown>(`/api/user/update-user/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    accessToken,
+    headers: { token: `Bearer ${accessToken}` },
+    body,
+  });
+  try {
+    return unwrapApiPayload(json);
+  } catch {
+    return json;
+  }
+}
+
 /**
  * Checks whether an expiry date string/timestamp is in the future.
  * Returns true (still valid) for any value we can't parse — fail open.

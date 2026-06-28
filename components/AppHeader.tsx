@@ -19,7 +19,7 @@ type AppHeaderProps = {
   titleOffsetX?: number;
 };
 
-export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
+export function AppHeader({ title, navigation, onBack, eyebrow, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
   const { insets } = useResponsiveLayout();
 
   return (
@@ -38,9 +38,12 @@ export function AppHeader({ title, navigation, onBack, left, right, curveColor =
             </TouchableOpacity>
           ) : null)}
         </View>
-        <Text style={[styles.title, titleOffsetX !== 0 && { transform: [{ translateX: titleOffsetX }] }]} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={[styles.titleStack, titleOffsetX !== 0 && { transform: [{ translateX: titleOffsetX }] }]}>
+          {eyebrow ? <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text> : null}
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
         <View style={[styles.side, styles.rightSide]}>
           {right ?? (navigation ? <HeaderMenu navigation={navigation} iconColor={colors.white} topOffset={52} rightOffset={18} /> : null)}
         </View>
@@ -83,9 +86,20 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.screenTitle,
-    flex: 1,
-    paddingHorizontal: spacing.sm,
     color: colors.white,
     textAlign: 'center',
+  },
+  titleStack: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyebrow: {
+    ...typography.eyebrow,
+    marginBottom: 1,
+    color: 'rgba(255,255,255,0.72)',
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
 });

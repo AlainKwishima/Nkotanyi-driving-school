@@ -6,8 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { AppHeader } from '../components/AppHeader';
+import { useAuth } from '../context/AuthContext';
 import { useAppFlow, type ContentLanguageCode } from '../context/AppFlowContext';
 import { useI18n } from '../i18n/useI18n';
+import { getMessageFromUnknownError } from '../services/api/client';
+import { updateUserProfile } from '../services/userApi';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSettings'>;
@@ -20,7 +23,22 @@ const OPTIONS: Array<{ code: ContentLanguageCode; label: string }> = [
 
 export function LanguageSettingsScreen({ navigation }: Props) {
   const { contentLanguage, canChangeLanguage, setContentLanguage } = useAppFlow();
+  const { accessToken, userId, refreshProfile } = useAuth();
   const { t } = useI18n();
+
+  const updateLanguage = async (lang: ContentLanguageCode) => {
+    if (!canChangeLanguage) return;
+    await setContentLanguage(lang);
+    if (!accessToken || !userId) return;
+    try {
+      await updateUserProfile(userId, accessToken, { lang });
+      await refreshProfile();
+    } catch (e) {
+      if (__DEV__) {
+        console.warn('[LanguageSettings] backend language update failed', getMessageFromUnknownError(e));
+      }
+    }
+  };
 
   return (
     <ScreenColumn>
@@ -40,8 +58,7 @@ export function LanguageSettingsScreen({ navigation }: Props) {
               <Pressable
                 key={option.code}
                 onPress={() => {
-                  if (!canChangeLanguage) return;
-                  void setContentLanguage(option.code);
+                  void updateLanguage(option.code);
                 }}
                 style={[styles.row, idx < OPTIONS.length - 1 && styles.rowDivider]}
                 accessibilityRole="button"

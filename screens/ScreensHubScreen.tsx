@@ -115,10 +115,6 @@ export function ScreensHubScreen({ navigation }: Props) {
                 navigation.navigate('PerformanceNative');
                 return;
               }
-              if (screen.key === 'performanceDetail') {
-                navigation.navigate('PerformanceDetailNative');
-                return;
-              }
               if (screen.key === 'performanceReview') {
                 navigation.navigate('PerformanceReviewNative');
                 return;

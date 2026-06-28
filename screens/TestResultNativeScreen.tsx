@@ -79,6 +79,7 @@ function ResultTemplate({
   percent,
   navigation,
   reviewParams,
+  title,
 }: {
   passed: boolean;
   score: string;
@@ -86,6 +87,7 @@ function ResultTemplate({
   percent: number;
   navigation: FailedProps['navigation'] | PassedProps['navigation'];
   reviewParams?: RootStackParamList['PerformanceReviewNative'];
+  title?: string;
 }) {
   const { t } = useI18n();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -107,12 +109,19 @@ function ResultTemplate({
     ]).start();
   }, [fadeAnim, slideAnim]);
 
+  const returnToExamInstructions = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'ExamInstructionsNative' }],
+    });
+  };
+
   return (
     <ScreenColumn>
       <AppHeader
         title={t('test.results')}
         eyebrow={passed ? t('performance.passed') : t('performance.failed')}
-        onBack={() => navigation.goBack()}
+        onBack={returnToExamInstructions}
       />
 
       <View style={styles.body}>
@@ -125,6 +134,13 @@ function ResultTemplate({
             },
           ]}
         >
+        {passed ? (
+          <View style={styles.celebrationRow}>
+            <View style={styles.celebrationDot} />
+            <Text style={styles.celebrationText}>{t('test.passedHeadline')}</Text>
+            <View style={styles.celebrationDot} />
+          </View>
+        ) : null}
         <View style={[styles.outcomeIcon, passed ? styles.outcomeIconPass : styles.outcomeIconFail]}>
           <Ionicons
             name={passed ? 'checkmark' : 'refresh'}
@@ -139,6 +155,7 @@ function ResultTemplate({
         <ScoreRing passed={passed} percent={percent} />
 
         <Text style={styles.mainTitle}>{passed ? t('test.passedTitle') : t('test.failedTitle')}</Text>
+        {title ? <Text style={styles.examTitle}>{title}</Text> : null}
 
         <View style={styles.statsCard}>
           <View style={styles.statCol}>
@@ -155,27 +172,28 @@ function ResultTemplate({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.primaryBtn, { backgroundColor: passed ? colors.green : colors.red }]}
-            onPress={() => navigation.navigate('ExamInstructionsNative')}
+            onPress={() =>
+              navigation.navigate(
+                'PerformanceReviewNative',
+                reviewParams,
+              )
+            }
           >
-            <Text style={styles.primaryText}>{t('test.newExam')}</Text>
+            <Text style={styles.primaryText}>{t('performance.reviewCorrection')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() =>
-              navigation.navigate(
-                'PerformanceReviewNative',
-                reviewParams ?? {
-                  correct: Number(score.split('/')[0] ?? 0),
-                  total: Number(score.split('/')[1] ?? 0),
-                  percent,
-                  timeLabel: time,
-                  passed,
-                },
-              )
-            }
+            onPress={() => navigation.navigate('ExamInstructionsNative')}
           >
-            <Text style={styles.secondaryText}>{t('test.checkResults')}</Text>
+            <Text style={styles.secondaryText}>{t('test.retakeExam')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.tertiaryBtn}
+            onPress={() => navigation.navigate('HomeNative')}
+          >
+            <Text style={styles.tertiaryText}>{t('test.home')}</Text>
           </TouchableOpacity>
         </View>
         </Animated.View>
@@ -189,6 +207,7 @@ export function TestFailedNativeScreen({ navigation, route }: FailedProps) {
   const total = route.params?.total ?? 20;
   const time = route.params?.timeLabel ?? '0:00';
   const percent = route.params?.percent ?? Math.round((correct / Math.max(total, 1)) * 100);
+  const reviewParams = { ...route.params, correct, total, timeLabel: time, percent, passed: false };
   return (
     <ResultTemplate
       passed={false}
@@ -196,7 +215,8 @@ export function TestFailedNativeScreen({ navigation, route }: FailedProps) {
       time={time}
       percent={percent}
       navigation={navigation}
-      reviewParams={{ correct, total, timeLabel: time, percent, passed: false }}
+      reviewParams={reviewParams}
+      title={route.params?.title}
     />
   );
 }
@@ -206,6 +226,7 @@ export function TestPassedNativeScreen({ navigation, route }: PassedProps) {
   const total = route.params?.total ?? 20;
   const time = route.params?.timeLabel ?? '0:00';
   const percent = route.params?.percent ?? Math.round((correct / Math.max(total, 1)) * 100);
+  const reviewParams = { ...route.params, correct, total, timeLabel: time, percent, passed: true };
   return (
     <ResultTemplate
       passed
@@ -213,7 +234,8 @@ export function TestPassedNativeScreen({ navigation, route }: PassedProps) {
       time={time}
       percent={percent}
       navigation={navigation}
-      reviewParams={{ correct, total, timeLabel: time, percent, passed: true }}
+      reviewParams={reviewParams}
+      title={route.params?.title}
     />
   );
 }
@@ -238,6 +260,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  celebrationRow: {
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  celebrationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.green,
+  },
+  celebrationText: {
+    ...typography.eyebrow,
+    color: colors.green,
+    textTransform: 'uppercase',
   },
   outcomeIconPass: {
     backgroundColor: colors.greenSoft,
@@ -285,6 +324,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...typography.heading,
     color: colors.ink,
+    textAlign: 'center',
+  },
+  examTitle: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
   statsCard: {
@@ -351,5 +396,16 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 16,
     color: colors.inkMuted,
+  },
+  tertiaryBtn: {
+    minHeight: 44,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tertiaryText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 14,
+    color: colors.brand,
   },
 });

@@ -1,5 +1,40 @@
 import { ReferenceScreenKey } from '../assets/referenceScreens';
 
+export type ExamMode = 'traffic' | 'signs';
+
+export type ExamAnswerDetail = {
+  questionId: string;
+  questionText: string;
+  questionImageUrls?: string[];
+  options?: Array<{
+    id: string;
+    text: string;
+    imageUrl?: string | null;
+    isCorrect: boolean;
+  }>;
+  selectedOptionId: string | null;
+  selectedOptionText: string | null;
+  correctOptionId: string | null;
+  correctOptionText: string | null;
+  explanation?: string | null;
+  isCorrect: boolean;
+};
+
+export type ExamResultParams = {
+  mode?: ExamMode;
+  title?: string;
+  correct?: number;
+  total?: number;
+  percent?: number;
+  timeLabel?: string;
+  passed?: boolean;
+  answeredCount?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  elapsedSec?: number;
+  answerDetails?: ExamAnswerDetail[];
+};
+
 export type RootStackParamList = {
   Splash: undefined;
   LanguageSelection: { changeOnly?: boolean } | undefined;
@@ -9,37 +44,15 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   ResetPassword: undefined;
   HomeNative: undefined;
-  ExamNative: { mode?: 'traffic' | 'signs' } | undefined;
+  ExamNative: { mode?: ExamMode } | undefined;
   ExamInstructionsNative: undefined;
   ExamTypeSelectNative: undefined;
   StartExamNative: { gateFor?: 'exam' | 'read' | 'watch' } | undefined;
   PracticeNoSelectedNative: undefined;
   PracticeSelectedNative: undefined;
-  TestFailedNative: { correct?: number; total?: number; timeLabel?: string; percent?: number } | undefined;
-  TestPassedNative: { correct?: number; total?: number; timeLabel?: string; percent?: number } | undefined;
+  TestFailedNative: ExamResultParams | undefined;
+  TestPassedNative: ExamResultParams | undefined;
   PerformanceNative: undefined;
-  PerformanceDetailNative:
-    | {
-        correct?: number;
-        total?: number;
-        percent?: number;
-        timeLabel?: string;
-        passed?: boolean;
-        dateLabel?: string;
-        title?: string;
-        answeredCount?: number;
-        startedAt?: string;
-        finishedAt?: string;
-        elapsedSec?: number;
-        answerDetails?: Array<{
-          questionId: string;
-          questionText: string;
-          selectedOptionText: string | null;
-          correctOptionText: string | null;
-          isCorrect: boolean;
-        }>;
-      }
-    | undefined;
   PerformanceReviewNative:
     | {
         title?: string;
@@ -53,13 +66,7 @@ export type RootStackParamList = {
         startedAt?: string;
         finishedAt?: string;
         elapsedSec?: number;
-        answerDetails?: Array<{
-          questionId: string;
-          questionText: string;
-          selectedOptionText: string | null;
-          correctOptionText: string | null;
-          isCorrect: boolean;
-        }>;
+        answerDetails?: ExamAnswerDetail[];
       }
     | undefined;
   ReadingNative: { initialTab?: 'documents' | 'signs' } | undefined;

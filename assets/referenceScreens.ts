@@ -19,7 +19,6 @@ export type ReferenceScreenKey =
   | 'paymentConfirmation'
   | 'subscription'
   | 'performance'
-  | 'performanceDetail'
   | 'performanceReview'
   | 'readingDocument'
   | 'roadSignsCategories'
@@ -94,11 +93,6 @@ export const REFERENCE_SCREENS: ReferenceScreenMeta[] = [
     source: require('./screenRefs/seunscription screen.png'),
   },
   { key: 'performance', title: 'Performance Screen', source: require('./screenRefs/performance screen.png') },
-  {
-    key: 'performanceDetail',
-    title: 'Performance Detail Screen',
-    source: require('./screenRefs/Performance detail screen.png'),
-  },
   {
     key: 'performanceReview',
     title: 'Performance Review Screen',

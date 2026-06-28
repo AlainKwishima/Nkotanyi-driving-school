@@ -20,7 +20,7 @@ import { HomeNativeScreen } from './screens/HomeNativeScreen';
 import { LanguageSelectionScreen } from './screens/LanguageSelectionScreen';
 import { LanguageSettingsScreen } from './screens/LanguageSettingsScreen';
 import { PracticeNoSelectedNativeScreen, PracticeSelectedNativeScreen } from './screens/PracticeNativeScreen';
-import { PerformanceDetailNativeScreen, PerformanceNativeScreen, PerformanceReviewNativeScreen } from './screens/PerformanceNativeScreens';
+import { PerformanceNativeScreen, PerformanceReviewNativeScreen } from './screens/PerformanceNativeScreens';
 import { HelpCenterNativeScreen } from './screens/LearningNativeScreens';
 import { PaymentConfirmationNativeScreen, PaymentNativeScreen, SubscriptionNativeScreen } from './screens/PaymentNativeScreens';
 import { ProfileNativeScreen } from './screens/ProfileNativeScreen';
@@ -118,7 +118,6 @@ export default function App() {
             <Stack.Screen name="TestFailedNative" component={TestFailedNativeScreen} />
             <Stack.Screen name="TestPassedNative" component={TestPassedNativeScreen} />
             <Stack.Screen name="PerformanceNative" component={PerformanceNativeScreen} options={mainTabScreenOptions} />
-            <Stack.Screen name="PerformanceDetailNative" component={PerformanceDetailNativeScreen} />
             <Stack.Screen name="PerformanceReviewNative" component={PerformanceReviewNativeScreen} />
             <Stack.Screen name="ReadingNative" component={ReadingNativeScreen} options={mainTabScreenOptions} />
             <Stack.Screen name="HelpCenterNative" component={HelpCenterNativeScreen} />

@@ -6,10 +6,18 @@ const MAX_RECORDS = 50;
 export type LocalExamAnswerDetail = {
   questionId: string;
   questionText: string;
+  questionImageUrls?: string[];
+  options?: Array<{
+    id: string;
+    text: string;
+    imageUrl?: string | null;
+    isCorrect: boolean;
+  }>;
   selectedOptionId: string | null;
   selectedOptionText: string | null;
   correctOptionId: string | null;
   correctOptionText: string | null;
+  explanation?: string | null;
   isCorrect: boolean;
 };
 

@@ -178,14 +178,14 @@ const styles = StyleSheet.create({
   avatar: {
     width: 62,
     height: 62,
-    borderRadius: 22,
+    borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.brandSoft,
+    backgroundColor: '#FB7B7B',
   },
   avatarText: {
     ...typography.title,
-    color: colors.brandStrong,
+    color: colors.white,
   },
   identityCopy: {
     flex: 1,

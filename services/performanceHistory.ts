@@ -1,4 +1,5 @@
 import type { LocalExamRecord } from './examHistoryStorage';
+import type { ExamAnswerDetail } from '../navigation/types';
 
 export type PerformanceHistoryRow = {
   id: string;
@@ -16,13 +17,7 @@ export type PerformanceHistoryRow = {
   startedAt?: string;
   finishedAt?: string;
   elapsedSec?: number;
-  answerDetails?: Array<{
-    questionId: string;
-    questionText: string;
-    selectedOptionText: string | null;
-    correctOptionText: string | null;
-    isCorrect: boolean;
-  }>;
+  answerDetails?: ExamAnswerDetail[];
 };
 
 function parseTime(isoLike: string): number {
@@ -92,8 +87,35 @@ export function mapServerPerformanceEntry(raw: unknown, index: number): Performa
             return {
               questionId: String(r.questionId ?? r._id ?? r.id ?? ''),
               questionText: String(r.questionText ?? r.question ?? ''),
+              questionImageUrls: Array.isArray(r.questionImageUrls)
+                ? r.questionImageUrls.filter((url): url is string => typeof url === 'string')
+                : Array.isArray(r.imageURLs)
+                  ? r.imageURLs.filter((url): url is string => typeof url === 'string')
+                  : undefined,
+              options: Array.isArray(r.options)
+                ? r.options
+                    .filter((option) => option && typeof option === 'object')
+                    .map((option) => {
+                      const o = option as Record<string, unknown>;
+                      return {
+                        id: String(o.id ?? o._id ?? ''),
+                        text: String(o.text ?? o.optionText ?? ''),
+                        imageUrl: typeof o.imageUrl === 'string' ? o.imageUrl : typeof o.optionImageURL === 'string' ? o.optionImageURL : null,
+                        isCorrect: Boolean(o.isCorrect ?? o.is_correct),
+                      };
+                    })
+                    .filter((option) => option.id || option.text)
+                : undefined,
+              selectedOptionId: typeof r.selectedOptionId === 'string' ? r.selectedOptionId : null,
               selectedOptionText: typeof r.selectedOptionText === 'string' ? r.selectedOptionText : null,
+              correctOptionId: typeof r.correctOptionId === 'string' ? r.correctOptionId : null,
               correctOptionText: typeof r.correctOptionText === 'string' ? r.correctOptionText : null,
+              explanation:
+                typeof r.explanation === 'string'
+                  ? r.explanation
+                  : typeof r.feedback === 'string'
+                    ? r.feedback
+                    : null,
               isCorrect: Boolean(r.isCorrect),
             };
           })
@@ -121,8 +143,13 @@ export function mapLocalExamRecord(r: LocalExamRecord): PerformanceHistoryRow {
     answerDetails: r.answers?.map((a) => ({
       questionId: a.questionId,
       questionText: a.questionText,
+      questionImageUrls: a.questionImageUrls,
+      options: a.options,
+      selectedOptionId: a.selectedOptionId,
       selectedOptionText: a.selectedOptionText,
+      correctOptionId: a.correctOptionId,
       correctOptionText: a.correctOptionText,
+      explanation: a.explanation,
       isCorrect: a.isCorrect,
     })),
   };

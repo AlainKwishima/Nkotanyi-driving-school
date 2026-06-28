@@ -13,6 +13,7 @@ import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
 import {
   checkPaymentStatus,
+  getMyRecentPayment,
   initiateAirtelPayment,
   initiateCardPayment,
   initiateMomoPayment,
@@ -262,13 +263,19 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function waitForPaymentConfirmation(
-  accessToken: string,
   probe: Record<string, unknown>,
   attempts = 8,
 ): Promise<unknown> {
   let last: unknown = null;
+  const reqRef = typeof probe.req_ref === 'string'
+    ? probe.req_ref
+    : typeof probe.reqRef === 'string'
+      ? probe.reqRef
+      : typeof probe.reference === 'string'
+        ? probe.reference
+        : '';
   for (let i = 0; i < attempts; i += 1) {
-    last = await checkPaymentStatus(probe, accessToken);
+    last = await checkPaymentStatus(reqRef ? { req_ref: reqRef } : probe);
     if (looksLikeSuccessfulPayment(last)) {
       return last;
     }
@@ -525,6 +532,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [checkingPending, setCheckingPending] = useState(false);
   const autoResumeKeyRef = useRef<string | null>(null);
+  const recentRecoveryKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -669,7 +677,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     }
     setCheckingPending(true);
     try {
-      const statusPayload = await waitForPaymentConfirmation(accessToken, {
+      const statusPayload = await waitForPaymentConfirmation({
         reqRef: record.reqRef,
         req_ref: record.reqRef,
         requestRef: record.reqRef,
@@ -711,8 +719,15 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   ): Promise<boolean> => {
     if (!accessToken) return false;
     try {
-      const statusPayload = await checkPaymentStatus(probe, accessToken);
-      const reqRef = extractReqRef(statusPayload) ?? (typeof probe.reqRef === 'string' ? probe.reqRef : null);
+      const reqRef = typeof probe.req_ref === 'string'
+        ? probe.req_ref
+        : typeof probe.reqRef === 'string'
+          ? probe.reqRef
+          : typeof probe.reference === 'string'
+            ? probe.reference
+            : '';
+      const statusPayload = await checkPaymentStatus(reqRef ? { req_ref: reqRef } : probe);
+      const recoveredReqRef = extractReqRef(statusPayload) ?? (typeof probe.reqRef === 'string' ? probe.reqRef : null);
       const nextCheckoutUrl = extractCheckoutLink(statusPayload) ?? checkoutUrl;
 
       if (looksLikeSuccessfulPayment(statusPayload)) {
@@ -720,9 +735,9 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         return true;
       }
 
-      if ((looksLikePendingPayment(statusPayload) || nextCheckoutUrl) && reqRef) {
+      if ((looksLikePendingPayment(statusPayload) || nextCheckoutUrl) && recoveredReqRef) {
         const record: PendingPaymentRecord = {
-          reqRef,
+          reqRef: recoveredReqRef,
           method: nextMethod,
           subscriptionType,
           amountRwf,
@@ -749,6 +764,60 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
     }
     return false;
   };
+
+  const recoverRecentPaymentFromBackend = async () => {
+    if (!accessToken || checkingPending || payBusy) return;
+    const since = pendingPayment?.createdAt ? Date.parse(pendingPayment.createdAt) : undefined;
+    const safeSince = typeof since === 'number' && Number.isFinite(since) ? since : undefined;
+    const recoveryKey = `${userId ?? 'anon'}:${pendingPayment?.reqRef ?? 'none'}:${safeSince ?? 'latest'}`;
+    if (recentRecoveryKeyRef.current === recoveryKey) return;
+    recentRecoveryKeyRef.current = recoveryKey;
+
+    setCheckingPending(true);
+    try {
+      const recentPayload = await getMyRecentPayment(accessToken, safeSince);
+      if (!recentPayload) return;
+
+      const reqRef = extractReqRef(recentPayload);
+      const nextCheckoutUrl = extractCheckoutLink(recentPayload);
+      const receipt = extractPaymentReceipt(recentPayload, paymentLanguage);
+
+      if (looksLikeSuccessfulPayment(recentPayload)) {
+        await finalizeSuccessfulPayment(receipt);
+        return;
+      }
+
+      if ((looksLikePendingPayment(recentPayload) || nextCheckoutUrl) && reqRef) {
+        const record: PendingPaymentRecord = {
+          reqRef,
+          method,
+          subscriptionType,
+          amountRwf,
+          language: paymentLanguage,
+          planTitle,
+          createdAt: new Date().toISOString(),
+          orderId: receipt.orderId,
+          checkoutUrl: nextCheckoutUrl,
+          phone: fallbackCardPhone,
+          userId,
+        };
+        await savePendingPayment(record);
+        setPendingPayment(record);
+        setCheckoutUrl(nextCheckoutUrl ?? null);
+      }
+    } catch (e) {
+      if (__DEV__) {
+        console.warn('[Payment] recent payment recovery failed', getMessageFromUnknownError(e));
+      }
+    } finally {
+      setCheckingPending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!accessToken || payBusy) return;
+    void recoverRecentPaymentFromBackend();
+  }, [accessToken, pendingPayment?.createdAt, pendingPayment?.reqRef, payBusy]);
 
   useEffect(() => {
     if (!pendingPayment || !accessToken || payBusy || checkingPending || pendingPayment.checkoutUrl) return;
@@ -810,7 +879,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         const confirmedPayload = looksLikeSuccessfulPayment(paymentPayload)
           ? paymentPayload
           : reference
-            ? await waitForPaymentConfirmation(accessToken, probe)
+            ? await waitForPaymentConfirmation(probe)
             : paymentPayload;
 
         const confirmed = looksLikeSuccessfulPayment(confirmedPayload);

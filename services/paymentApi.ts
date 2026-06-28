@@ -109,15 +109,42 @@ export async function initiateCardPayment(
   }
 }
 
-export async function checkPaymentStatus(body: Record<string, unknown>, accessToken: string): Promise<unknown> {
+export async function checkPaymentStatus(body: { req_ref: string } | Record<string, unknown>, accessToken?: string): Promise<unknown> {
+  const record = body as Record<string, unknown>;
+  const reqRef =
+    typeof record.req_ref === 'string'
+      ? record.req_ref
+      : typeof record.reqRef === 'string'
+        ? record.reqRef
+        : typeof record.reference === 'string'
+          ? record.reference
+          : '';
+  const requestBody = reqRef ? { req_ref: reqRef } : body;
   const json = await apiRequest<unknown>(`/api/payment/check-payment-status`, {
     method: 'POST',
-    body,
+    body: requestBody,
     accessToken,
   });
   try {
     return unwrapApiPayload(json);
   } catch {
     return json;
+  }
+}
+
+export async function getMyRecentPayment(accessToken: string, since?: number): Promise<unknown | null> {
+  const path = since ? `/api/payment/my-recent-payment?since=${encodeURIComponent(String(since))}` : `/api/payment/my-recent-payment`;
+  const json = await apiRequest<unknown>(path, {
+    method: 'GET',
+    accessToken,
+    headers: { token: `Bearer ${accessToken}` },
+  });
+  if (json && typeof json === 'object' && !Array.isArray(json) && 'data' in json && (json as { data?: unknown }).data == null) {
+    return null;
+  }
+  try {
+    return unwrapApiPayload(json) ?? null;
+  } catch {
+    return json ?? null;
   }
 }
