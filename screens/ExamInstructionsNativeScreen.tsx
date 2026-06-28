@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,16 +11,9 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useGateModal } from '../context/GateModalContext';
 import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
-import { colors, radii, spacing, typography } from '../constants/theme';
+import { colors, radii, shadows, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExamInstructionsNative'>;
-
-const STAT_DEFINITIONS = [
-  { icon: 'timer-outline', label: 'examInstructions.statTimeLimit', value: 'examInstructions.statTimeValue' },
-  { icon: 'help-circle-outline', label: 'examInstructions.statQuestions', value: 'examInstructions.statQuestionsValue' },
-  { icon: 'ribbon-outline', label: 'examInstructions.statPassing', value: 'examInstructions.statPassingValue' },
-  { icon: 'clipboard-outline', label: 'examInstructions.statExamType', value: 'examInstructions.statExamTypeValue' },
-] as const;
 
 const GUIDE_KEYS = [
   'examInstructions.guide1',
@@ -43,16 +36,6 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
       () => navigation.replace('HomeNative'),
     );
   }, [hasSubscription, isSigningOut, navigation, openGateModal]);
-
-  const stats = useMemo(
-    () =>
-      STAT_DEFINITIONS.map((item) => ({
-        icon: item.icon,
-        label: t(item.label),
-        value: t(item.value),
-      })),
-    [t],
-  );
 
   const startExam = () => {
     if (!hasSubscription) {
@@ -78,38 +61,17 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <View style={styles.introCard}>
-            <View style={styles.introHeader}>
-              <View style={styles.introIcon}>
-                <Ionicons name="shield-checkmark-outline" size={23} color={colors.brandStrong} />
-              </View>
-              <View style={styles.introCopy}>
-                <Text style={styles.introEyebrow}>{t('home.action.exams')}</Text>
-                <Text style={styles.introTitle}>{t('examInstructions.readyTitle')}</Text>
-              </View>
+          <View style={styles.webIntroCard}>
+            <View style={styles.webIntroHeader}>
+              <Text style={styles.webIntroTitle}>{t('examInstructions.webHeroTitle')}</Text>
             </View>
-            <Text style={styles.introBody}>{t('examInstructions.readySub')}</Text>
-            <TouchableOpacity style={styles.startButton} onPress={startExam} activeOpacity={0.88}>
-              <Text style={styles.startText}>{t('examInstructions.startExam')}</Text>
-              <Ionicons name="arrow-forward" size={19} color={colors.white} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('examInstructions.sectionTitle')}</Text>
-            <Text style={styles.sectionBody}>{t('examInstructions.sectionSub')}</Text>
-          </View>
-
-          <View style={styles.statsGrid}>
-            {stats.map((stat) => (
-              <View key={stat.label} style={styles.statCard}>
-                <View style={styles.statIcon}>
-                  <Ionicons name={stat.icon} size={19} color={colors.brand} />
-                </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
+            <View style={styles.webIntroBody}>
+              <Text style={styles.webIntroText}>{t('examInstructions.webHeroBody')}</Text>
+              <TouchableOpacity style={styles.startButton} onPress={startExam} activeOpacity={0.88}>
+                <Text style={styles.startText}>{t('examInstructions.webHeroCta')}</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.white} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.guideCard}>
@@ -140,52 +102,47 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   content: {
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  introCard: {
-    padding: spacing.xl,
-    borderRadius: radii.xl,
+  webIntroCard: {
+    overflow: 'hidden',
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    ...shadows.card,
   },
-  introHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  introIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: radii.lg,
-    alignItems: 'center',
+  webIntroHeader: {
+    minHeight: 72,
     justifyContent: 'center',
-    backgroundColor: colors.brandSoft,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.primary,
   },
-  introCopy: {
-    flex: 1,
+  webIntroTitle: {
+    fontFamily: 'Poppins-ExtraBold',
+    fontSize: 17,
+    lineHeight: 24,
+    color: colors.white,
   },
-  introEyebrow: {
-    ...typography.eyebrow,
-    color: colors.brand,
-    textTransform: 'uppercase',
+  webIntroBody: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl,
+    alignItems: 'center',
   },
-  introTitle: {
-    ...typography.heading,
-    marginTop: 2,
-    color: colors.ink,
-  },
-  introBody: {
+  webIntroText: {
     ...typography.body,
-    marginTop: spacing.md,
-    color: colors.inkMuted,
+    alignSelf: 'stretch',
+    color: colors.textPrimary,
   },
   startButton: {
-    minHeight: 50,
-    width: '100%',
-    marginTop: spacing.lg,
-    borderRadius: radii.lg,
+    minHeight: 44,
+    minWidth: 132,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -193,57 +150,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   startText: {
-    ...typography.bodyStrong,
+    fontFamily: 'Poppins-ExtraBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.white,
   },
-  sectionTitle: {
-    ...typography.title,
-    color: colors.ink,
-  },
-  sectionBody: {
-    ...typography.body,
-    marginTop: spacing.xs,
-    color: colors.inkMuted,
-  },
-  sectionHeader: {
-    marginTop: spacing.xl,
-  },
-  statsGrid: {
-    marginTop: spacing.md,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    width: '48.5%',
-    minHeight: 112,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  statIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.brandSoft,
-  },
-  statValue: {
-    ...typography.bodyStrong,
-    marginTop: spacing.md,
-    color: colors.ink,
-  },
-  statLabel: {
-    ...typography.caption,
-    marginTop: 2,
-    color: colors.inkSoft,
-  },
   guideCard: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xl,
     padding: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,

@@ -165,6 +165,10 @@ const en: Record<string, string> = {
   'exam.keepWorking': 'Keep working',
 
   'examInstructions.title': 'Exam instructions',
+  'examInstructions.webHeroTitle': 'What you need before starting',
+  'examInstructions.webHeroBody':
+    'To take the exam, you must have an active subscription and available exam access. Good luck!',
+  'examInstructions.webHeroCta': 'Start',
   'examInstructions.readyTitle': 'Ready to start?',
   'examInstructions.readySub': 'Good luck, future driver!',
   'examInstructions.startExam': 'Start exam',
@@ -744,6 +748,10 @@ const rw: Record<string, string> = {
   'exam.incompleteQuestions': 'Serivisi y\'ikizamini ntiyagaruye ibibazo 20 byose. Ongera ugerageze.',
 
   'examInstructions.title': 'Amabwiriza y’ikizamini',
+  'examInstructions.webHeroTitle': 'Ibyo ugomba kuba wujuje kugira ngo utangire',
+  'examInstructions.webHeroBody':
+    'Kugira ngo ubashe gukora ikizamini, ugomba kuba wirishyuye kandi ucyemerewe gukora ibizamini waguzwe. Amahirwe masa!',
+  'examInstructions.webHeroCta': 'Tangira',
   'examInstructions.readyTitle': 'Witeguye gutangira?',
   'examInstructions.readySub': 'Amahirwe, mushoferi w’ejo hazaza!',
   'examInstructions.startExam': 'Tangira ikizamini',
@@ -1284,6 +1292,10 @@ const fr: Record<string, string> = {
   'exam.incompleteQuestions': 'Le service d’examen n’a pas renvoyé les 20 questions complètes. Veuillez réessayer.',
 
   'examInstructions.title': 'Instructions d’examen',
+  'examInstructions.webHeroTitle': 'Ce qu’il faut avant de commencer',
+  'examInstructions.webHeroBody':
+    'Pour passer l’examen, vous devez disposer d’un abonnement actif et d’un accès examen disponible. Bonne chance !',
+  'examInstructions.webHeroCta': 'Commencer',
   'examInstructions.readyTitle': 'Prêt à commencer ?',
   'examInstructions.readySub': 'Bonne chance, futur conducteur !',
   'examInstructions.startExam': 'Commencer l’examen',
