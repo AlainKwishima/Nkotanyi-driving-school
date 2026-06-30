@@ -1,7 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+
+import { AppText, shrinkableTextContainer } from './AppText';
 
 import { colors, spacing, typography } from '../constants/theme';
+import { useResponsiveMetrics } from '../utils/responsive';
 
 export function SectionHeading({
   title,
@@ -12,12 +15,15 @@ export function SectionHeading({
   action?: string;
   onAction?: () => void;
 }) {
+  const r = useResponsiveMetrics();
   return (
-    <View style={styles.row}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={[styles.row, { minHeight: r.verticalScale(24), marginTop: r.verticalScale(spacing.xxl), marginBottom: r.verticalScale(spacing.md) }]}>
+      <View style={[shrinkableTextContainer.root, styles.titleWrap]}>
+        <AppText style={[styles.title, { fontSize: r.font(17), lineHeight: r.lineHeight(17) }]}>{title}</AppText>
+      </View>
       {action && onAction ? (
-        <TouchableOpacity onPress={onAction} hitSlop={8}>
-          <Text style={styles.action}>{action}</Text>
+        <TouchableOpacity onPress={onAction} hitSlop={8} style={styles.actionWrap}>
+          <AppText style={[styles.action, { fontSize: r.font(14), lineHeight: r.lineHeight(14) }]}>{action}</AppText>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -26,12 +32,13 @@ export function SectionHeading({
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 24,
-    marginTop: spacing.xxl,
-    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  titleWrap: {
+    marginRight: spacing.sm,
   },
   title: {
     ...typography.sectionTitle,
@@ -40,5 +47,9 @@ const styles = StyleSheet.create({
   action: {
     ...typography.bodyStrong,
     color: colors.brand,
+  },
+  actionWrap: {
+    flexShrink: 0,
+    maxWidth: '42%',
   },
 });

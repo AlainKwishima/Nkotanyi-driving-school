@@ -1,7 +1,9 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '../constants/theme';
+import { useResponsiveMetrics } from '../utils/responsive';
 
 type ReadSection = 'documents' | 'signs';
 
@@ -24,6 +26,7 @@ export function ReadSectionTabs({
   onDocumentsPress,
   onSignsPress,
 }: ReadSectionTabsProps) {
+  const r = useResponsiveMetrics();
   const tabs = [
     {
       key: 'documents' as const,
@@ -40,24 +43,39 @@ export function ReadSectionTabs({
   ];
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { padding: r.scale(4), borderRadius: r.radius(radii.xl), gap: r.scale(spacing.xs) }]}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         return (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, isActive ? styles.tabActive : styles.tabInactive]}
+            style={[
+              styles.tab,
+              {
+                minHeight: r.touch(48),
+                paddingHorizontal: r.scale(spacing.md),
+                borderRadius: r.radius(radii.lg),
+                gap: r.scale(spacing.sm),
+              },
+              isActive ? styles.tabActive : styles.tabInactive,
+            ]}
             onPress={tab.onPress}
             activeOpacity={0.84}
           >
-            <Text style={[styles.label, isActive ? styles.labelActive : styles.labelInactive]} numberOfLines={1}>
+            <AppText style={[styles.label, { fontSize: r.font(14), lineHeight: r.lineHeight(14) }, isActive ? styles.labelActive : styles.labelInactive]} lines={1}>
               {tab.label}
-            </Text>
+            </AppText>
             {typeof tab.count === 'number' ? (
-              <View style={[styles.countPill, isActive ? styles.countPillActive : styles.countPillInactive]}>
-                <Text style={[styles.countText, isActive ? styles.countTextActive : styles.countTextInactive]}>
+              <View
+                style={[
+                  styles.countPill,
+                  { minWidth: r.scale(22), height: r.verticalScale(22), paddingHorizontal: r.scale(6) },
+                  isActive ? styles.countPillActive : styles.countPillInactive,
+                ]}
+              >
+                <AppText style={[styles.countText, { fontSize: r.font(10, 0.2) }, isActive ? styles.countTextActive : styles.countTextInactive]}>
                   {tab.count}
-                </Text>
+                </AppText>
               </View>
             ) : null}
           </TouchableOpacity>
@@ -69,23 +87,16 @@ export function ReadSectionTabs({
 
 const styles = StyleSheet.create({
   wrap: {
-    padding: 4,
-    borderRadius: radii.xl,
     flexDirection: 'row',
-    gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
   },
   tab: {
     flex: 1,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
   },
   tabActive: {
     backgroundColor: colors.brand,
@@ -104,9 +115,6 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   countPill: {
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -119,7 +127,6 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontFamily: 'Poppins-ExtraBold',
-    fontSize: 10,
   },
   countTextActive: {
     color: colors.brand,

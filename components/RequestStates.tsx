@@ -1,8 +1,10 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radii, spacing, typography } from '../constants/theme';
+import { useResponsiveMetrics } from '../utils/responsive';
 import { useI18n } from '../i18n/useI18n';
 
 type StateProps = {
@@ -13,37 +15,40 @@ type StateProps = {
 
 export function LoadingState({ message }: Pick<StateProps, 'message'>) {
   const { t } = useI18n();
+  const r = useResponsiveMetrics();
   return (
-    <View style={styles.state}>
+    <View style={[styles.state, { minHeight: r.verticalScale(120), padding: r.scale(spacing.xl) }]}>
       <ActivityIndicator color={colors.brand} />
-      <Text style={styles.message}>{message ?? t('common.loading')}</Text>
+      <AppText style={[styles.message, { marginTop: r.verticalScale(spacing.xs), fontSize: r.font(14), lineHeight: r.lineHeight(14) }]} lines={null}>{message ?? t('common.loading')}</AppText>
     </View>
   );
 }
 
 export function EmptyState({ title, message }: StateProps) {
   const { t } = useI18n();
+  const r = useResponsiveMetrics();
   return (
-    <View style={styles.state}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+    <View style={[styles.state, { minHeight: r.verticalScale(120), padding: r.scale(spacing.xl) }]}>
+      <View style={[styles.emptyIcon, { width: r.touch(44), height: r.touch(44), borderRadius: r.radius(radii.lg) }]}>
+        <Ionicons name="document-text-outline" size={r.icon(22)} color={colors.primary} />
       </View>
-      <Text style={styles.title}>{title ?? t('error.emptyTitle')}</Text>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <AppText style={[styles.title, { marginTop: r.verticalScale(spacing.sm), fontSize: r.font(17), lineHeight: r.lineHeight(17) }]}>{title ?? t('error.emptyTitle')}</AppText>
+      {message ? <AppText style={[styles.message, { marginTop: r.verticalScale(spacing.xs), fontSize: r.font(14), lineHeight: r.lineHeight(14) }]} lines={null}>{message}</AppText> : null}
     </View>
   );
 }
 
 export function InlineErrorState({ title, message, onRetry }: StateProps) {
   const { t } = useI18n();
+  const r = useResponsiveMetrics();
   return (
-    <View style={[styles.state, styles.errorState]}>
-      <Ionicons name="alert-circle-outline" size={24} color={colors.danger} />
-      <Text style={styles.title}>{title ?? t('error.genericTitle')}</Text>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+    <View style={[styles.state, styles.errorState, { minHeight: r.verticalScale(120), padding: r.scale(spacing.xl), borderRadius: r.radius(radii.lg) }]}>
+      <Ionicons name="alert-circle-outline" size={r.icon(24)} color={colors.danger} />
+      <AppText style={[styles.title, { marginTop: r.verticalScale(spacing.sm), fontSize: r.font(17), lineHeight: r.lineHeight(17) }]}>{title ?? t('error.genericTitle')}</AppText>
+      {message ? <AppText style={[styles.message, { marginTop: r.verticalScale(spacing.xs), fontSize: r.font(14), lineHeight: r.lineHeight(14) }]} lines={null}>{message}</AppText> : null}
       {onRetry ? (
-        <TouchableOpacity style={styles.retry} onPress={onRetry}>
-          <Text style={styles.retryText}>{t('common.retry')}</Text>
+        <TouchableOpacity style={[styles.retry, { minHeight: r.touch(44), marginTop: r.verticalScale(spacing.lg), paddingHorizontal: r.scale(spacing.xl) }]} onPress={onRetry}>
+          <AppText style={[styles.retryText, { fontSize: r.font(14), lineHeight: r.lineHeight(14) }]}>{t('common.retry')}</AppText>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -52,41 +57,30 @@ export function InlineErrorState({ title, message, onRetry }: StateProps) {
 
 const styles = StyleSheet.create({
   state: {
-    minHeight: 120,
-    padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorState: {
-    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
   },
   emptyIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.blueTint,
   },
   title: {
     ...typography.sectionTitle,
-    marginTop: spacing.sm,
     color: colors.ink,
     textAlign: 'center',
   },
   message: {
     ...typography.body,
-    marginTop: spacing.xs,
     color: colors.inkMuted,
     textAlign: 'center',
   },
   retry: {
-    minHeight: 44,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',

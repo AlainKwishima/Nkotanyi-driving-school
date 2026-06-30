@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '../constants/theme';
 import { useI18n } from '../i18n/useI18n';
@@ -21,10 +22,10 @@ class ErrorBoundary extends React.Component<
     if (!this.state.failed) return this.props.children;
     return (
       <View style={styles.root}>
-        <Text style={styles.title}>{this.props.labels.title}</Text>
-        <Text style={styles.message}>{this.props.labels.message}</Text>
+        <AppText style={styles.title}>{this.props.labels.title}</AppText>
+        <AppText style={styles.message} lines={null}>{this.props.labels.message}</AppText>
         <TouchableOpacity style={styles.button} onPress={() => this.setState({ failed: false })}>
-          <Text style={styles.buttonText}>{this.props.labels.retry}</Text>
+          <AppText style={styles.buttonText}>{this.props.labels.retry}</AppText>
         </TouchableOpacity>
       </View>
     );

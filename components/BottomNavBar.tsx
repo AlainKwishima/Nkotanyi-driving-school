@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 
@@ -44,18 +45,18 @@ function resolveActive(routeName: string): TabKey | null {
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
   const route = useRoute();
-  const { insets, shortSide } = useResponsiveLayout();
+  const { insets, shortSide, scale, verticalScale, radius, touch, font } = useResponsiveLayout();
   const { t } = useI18n();
   const { hasSubscription, canChangeLanguage, subscriptionLanguage, contentLanguage, isSigningOut } = useAppFlow();
   const { openGateModal } = useGateModal();
   const activeKey = active ?? resolveActive(route.name);
   const isCompact = shortSide <= 360;
   const isWidePhone = shortSide >= 412;
-  const iconSize = isCompact ? 20 : 22;
-  const labelSize = isCompact ? 9 : isWidePhone ? 11 : 10;
-  const horizontalInset = isCompact ? 8 : 14;
-  const bottomInset = Math.max(insets.bottom - 20, 0);
-  const navLayerHeight = bottomInset + 70;
+  const iconSize = scale(isCompact ? 20 : 22);
+  const labelSize = font(isCompact ? 9 : isWidePhone ? 11 : 10, 0.25);
+  const horizontalInset = scale(isCompact ? 8 : 14);
+  const bottomInset = Math.max(insets.bottom - 28, 0);
+  const navLayerHeight = bottomInset + verticalScale(68);
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -97,23 +98,36 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
 
   return (
     <View pointerEvents="box-none" style={[styles.navLayer, { height: navLayerHeight }]}>
-      <View style={[styles.tabs, { left: horizontalInset, right: horizontalInset, bottom: bottomInset }]}>
+      <View
+        style={[
+          styles.tabs,
+          {
+            left: horizontalInset,
+            right: horizontalInset,
+            bottom: bottomInset,
+            minHeight: verticalScale(68),
+            paddingHorizontal: scale(8),
+            paddingVertical: verticalScale(7),
+            borderRadius: radius(24),
+          },
+        ]}
+      >
         {tabs.map((tab) => {
           const isActive = tab.key === activeKey;
           return (
             <Pressable
               key={tab.key}
-              style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+              style={({ pressed }) => [styles.tab, { minWidth: touch(MIN_TOUCH_TARGET), minHeight: touch(MIN_TOUCH_TARGET) }, pressed && styles.tabPressed]}
               onPress={() => onPress(tab.key, tab.route)}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >
-              <View style={[styles.tabBubble, isActive && styles.tabBubbleActive]}>
+              <View style={[styles.tabBubble, { width: scale(42), height: verticalScale(32), borderRadius: radius(18) }, isActive && styles.tabBubbleActive]}>
                 <Ionicons name={tab.icon} size={iconSize} color={isActive ? colors.primary : colors.textMuted} />
               </View>
-              <Text style={[styles.tabText, { fontSize: labelSize }, isActive && styles.tabTextActive]} numberOfLines={1}>
+              <AppText style={[styles.tabText, { fontSize: labelSize, marginTop: verticalScale(1) }, isActive && styles.tabTextActive]} lines={1}>
                 {t(tab.labelKey)}
-              </Text>
+              </AppText>
             </Pressable>
           );
         })}
@@ -132,37 +146,27 @@ const styles = StyleSheet.create({
   },
   tabs: {
     position: 'absolute',
-    minHeight: 68,
     backgroundColor: 'rgba(255,255,255,0.98)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.line,
     ...shadows.floating,
   },
   tab: {
     alignItems: 'center',
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     flex: 1,
   },
   tabPressed: { opacity: 0.72 },
   tabBubble: {
-    width: 42,
-    height: 32,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabBubbleActive: { backgroundColor: colors.blueTint },
   tabText: {
     ...typography.caption,
-    marginTop: 1,
     color: colors.textMuted,
   },
   tabTextActive: {

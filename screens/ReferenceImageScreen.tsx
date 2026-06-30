@@ -1,24 +1,26 @@
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Dimensions, Image, ImageResolvedAssetSource, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ImageResolvedAssetSource, ScrollView, StyleSheet, View } from 'react-native';
 
 import { REFERENCE_BY_KEY } from '../assets/referenceScreens';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, spacing } from '../constants/theme';
+import { useResponsiveMetrics } from '../utils/responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReferenceImage'>;
 
 export function ReferenceImageScreen({ route, navigation }: Props) {
+  const r = useResponsiveMetrics();
   const screen = REFERENCE_BY_KEY[route.params.key];
-  const phoneWidth = Math.min(Dimensions.get('window').width - spacing.xxl, 420);
+  const phoneWidth = Math.min(r.width - r.scale(spacing.xxl), r.scale(420));
   const resolved = Image.resolveAssetSource(screen.source) as ImageResolvedAssetSource | undefined;
   const aspectRatio = resolved?.width && resolved?.height ? resolved.width / resolved.height : 1125 / 2433;
 
   return (
     <View style={styles.root}>
       <ScreenHeader title={screen.title} onBack={() => navigation.goBack()} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingHorizontal: r.scale(spacing.md), paddingBottom: r.verticalScale(spacing.xxl) }]}>
         <Image source={screen.source} style={{ width: phoneWidth, aspectRatio }} resizeMode="contain" />
       </ScrollView>
     </View>
@@ -35,7 +37,5 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl,
   },
 });

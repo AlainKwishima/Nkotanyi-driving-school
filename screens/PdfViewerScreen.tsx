@@ -1,5 +1,6 @@
+import { AppText } from '../components/AppText';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -614,8 +615,8 @@ export function PdfViewerScreen({ navigation, route }: Props) {
               <PdfDocumentIcon size={68} />
             </View>
             <ActivityIndicator size="small" color={colors.brand} />
-            <Text style={styles.overlayTitle}>{t('pdf.opening')}</Text>
-            <Text style={styles.overlayBody}>{progressLabel}</Text>
+            <AppText style={styles.overlayTitle}>{t('pdf.opening')}</AppText>
+            <AppText style={styles.overlayBody}>{progressLabel}</AppText>
           </View>
         ) : null}
 
@@ -624,12 +625,12 @@ export function PdfViewerScreen({ navigation, route }: Props) {
             <View style={[styles.overlayIcon, styles.overlayIconError]}>
               <Ionicons name="alert-circle-outline" size={30} color={colors.red} />
             </View>
-            <Text style={styles.overlayTitle}>{t('pdf.previewErrorTitle')}</Text>
-            <Text style={styles.overlayBody}>
+            <AppText style={styles.overlayTitle}>{t('pdf.previewErrorTitle')}</AppText>
+            <AppText style={styles.overlayBody}>
               {error ?? t('pdf.previewErrorBody')}
-            </Text>
+            </AppText>
             <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-              <Text style={styles.retryText}>{t('common.retry')}</Text>
+              <AppText style={styles.retryText}>{t('common.retry')}</AppText>
             </TouchableOpacity>
           </View>
         ) : null}

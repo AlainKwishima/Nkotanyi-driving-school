@@ -1,16 +1,8 @@
+import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useIsFocused } from '@react-navigation/native';
-import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useEvent } from 'expo';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +43,7 @@ function MediaPlaceholder({ compact = false }: { compact?: boolean }) {
       <View style={[styles.mediaMark, compact && styles.mediaMarkCompact]}>
         <Ionicons name="play" size={compact ? 14 : 24} color={colors.white} />
       </View>
-      {!compact ? <Text style={styles.mediaPlaceholderText}>IBYAPA</Text> : null}
+      {!compact ? <AppText style={styles.mediaPlaceholderText}>IBYAPA</AppText> : null}
     </View>
   );
 }
@@ -215,7 +207,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
         <AppHeader title={t('video.playerTitle')} navigation={navigation} onBack={() => navigation.goBack()} />
         <View style={styles.centeredGate}>
           <ActivityIndicator size="large" color={colors.brand} />
-          <Text style={styles.gateText}>{t('video.loading')}</Text>
+          <AppText style={styles.gateText}>{t('video.loading')}</AppText>
         </View>
       </ScreenColumn>
     );
@@ -225,10 +217,6 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
     <ScreenColumn>
       <AppHeader
         title={t('video.playerTitle')}
-        eyebrow={t('video.lessonPosition', {
-          current: allVideos.length > 0 ? currentIndex + 1 : 1,
-          total: Math.max(allVideos.length, 1),
-        })}
         navigation={navigation}
         onBack={() => navigation.goBack()}
       />
@@ -248,10 +236,10 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                     color={unavailableInApp ? colors.amber : colors.red}
                   />
                 </View>
-                <Text style={styles.errorTitle}>
+                <AppText style={styles.errorTitle}>
                   {t(unavailableInApp ? 'video.playbackUnavailable' : 'video.playbackError')}
-                </Text>
-                <Text style={styles.errorText}>{playerError}</Text>
+                </AppText>
+                <AppText style={styles.errorText} lines={null}>{playerError}</AppText>
                 <TouchableOpacity
                   style={styles.retryButton}
                   onPress={() => {
@@ -261,7 +249,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                   activeOpacity={0.82}
                 >
                   <Ionicons name="refresh" size={17} color={colors.white} />
-                  <Text style={styles.retryText}>{t('common.retry')}</Text>
+                  <AppText style={styles.retryText}>{t('common.retry')}</AppText>
                 </TouchableOpacity>
                 {unavailableInApp && current.videoUrl ? (
                   <TouchableOpacity
@@ -272,7 +260,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                     activeOpacity={0.82}
                   >
                     <Ionicons name="open-outline" size={17} color={colors.white} />
-                    <Text style={styles.retryText}>{t('video.openExternal')}</Text>
+                    <AppText style={styles.retryText}>{t('video.openExternal')}</AppText>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -289,20 +277,20 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
             <View style={styles.nowPlaying}>
               <View style={styles.nowPlayingLabel}>
                 <View style={styles.liveDot} />
-                <Text style={styles.eyebrow}>{t('video.nowPlaying')}</Text>
+                <AppText style={styles.eyebrow}>{t('video.nowPlaying')}</AppText>
               </View>
-              <Text style={styles.videoTitle}>{title}</Text>
-              {!current.videoUrl ? <Text style={styles.noUrl}>{t('video.noUrl')}</Text> : null}
+              <AppText style={styles.videoTitle} lines={2}>{title}</AppText>
+              {!current.videoUrl ? <AppText style={styles.noUrl}>{t('video.noUrl')}</AppText> : null}
             </View>
           </View>
 
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>{t('video.libraryTitle')}</Text>
-              <Text style={styles.sectionTitle}>{t('video.upNext')}</Text>
+              <AppText style={styles.sectionEyebrow}>{t('video.libraryTitle')}</AppText>
+              <AppText style={styles.sectionTitle}>{t('video.upNext')}</AppText>
             </View>
             <View style={styles.countBadge}>
-              <Text style={styles.countText}>{playlist.length}</Text>
+              <AppText style={styles.countText}>{playlist.length}</AppText>
             </View>
           </View>
 
@@ -329,13 +317,13 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
                   </View>
                 </View>
                 <View style={styles.lessonCopy}>
-                  <Text style={styles.lessonNumber}>
+                  <AppText style={styles.lessonNumber}>
                     {t('video.lessonNumber', { number: index + 1 })}
-                  </Text>
-                  <Text style={styles.lessonTitle} numberOfLines={2}>
+                  </AppText>
+                  <AppText style={styles.lessonTitle} lines={2}>
                     {video.title ?? t('video.lessonFallback', { n: index + 1 })}
-                  </Text>
-                  <Text style={styles.lessonMeta}>{video.duration ?? t('video.tapWatch')}</Text>
+                  </AppText>
+                  <AppText style={styles.lessonMeta}>{video.duration ?? t('video.tapWatch')}</AppText>
                 </View>
                 <View style={styles.chevron}>
                   <Ionicons name="chevron-forward" size={18} color={colors.brand} />
@@ -345,7 +333,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
           ) : (
             <View style={styles.emptyPlaylist}>
               <Ionicons name="checkmark-circle-outline" size={32} color={colors.green} />
-              <Text style={styles.emptyPlaylistText}>{t('video.noOtherVideos')}</Text>
+              <AppText style={styles.emptyPlaylistText}>{t('video.noOtherVideos')}</AppText>
             </View>
           )}
         </ScrollView>

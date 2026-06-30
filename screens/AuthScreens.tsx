@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,8 +60,8 @@ function LogoHeader({ showTitle, showTagline = false }: { showTitle: boolean; sh
   return (
     <View style={styles.logoHeader}>
       <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(64), height: m.scale(64) }]} resizeMode="contain" />
-      {showTitle ? <Text style={[styles.brandTitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(12), lineHeight: m.fontScale(18) }]}>{t('language.brand')}</Text> : null}
-      {showTagline ? <Text style={[styles.taglineText, { marginTop: m.verticalScale(2), fontSize: m.fontScale(11), lineHeight: m.fontScale(16) }]}>{t('auth.tagline')}</Text> : null}
+      {showTitle ? <AppText style={[styles.brandTitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(12), lineHeight: m.fontScale(18) }]}>{t('language.brand')}</AppText> : null}
+      {showTagline ? <AppText style={[styles.taglineText, { marginTop: m.verticalScale(2), fontSize: m.fontScale(11), lineHeight: m.fontScale(16) }]}>{t('auth.tagline')}</AppText> : null}
     </View>
   );
 }
@@ -81,7 +82,7 @@ function RememberMeRow({
         size={20}
         color={checked ? colors.brand : colors.inkSoft}
       />
-      <Text style={styles.rememberText}>{label}</Text>
+      <AppText style={styles.rememberText}>{label}</AppText>
     </Pressable>
   );
 }
@@ -143,8 +144,8 @@ export function LoginScreen({ navigation, route }: LoginProps) {
         <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle={false} />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.welcomeBack')}</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{t('auth.signInSubtitle')}</Text>
+        <AppText style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.welcomeBack')}</AppText>
+        <AppText style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]} lines={null}>{t('auth.signInSubtitle')}</AppText>
 
         <View style={styles.formGroup}>
           <AuthInputField
@@ -207,18 +208,18 @@ export function LoginScreen({ navigation, route }: LoginProps) {
         {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
 
         <Pressable style={styles.forgotLinkWrap} onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgotLink}>{t('auth.forgot')}</Text>
+          <AppText style={styles.forgotLink}>{t('auth.forgot')}</AppText>
         </Pressable>
 
         <View style={styles.separatorRow}>
           <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>{t('auth.or')}</Text>
+          <AppText style={styles.separatorText}>{t('auth.or')}</AppText>
           <View style={styles.separatorLine} />
         </View>
 
         <Pressable style={styles.bottomLinkRow} onPress={() => navigation.navigate('CreateAccount')}>
-          <Text style={styles.bottomLinkHint}>{t('auth.newUser')} </Text>
-          <Text style={styles.bottomLinkAction}>{t('auth.createAccountLink')}</Text>
+          <AppText style={styles.bottomLinkHint}>{t('auth.newUser')} </AppText>
+          <AppText style={styles.bottomLinkAction}>{t('auth.createAccountLink')}</AppText>
         </Pressable>
       </ScrollView>
     </View>
@@ -248,8 +249,8 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
         <AuthBackButton navigation={navigation} />
         <LogoHeader showTitle />
 
-        <Text style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.createTitle')}</Text>
-        <Text style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{t('auth.createSubtitle')}</Text>
+        <AppText style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.createTitle')}</AppText>
+        <AppText style={[styles.authSubtitle, { marginTop: m.verticalScale(4), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]} lines={null}>{t('auth.createSubtitle')}</AppText>
 
         <View style={styles.formGroup}>
           <AuthInputField
@@ -327,8 +328,8 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
         {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
 
         <Pressable style={styles.bottomLinkRowCreate} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.bottomLinkHint}>{t('auth.haveAccount')} </Text>
-          <Text style={styles.bottomLinkAction}>{t('auth.signInLink')}</Text>
+          <AppText style={styles.bottomLinkHint}>{t('auth.haveAccount')} </AppText>
+          <AppText style={styles.bottomLinkAction}>{t('auth.signInLink')}</AppText>
         </Pressable>
       </ScrollView>
     </View>
@@ -371,12 +372,12 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
           <View style={styles.recoveryBadge}>
             <MaterialCommunityIcons name="shield-key-outline" size={22} color={colors.brandStrong} />
           </View>
-          <Text style={[styles.secondaryTitle, { marginTop: m.verticalScale(12), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
+          <AppText style={[styles.secondaryTitle, { marginTop: m.verticalScale(12), fontSize: m.fontScale(22), lineHeight: m.fontScale(30) }]}>
             {t('auth.contactAdminTitle')}
-          </Text>
-          <Text style={[styles.secondarySubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(20), paddingHorizontal: m.scale(6) }]}>
+          </AppText>
+          <AppText style={[styles.secondarySubtitle, { marginTop: m.verticalScale(6), fontSize: m.fontScale(13), lineHeight: m.fontScale(20), paddingHorizontal: m.scale(6) }]}>
             {t('auth.contactAdminMessage')}
-          </Text>
+          </AppText>
         </View>
 
         <View style={[styles.contactInfoCard, { marginTop: m.verticalScale(18), padding: m.scale(6) }]}>
@@ -385,8 +386,8 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
               <Feather name="mail" size={m.scale(19)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
-              <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</Text>
-              <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolEmail')}</Text>
+              <AppText style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</AppText>
+              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolEmail')}</AppText>
             </View>
             <Feather name="chevron-right" size={18} color={colors.inkSoft} />
           </Pressable>
@@ -398,8 +399,8 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
               <Feather name="phone" size={m.scale(19)} color={colors.brand} />
             </View>
             <View style={styles.contactTextContent}>
-              <Text style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</Text>
-              <Text style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolPhone')}</Text>
+              <AppText style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</AppText>
+              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolPhone')}</AppText>
             </View>
             <Feather name="chevron-right" size={18} color={colors.inkSoft} />
           </Pressable>
@@ -413,14 +414,14 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
             ]}
           >
             <MaterialCommunityIcons name="whatsapp" size={m.scale(20)} color="#FFFFFF" />
-            <Text style={[styles.whatsappBtnText, { marginLeft: m.scale(8), fontSize: m.fontScale(14) }]}>
+            <AppText style={[styles.whatsappBtnText, { marginLeft: m.scale(8), fontSize: m.fontScale(14) }]}>
               {t('auth.whatsappUs')}
-            </Text>
+            </AppText>
           </Pressable>
         </View>
 
         <Pressable style={({ pressed }) => [styles.backSignInWrap, pressed && { opacity: 0.78 }]} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backSignInText}>{t('auth.backSignIn')}</Text>
+          <AppText style={styles.backSignInText}>{t('auth.backSignIn')}</AppText>
         </Pressable>
       </ScrollView>
     </View>
@@ -447,8 +448,8 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
           <MaterialCommunityIcons name="lock-reset" size={24} color="#EFF6FF" />
         </View>
 
-        <Text style={styles.resetTitle}>{t('auth.newPasswordTitle')}</Text>
-        <Text style={styles.resetSubtitle}>{t('auth.newPasswordSubtitle')}</Text>
+        <AppText style={styles.resetTitle}>{t('auth.newPasswordTitle')}</AppText>
+        <AppText style={styles.resetSubtitle}>{t('auth.newPasswordSubtitle')}</AppText>
 
         <View style={styles.secondaryFormGroup}>
           <AuthInputField
@@ -482,10 +483,10 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
         </View>
 
         <View style={styles.requirementsCard}>
-          <Text style={styles.requirementsHeading}>{t('auth.securityRequirements')}</Text>
-          <Text style={styles.reqDone}>{'\u2713 '} {t('auth.req8chars')}</Text>
-          <Text style={styles.reqTodo}>{'\u2013 '} {t('auth.reqNumber')}</Text>
-          <Text style={styles.reqTodo}>{'\u2013 '} {t('auth.reqSpecial')}</Text>
+          <AppText style={styles.requirementsHeading}>{t('auth.securityRequirements')}</AppText>
+          <AppText style={styles.reqDone}>{'\u2713 '} {t('auth.req8chars')}</AppText>
+          <AppText style={styles.reqTodo}>{'\u2013 '} {t('auth.reqNumber')}</AppText>
+          <AppText style={styles.reqTodo}>{'\u2013 '} {t('auth.reqSpecial')}</AppText>
         </View>
 
         <AuthButton
@@ -514,9 +515,9 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
           <View style={styles.footerLine} />
         </View>
 
-        <Text style={styles.supportText}>
-          {t('auth.supportNeed')} <Text style={styles.supportAction}>{t('auth.supportContact')}</Text>
-        </Text>
+        <AppText style={styles.supportText}>
+          {t('auth.supportNeed')} <AppText style={styles.supportAction}>{t('auth.supportContact')}</AppText>
+        </AppText>
       </ScrollView>
     </View>
   );

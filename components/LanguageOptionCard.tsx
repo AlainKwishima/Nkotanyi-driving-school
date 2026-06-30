@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { useMobile } from '../hooks/useMobile';
@@ -33,17 +34,17 @@ export function LanguageOptionCard({
       ]}
     >
       <View style={styles.leftContent}>
-        <View style={styles.flagFrame}>
-          <Image source={flagUri} style={styles.flagImage} resizeMode="cover" />
+        <View style={[styles.flagFrame, { width: m.scale(52), height: m.scale(52), borderRadius: m.scale(radii.md), padding: m.scale(2) }]}>
+          <Image source={flagUri} style={[styles.flagImage, { borderRadius: m.scale(14) }]} resizeMode="cover" />
         </View>
         <View style={[styles.textBlock, { marginLeft: m.scale(16) }]}>
-          <Text style={[styles.titleText, { fontSize: m.fontScale(16), lineHeight: m.fontScale(24) }]}>{title}</Text>
-          <Text style={[styles.subtitleText, { fontSize: m.fontScale(12), lineHeight: m.fontScale(16) }]}>{subtitle}</Text>
+          <AppText style={[styles.titleText, { fontSize: m.fontScale(16), lineHeight: m.fontScale(24) }]}>{title}</AppText>
+          <AppText style={[styles.subtitleText, { fontSize: m.fontScale(12), lineHeight: m.fontScale(16) }]}>{subtitle}</AppText>
         </View>
       </View>
-      <View style={[styles.indicator, selected ? styles.indicatorSelected : styles.indicatorDefault]}>
+      <View style={[styles.indicator, { width: m.scale(26), height: m.scale(26), borderRadius: m.scale(13) }, selected ? styles.indicatorSelected : styles.indicatorDefault]}>
         {selected ? (
-          <Image source={FIGMA_ASSETS.checkIconBlue} style={styles.checkIcon} resizeMode="contain" />
+          <Image source={FIGMA_ASSETS.checkIconBlue} style={[styles.checkIcon, { width: m.scale(12), height: m.scale(12) }]} resizeMode="contain" />
         ) : null}
       </View>
     </Pressable>
@@ -79,14 +80,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   flagFrame: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
     backgroundColor: colors.surfaceAlt,
     overflow: 'hidden',
-    padding: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -96,7 +93,6 @@ const styles = StyleSheet.create({
   flagImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 14,
   },
   textBlock: {
     flex: 1,
@@ -116,9 +112,6 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   indicator: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -129,8 +122,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   checkIcon: {
-    width: 12,
-    height: 12,
     tintColor: colors.white,
   },
 });

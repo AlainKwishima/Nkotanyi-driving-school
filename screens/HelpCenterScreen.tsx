@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { BottomNavBar } from '../components/BottomNavBar';
@@ -32,8 +33,8 @@ export function HelpCenterScreen({ navigation }: Props) {
               <Ionicons name="chatbubbles-outline" size={27} color={colors.brand} />
             </View>
             <View style={styles.introCopy}>
-              <Text style={styles.introTitle}>{t('help.directContact')}</Text>
-              <Text style={styles.introText}>{t('reading.helpIntro')}</Text>
+              <AppText style={styles.introTitle}>{t('help.directContact')}</AppText>
+              <AppText style={styles.introText}>{t('reading.helpIntro')}</AppText>
             </View>
           </View>
 
@@ -48,8 +49,8 @@ export function HelpCenterScreen({ navigation }: Props) {
                 <Ionicons name="mail-outline" size={21} color={colors.brandStrong} />
               </View>
               <View style={styles.contactCopy}>
-                <Text style={styles.contactLabel}>{t('help.emailSupport')}</Text>
-                <Text style={styles.contactValue}>support@nkotanyi.rw</Text>
+                <AppText style={styles.contactLabel}>{t('help.emailSupport')}</AppText>
+                <AppText style={styles.contactValue}>support@nkotanyi.rw</AppText>
               </View>
               <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
             </TouchableOpacity>
@@ -63,8 +64,8 @@ export function HelpCenterScreen({ navigation }: Props) {
                 <Ionicons name="call-outline" size={21} color="#2563EB" />
               </View>
               <View style={styles.contactCopy}>
-                <Text style={styles.contactLabel}>{t('help.phoneNumber')}</Text>
-                <Text style={styles.contactValue}>+250 788 123 456</Text>
+                <AppText style={styles.contactLabel}>{t('help.phoneNumber')}</AppText>
+                <AppText style={styles.contactValue}>+250 788 123 456</AppText>
               </View>
               <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
             </TouchableOpacity>
@@ -74,9 +75,9 @@ export function HelpCenterScreen({ navigation }: Props) {
           {faqs.map((question, index) => (
             <View key={`${question}-${index}`} style={styles.faqItem}>
               <View style={styles.faqNumber}>
-                <Text style={styles.faqNumberText}>{String(index + 1).padStart(2, '0')}</Text>
+                <AppText style={styles.faqNumberText}>{String(index + 1).padStart(2, '0')}</AppText>
               </View>
-              <Text style={styles.faqText}>{question}</Text>
+              <AppText style={styles.faqText}>{question}</AppText>
               <Ionicons name="chevron-forward" size={18} color={colors.inkSoft} />
             </View>
           ))}

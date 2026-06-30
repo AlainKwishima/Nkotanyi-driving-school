@@ -1,17 +1,20 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useResponsiveMetrics } from '../utils/responsive';
 
 type PdfDocumentIconProps = {
   size?: number;
 };
 
 export function PdfDocumentIcon({ size = 64 }: PdfDocumentIconProps) {
-  const documentWidth = size * 0.42;
-  const documentHeight = size * 0.5;
+  const r = useResponsiveMetrics();
+  const scaledSize = r.scale(size);
+  const documentWidth = scaledSize * 0.42;
+  const documentHeight = scaledSize * 0.5;
 
   return (
-    <View style={[styles.root, { width: size, height: size, borderRadius: size * 0.28 }]}>
+    <View style={[styles.root, { width: scaledSize, height: scaledSize, borderRadius: scaledSize * 0.28 }]}>
       <Svg width={documentWidth} height={documentHeight} viewBox="0 0 42 52" accessibilityRole="image">
         <Path
           d="M7 0h20l15 15v32a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V5a5 5 0 0 1 5-5Z"

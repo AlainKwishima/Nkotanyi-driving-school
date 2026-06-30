@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 
@@ -33,7 +34,14 @@ import {
   validateCvv,
   validateCardHolder,
 } from '../utils/validation';
+import { PaymentMethodLogo, type PaymentMethodLogoKey } from '../components/PaymentMethodLogo';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
+
+const PAYMENT_METHODS: Array<{ key: PaymentMethodLogoKey; labelKey: 'payment.methodMomo' | 'payment.methodAirtel' | 'payment.methodCard' }> = [
+  { key: 'momo', labelKey: 'payment.methodMomo' },
+  { key: 'airtel', labelKey: 'payment.methodAirtel' },
+  { key: 'card', labelKey: 'payment.methodCard' },
+];
 
 type SubscriptionProps = NativeStackScreenProps<RootStackParamList, 'SubscriptionNative'>;
 type PaymentProps = NativeStackScreenProps<RootStackParamList, 'PaymentNative'>;
@@ -126,8 +134,8 @@ function PaymentStatusModal({
               />
             )}
           </View>
-          <Text style={styles.statusTitle}>{state?.title}</Text>
-          {state?.message ? <Text style={styles.statusMessage}>{state.message}</Text> : null}
+          <AppText style={styles.statusTitle}>{state?.title}</AppText>
+          {state?.message ? <AppText style={styles.statusMessage} lines={null}>{state.message}</AppText> : null}
           {!isProcessing && state?.actionLabel ? (
             <TouchableOpacity
               style={[
@@ -137,7 +145,7 @@ function PaymentStatusModal({
               onPress={handleAction}
               activeOpacity={0.88}
             >
-              <Text style={styles.statusActionText}>{state.actionLabel}</Text>
+              <AppText style={styles.statusActionText}>{state.actionLabel}</AppText>
             </TouchableOpacity>
           ) : null}
         </Pressable>
@@ -546,12 +554,12 @@ function PlanCard({
     <View style={[styles.planCard, isActive && styles.planCardActive]}>
       <View style={styles.planCardHeader}>
         <View style={{ flex: 1 }}>
-          {isActive ? <Text style={styles.bestValue}>{t('payment.bestValue').toUpperCase()}</Text> : null}
-          <Text style={[styles.planTitle, isActive && styles.planTitleActive]}>{title}</Text>
+          {isActive ? <AppText style={styles.bestValue}>{t('payment.bestValue').toUpperCase()}</AppText> : null}
+          <AppText style={[styles.planTitle, isActive && styles.planTitleActive]} lines={2}>{title}</AppText>
         </View>
         <View style={styles.planPriceCol}>
-          <Text style={[styles.planPrice, isActive && styles.planPriceActive]}>{plan.price}</Text>
-          <Text style={[styles.planCurrency, isActive && styles.planCurrencyActive]}>RWF</Text>
+          <AppText style={[styles.planPrice, isActive && styles.planPriceActive]}>{plan.price}</AppText>
+          <AppText style={[styles.planCurrency, isActive && styles.planCurrencyActive]}>RWF</AppText>
         </View>
       </View>
 
@@ -560,7 +568,7 @@ function PlanCard({
           {featureTexts.map((text) => (
             <View key={text} style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={14} color="#EFF6FF" />
-              <Text style={styles.featureText}>{text}</Text>
+              <AppText style={styles.featureText} lines={null}>{text}</AppText>
             </View>
           ))}
         </View>
@@ -570,7 +578,7 @@ function PlanCard({
         style={[styles.startNowBtn, isActive && styles.startNowBtnActive]}
         onPress={onPress}
       >
-        <Text style={[styles.startNowText, isActive && styles.startNowTextActive]}>{actionLabel}</Text>
+        <AppText style={[styles.startNowText, isActive && styles.startNowTextActive]}>{actionLabel}</AppText>
       </TouchableOpacity>
     </View>
   );
@@ -640,27 +648,29 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
-          <Text style={styles.subHeading}>{t('payment.investTitle')}</Text>
-          <Text style={styles.subLead}>{t('payment.investBody')}</Text>
+          <AppText style={styles.subHeading}>{t('payment.investTitle')}</AppText>
+          <AppText style={styles.subLead}>{t('payment.investBody')}</AppText>
 
           {hasSubscription ? (
             <View style={styles.renewBanner}>
               <Ionicons name="information-circle-outline" size={20} color="#1E3A8A" />
-              <Text style={styles.renewBannerText}>{t('payment.activePlanRenewHint')}</Text>
+              <AppText style={styles.renewBannerText}>{t('payment.activePlanRenewHint')}</AppText>
             </View>
           ) : null}
 
           {pricingLoading ? (
             <View style={styles.pricingStatusCard}>
               <ActivityIndicator color={colors.brand} />
-              <Text style={styles.pricingStatusText}>{t('payment.loadingPlans')}</Text>
+              <AppText style={styles.pricingStatusText}>{t('payment.loadingPlans')}</AppText>
             </View>
           ) : pricingError ? (
             <View style={styles.pricingStatusCard}>
-              <Text style={styles.pricingStatusError}>{pricingError}</Text>
+              <AppText style={styles.pricingStatusError}>{pricingError}</AppText>
             </View>
           ) : (
-            plans.map((plan, index) => (
+            <>
+              <AppText style={styles.amountSectionTitle}>{t('payment.selectAmountTitle')}</AppText>
+              {plans.map((plan, index) => (
               <PlanCard
                 key={plan.subscriptionType}
                 plan={plan}
@@ -677,12 +687,13 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
                   })
                 }
               />
-            ))
+            ))}
+            </>
           )}
 
           <View style={styles.customPlanCard}>
-            <Text style={styles.customPlanTitle}>{t('payment.customTitle')}</Text>
-            <Text style={styles.customPlanText}>{t('payment.customBody')}</Text>
+            <AppText style={styles.customPlanTitle}>{t('payment.customTitle')}</AppText>
+            <AppText style={styles.customPlanText}>{t('payment.customBody')}</AppText>
           </View>
         </ScrollView>
       </View>
@@ -693,7 +704,7 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
 
 export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   const { t } = useI18n();
-  const { tabScrollBottomPad } = useResponsiveLayout();
+  const { tabScrollBottomPad, scale, shortSide } = useResponsiveLayout();
   const { accessToken, refreshProfile, phone: profilePhone, userId } = useAuth();
   const {
     setHasSubscription,
@@ -799,6 +810,8 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
 
   const isCard = method === 'card';
   const isMomo = method === 'momo';
+  const isCompactMethods = shortSide <= 360;
+  const methodLogoHeight = scale(isCompactMethods ? 34 : 40);
   const locale = localeTagForContentLanguage(contentLanguage);
   const amountFormatted = amountRwf.toLocaleString(locale, { maximumFractionDigits: 0 });
   const selectedMethodLabel =
@@ -1321,28 +1334,24 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                 <MaterialCommunityIcons name="calendar-check-outline" size={20} color="#FFFFFF" />
               </View>
               <View style={styles.planSummaryCopy}>
-                <Text style={styles.planSummaryLabel}>{t('profile.subscriptionPlan')}</Text>
-                <Text style={styles.standardDaily}>{planTitle}</Text>
+                <AppText style={styles.planSummaryLabel}>{t('profile.subscriptionPlan')}</AppText>
+                <AppText style={styles.standardDaily}>{planTitle}</AppText>
               </View>
               <TouchableOpacity style={styles.changePill} onPress={() => navigation.navigate('SubscriptionNative')}>
-                <Text style={styles.changeLink}>{t('payment.change')}</Text>
+                <AppText style={styles.changeLink}>{t('payment.change')}</AppText>
               </TouchableOpacity>
             </View>
             <View style={styles.planSummaryFooter}>
-              <Text style={styles.planSummaryCaption}>{t('payment.amount')}</Text>
-              <Text style={styles.amountBlue}>{amountFormatted} RWF</Text>
+              <AppText style={styles.planSummaryCaption}>{t('payment.amount')}</AppText>
+              <AppText style={styles.amountBlue}>{amountFormatted} RWF</AppText>
             </View>
           </View>
 
           <View style={styles.paymentSectionCard}>
-            <Text style={styles.sectionTitle}>{t('payment.selectMethod')}</Text>
-            <Text style={styles.sectionSupport}>{t('payment.selectMethodHint')}</Text>
+            <AppText style={styles.sectionTitle}>{t('payment.selectMethod')}</AppText>
+            <AppText style={styles.sectionSupport} lines={null}>{t('payment.selectMethodHint')}</AppText>
             <View style={styles.methodsRow}>
-              {[
-                { key: 'momo' as const, label: t('payment.methodMomo'), brand: 'MTN', icon: 'phone-portrait-outline' as const, iconBg: '#FFCC00', iconColor: '#1E3A8A' },
-                { key: 'airtel' as const, label: t('payment.methodAirtel'), brand: 'A', icon: 'radio-outline' as const, iconBg: '#E3242B', iconColor: '#FFFFFF' },
-                { key: 'card' as const, label: t('payment.methodCard'), brand: 'CARD', icon: 'card-outline' as const, iconBg: '#F3F4F6', iconColor: '#374151' },
-              ].map((m) => {
+              {PAYMENT_METHODS.map((m) => {
                 const active = method === m.key;
                 return (
                   <TouchableOpacity
@@ -1353,19 +1362,18 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                       setFieldErrors({});
                     }}
                     activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={t(m.labelKey)}
                   >
-                    <View style={[styles.methodIconWrap, { backgroundColor: m.iconBg }]}>
-                      {m.brand.length === 1 ? (
-                        <Text style={[styles.methodBrandSingle, { color: m.iconColor }]}>{m.brand}</Text>
-                      ) : m.brand === 'MTN' ? (
-                        <Text style={[styles.methodBrand, { color: m.iconColor }]}>{m.brand}</Text>
-                      ) : (
-                        <Ionicons name={m.icon} size={18} color={m.iconColor} />
-                      )}
-                    </View>
-                    <Text style={styles.methodLabel}>{m.label}</Text>
+                    <PaymentMethodLogo method={m.key} height={methodLogoHeight} />
+                    <AppText style={styles.methodLabel} lines={2}>
+                      {t(m.labelKey)}
+                    </AppText>
                     {active ? (
-                      <View style={styles.checkDot}><Ionicons name="checkmark" size={10} color="#FFFFFF" /></View>
+                      <View style={styles.checkDot}>
+                        <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                      </View>
                     ) : null}
                   </TouchableOpacity>
                 );
@@ -1373,11 +1381,11 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>{t('payment.details')}</Text>
+          <AppText style={styles.sectionTitle}>{t('payment.details')}</AppText>
           <View style={styles.detailsCard}>
             {isCard ? (
               <>
-                <Text style={styles.inputLabel}>{t('payment.cardNumber')}</Text>
+                <AppText style={styles.inputLabel}>{t('payment.cardNumber')}</AppText>
                 <TextInput
                   style={styles.inputField}
                   placeholder="1234 5678 9012 3456"
@@ -1389,9 +1397,9 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                     setFieldErrors((e) => ({ ...e, cardNumber: undefined }));
                   }}
                 />
-                {fieldErrors.cardNumber ? <Text style={styles.fieldError}>{fieldErrors.cardNumber}</Text> : null}
+                {fieldErrors.cardNumber ? <AppText style={styles.fieldError}>{fieldErrors.cardNumber}</AppText> : null}
 
-                <Text style={[styles.inputLabel, styles.inputLabelSpacing]}>{t('payment.cardHolder')}</Text>
+                <AppText style={[styles.inputLabel, styles.inputLabelSpacing]}>{t('payment.cardHolder')}</AppText>
                 <TextInput
                   style={styles.inputField}
                   placeholder={t('payment.placeholderName')}
@@ -1402,11 +1410,11 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                     setFieldErrors((e) => ({ ...e, cardHolder: undefined }));
                   }}
                 />
-                {fieldErrors.cardHolder ? <Text style={styles.fieldError}>{fieldErrors.cardHolder}</Text> : null}
+                {fieldErrors.cardHolder ? <AppText style={styles.fieldError}>{fieldErrors.cardHolder}</AppText> : null}
 
                 <View style={styles.cardRow}>
                   <View style={styles.cardCol}>
-                    <Text style={styles.inputLabel}>{t('payment.expiry')}</Text>
+                    <AppText style={styles.inputLabel}>{t('payment.expiry')}</AppText>
                     <TextInput
                       style={styles.inputField}
                       placeholder="MM/YY"
@@ -1417,10 +1425,10 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                         setFieldErrors((e) => ({ ...e, cardExpiry: undefined }));
                       }}
                     />
-                    {fieldErrors.cardExpiry ? <Text style={styles.fieldError}>{fieldErrors.cardExpiry}</Text> : null}
+                    {fieldErrors.cardExpiry ? <AppText style={styles.fieldError}>{fieldErrors.cardExpiry}</AppText> : null}
                   </View>
                   <View style={styles.cardCol}>
-                    <Text style={styles.inputLabel}>{t('payment.cvv')}</Text>
+                    <AppText style={styles.inputLabel}>{t('payment.cvv')}</AppText>
                     <TextInput
                       style={styles.inputField}
                       placeholder="123"
@@ -1433,14 +1441,15 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                         setFieldErrors((e) => ({ ...e, cardCvv: undefined }));
                       }}
                     />
-                    {fieldErrors.cardCvv ? <Text style={styles.fieldError}>{fieldErrors.cardCvv}</Text> : null}
+                    {fieldErrors.cardCvv ? <AppText style={styles.fieldError}>{fieldErrors.cardCvv}</AppText> : null}
                   </View>
                 </View>
-                <Text style={styles.inputHint}>{t('payment.cardHint')}</Text>
+                <AppText style={styles.inputHint} lines={null}>{t('payment.cardHint')}</AppText>
               </>
             ) : (
               <>
-                <Text style={styles.inputLabel}>{t('auth.phone')}</Text>
+                <AppText style={styles.phoneSectionTitle}>{t('payment.phoneSectionTitle')}</AppText>
+                <AppText style={styles.inputLabel}>{t('payment.phoneLabel')}</AppText>
                 <TextInput
                   style={styles.inputField}
                   placeholder={t('payment.phonePh')}
@@ -1454,21 +1463,21 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                {fieldErrors.phone ? <Text style={styles.fieldError}>{fieldErrors.phone}</Text> : null}
-                <Text style={styles.inputHint}>{t('payment.phoneFormatsHint')}</Text>
-                <Text style={styles.inputHint}>{isMomo ? t('payment.momoHint') : t('payment.airtelHint')}</Text>
+                {fieldErrors.phone ? <AppText style={styles.fieldError}>{fieldErrors.phone}</AppText> : null}
+                <AppText style={styles.inputHint} lines={null}>{t('payment.phoneFormatsHint')}</AppText>
+                <AppText style={styles.inputHint} lines={null}>{isMomo ? t('payment.momoHint') : t('payment.airtelHint')}</AppText>
               </>
             )}
           </View>
 
           <View style={styles.amountSummaryCard}>
             <View>
-              <Text style={styles.amountSummaryLabel}>{t('payment.totalDue')}</Text>
-              <Text style={styles.amountSummaryMethod}>{selectedMethodLabel}</Text>
+              <AppText style={styles.amountSummaryLabel}>{t('payment.totalDue')}</AppText>
+              <AppText style={styles.amountSummaryMethod}>{selectedMethodLabel}</AppText>
             </View>
             <View style={styles.amountSummaryRight}>
-              <Text style={styles.amountSummaryValue}>{amountFormatted}</Text>
-              <Text style={styles.amountSummaryCurrency}>RWF</Text>
+              <AppText style={styles.amountSummaryValue}>{amountFormatted}</AppText>
+              <AppText style={styles.amountSummaryCurrency}>RWF</AppText>
             </View>
           </View>
 
@@ -1478,17 +1487,17 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
             ) : (
               <>
                 <MaterialCommunityIcons name="lock-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.payNowText}>
+                <AppText style={styles.payNowText}>
                   {pendingPayment
                     ? t('payment.resumePending')
                     : hasSubscription
                       ? t('payment.completeUpdate')
                       : t('payment.payNow')}
-                </Text>
+                </AppText>
               </>
             )}
           </TouchableOpacity>
-          <Text style={styles.secureInfo}>{t('payment.secure')}</Text>
+          <AppText style={styles.secureInfo}>{t('payment.secure')}</AppText>
         </ScrollView>
       </View>
       <BottomTabs navigation={navigation} />
@@ -1496,7 +1505,7 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         <View style={styles.checkoutBackdrop}>
           <View style={styles.checkoutSheet}>
             <View style={styles.checkoutHeader}>
-              <Text style={styles.checkoutTitle}>{t('payment.checkoutTitle')}</Text>
+              <AppText style={styles.checkoutTitle}>{t('payment.checkoutTitle')}</AppText>
               <TouchableOpacity onPress={() => setCheckoutVisible(false)} style={styles.checkoutCloseBtn}>
                 <Ionicons name="close" size={22} color="#111827" />
               </TouchableOpacity>
@@ -1659,6 +1668,22 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: { marginTop: 10, marginBottom: 10, ...typography.title, fontSize: 16, color: colors.ink },
+  amountSectionTitle: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    ...typography.title,
+    fontSize: 16,
+    color: colors.ink,
+  },
+  phoneSectionTitle: {
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.warningSoft,
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
   sectionSupport: {
     marginTop: -4,
     marginBottom: spacing.md,
@@ -1721,29 +1746,30 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     ...shadows.card,
   },
-  methodsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  methodsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   methodCard: {
-    width: '31.4%',
+    flex: 1,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
-    minHeight: 96,
-    paddingVertical: 13,
-    paddingHorizontal: 4,
+    minHeight: 104,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
+    justifyContent: 'flex-start',
     borderWidth: 2,
     borderColor: colors.line,
   },
   methodCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
-  methodIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  methodLabel: {
+    marginTop: spacing.sm,
+    fontFamily: 'Poppins-Bold',
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.inkMuted,
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
-  methodBrand: { fontFamily: 'Poppins-ExtraBold', fontSize: 11, lineHeight: 14 },
-  methodBrandSingle: { fontFamily: 'Poppins-ExtraBold', fontSize: 18, lineHeight: 20 },
-  methodLabel: { marginTop: 8, fontFamily: 'Poppins-Bold', fontSize: 10, lineHeight: 14, color: colors.inkMuted, textAlign: 'center' },
   checkDot: { position: 'absolute', top: 7, right: 7, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 
   detailsCard: {

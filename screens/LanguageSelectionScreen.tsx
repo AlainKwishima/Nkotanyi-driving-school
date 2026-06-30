@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image, ImageSourcePropType, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../navigation/types';
@@ -73,21 +74,21 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
       >
         <View style={[styles.header, { minHeight: m.verticalScale(132), paddingTop: m.verticalScale(12) }]}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={[styles.logo, { width: m.scale(92), height: m.scale(92) }]} resizeMode="contain" />
-          <Text style={[styles.brandTitle, { width: m.scale(240), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
+          <AppText style={[styles.brandTitle, { width: m.scale(240), fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>
             {t('language.brand')}
-          </Text>
+          </AppText>
         </View>
 
         <View style={[styles.main, { paddingTop: m.verticalScale(14), paddingHorizontal: m.scale(20) }]}>
           <View style={styles.mainInner}>
             <View style={[styles.titleMargin, { paddingBottom: m.verticalScale(20) }]}>
               <View style={styles.titleSection}>
-                <Text style={[styles.heading, { maxWidth: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
+                <AppText style={[styles.heading, { maxWidth: m.scale(280), fontSize: m.fontScale(18), lineHeight: m.fontScale(28) }]}>
                   {changeOnly ? t('language.changeTitle') : t('language.chooseTitle')}
-                </Text>
-                <Text style={[styles.subHeading, { marginTop: m.verticalScale(6), maxWidth: m.scale(280), fontSize: m.fontScale(13), lineHeight: m.fontScale(19) }]}>
+                </AppText>
+                <AppText style={[styles.subHeading, { marginTop: m.verticalScale(6), maxWidth: m.scale(280), fontSize: m.fontScale(13), lineHeight: m.fontScale(19) }]}>
                   {changeOnly ? t('language.changeHint') : t('language.chooseSubtitle')}
-                </Text>
+                </AppText>
               </View>
             </View>
 
@@ -130,9 +131,9 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
                 navigation.navigate('CreateAccount');
               }}
             />
-            <Text style={[styles.copyright, { marginTop: m.verticalScale(14), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
+            <AppText style={[styles.copyright, { marginTop: m.verticalScale(14), fontSize: m.fontScale(10), lineHeight: m.fontScale(15) }]}>
               {t('language.copyright')}
-            </Text>
+            </AppText>
           </View>
         </View>
       </ScrollView>

@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
@@ -39,10 +40,10 @@ export function SplashScreen({ navigation }: Props) {
         <View style={styles.logoCard}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={styles.logo} resizeMode="contain" />
         </View>
-        <Text style={styles.brandName}>IBYAPA</Text>
-        <Text style={styles.brandDescriptor}>ROAD SAFETY LEARNING</Text>
+        <AppText style={styles.brandName}>{t('splash.brandName')}</AppText>
+        <AppText style={styles.brandDescriptor}>{t('splash.brandDescriptor')}</AppText>
         <ActivityIndicator size="small" color={colors.brand} style={styles.spinner} />
-        <Text style={styles.waitText}>{t('splash.wait')}</Text>
+        <AppText style={styles.waitText}>{t('splash.wait')}</AppText>
       </View>
 
       <View style={styles.cityWrap}>

@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,13 +30,13 @@ export function HeaderMenu({
   const [open, setOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const insets = useSafeAreaInsets();
-  const { shortSide } = useResponsiveLayout();
+  const { shortSide, scale, verticalScale, radius, touch, icon, font, lineHeight } = useResponsiveLayout();
   const { logout } = useAuth();
   const { canChangeLanguage } = useAppFlow();
   const { t } = useI18n();
   const compact = shortSide <= 360;
-  const dropdownWidth = compact ? 170 : 186;
-  const iconSize = compact ? 20 : 22;
+  const dropdownWidth = scale(compact ? 170 : 186);
+  const iconSize = icon(compact ? 20 : 22);
 
   const menuItems = useMemo(
     () => [
@@ -63,13 +64,24 @@ export function HeaderMenu({
 
   return (
     <>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => setOpen(true)} activeOpacity={0.85}>
+      <TouchableOpacity style={[styles.iconBtn, { minWidth: touch(MIN_TOUCH_TARGET), minHeight: touch(MIN_TOUCH_TARGET), borderRadius: radius(22) }]} onPress={() => setOpen(true)} activeOpacity={0.85}>
         <Ionicons name="menu" size={iconSize} color={iconColor} />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <View style={[styles.dropdown, { top: topOffset + insets.top, right: rightOffset + insets.right, width: dropdownWidth }]}>
+          <View
+            style={[
+              styles.dropdown,
+              {
+                top: topOffset + insets.top,
+                right: rightOffset + insets.right,
+                width: dropdownWidth,
+                maxHeight: verticalScale(320),
+                borderRadius: radius(radii.lg),
+              },
+            ]}
+          >
             <ScrollView
               style={styles.dropdownScroll}
               contentContainerStyle={styles.dropdownScrollContent}
@@ -79,12 +91,12 @@ export function HeaderMenu({
               {menuItems.map((item, idx) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.menuItem, idx < menuItems.length - 1 && styles.menuItemDivider]}
+                  style={[styles.menuItem, { minHeight: touch(MIN_TOUCH_TARGET), paddingHorizontal: scale(14) }, idx < menuItems.length - 1 && styles.menuItemDivider]}
                   onPress={() => void onSelect(item.route)}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name={item.icon} size={16} color={colors.textSecondary} />
-                  <Text style={styles.menuText}>{t(item.labelKey)}</Text>
+                  <Ionicons name={item.icon} size={icon(16)} color={colors.textSecondary} />
+                  <AppText style={[styles.menuText, { marginLeft: scale(10), fontSize: font(14), lineHeight: lineHeight(14) }]}>{t(item.labelKey)}</AppText>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -106,11 +118,8 @@ export function HeaderMenu({
 
 const styles = StyleSheet.create({
   iconBtn: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.14)',
   },
   backdrop: {
@@ -119,9 +128,6 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    width: 186,
-    maxHeight: 320,
-    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
@@ -135,10 +141,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   menuItem: {
-    minHeight: MIN_TOUCH_TARGET,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
   },
   menuItemDivider: {
     borderBottomWidth: 1,
@@ -146,7 +150,6 @@ const styles = StyleSheet.create({
   },
   menuText: {
     ...typography.body,
-    marginLeft: 10,
     color: colors.ink,
   },
 });

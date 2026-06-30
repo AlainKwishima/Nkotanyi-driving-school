@@ -1,21 +1,24 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { useNetworkStatus } from '../context/NetworkStatusContext';
 import { useI18n } from '../i18n/useI18n';
 import { colors, spacing, typography } from '../constants/theme';
+import { useResponsiveMetrics } from '../utils/responsive';
 
 export function OfflineBanner() {
   const { isConnected, isInternetReachable, refresh } = useNetworkStatus();
   const { t } = useI18n();
+  const r = useResponsiveMetrics();
   const offline = !isConnected || isInternetReachable === false;
 
   if (!offline) return null;
   return (
-    <View style={styles.banner}>
-      <Text style={styles.text}>{t('error.offlineBanner')}</Text>
+    <View style={[styles.banner, { minHeight: r.verticalScale(36), paddingHorizontal: r.scale(spacing.lg) }]}>
+      <AppText style={[styles.text, { fontSize: r.font(12), lineHeight: r.lineHeight(12) }]}>{t('error.offlineBanner')}</AppText>
       <TouchableOpacity onPress={() => void refresh()} hitSlop={8}>
-        <Text style={styles.action}>{t('common.retry')}</Text>
+        <AppText style={[styles.action, { marginLeft: r.scale(spacing.md), fontSize: r.font(14), lineHeight: r.lineHeight(14) }]}>{t('common.retry')}</AppText>
       </TouchableOpacity>
     </View>
   );
@@ -23,8 +26,6 @@ export function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    minHeight: 36,
-    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -37,7 +38,6 @@ const styles = StyleSheet.create({
   },
   action: {
     ...typography.bodyStrong,
-    marginLeft: spacing.md,
     color: colors.white,
   },
 });

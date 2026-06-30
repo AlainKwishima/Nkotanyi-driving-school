@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NavigationProp } from '@react-navigation/native';
 
@@ -12,75 +13,74 @@ type AppHeaderProps = {
   title: string;
   navigation?: NavigationProp<RootStackParamList>;
   onBack?: () => void;
-  eyebrow?: string;
   left?: React.ReactNode;
   right?: React.ReactNode;
   curveColor?: string;
   titleOffsetX?: number;
 };
 
-export function AppHeader({ title, navigation, onBack, eyebrow, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
-  const { insets } = useResponsiveLayout();
+export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
+  const { insets, scale, verticalScale, radius, touch, font, lineHeight } = useResponsiveLayout();
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.row}>
-        <View style={styles.side}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingHorizontal: scale(spacing.lg) }]}>
+      <View style={[styles.row, { minHeight: verticalScale(54), paddingBottom: verticalScale(spacing.xs) }]}>
+        <View style={[styles.side, { width: touch(44) }]}>
           {left ?? (onBack ? (
             <TouchableOpacity
-              style={styles.iconButton}
+              style={[styles.iconButton, { width: touch(44), height: touch(44) }]}
               onPress={onBack}
               activeOpacity={0.72}
               accessibilityRole="button"
               accessibilityLabel="Back"
             >
-              <Ionicons name="chevron-back" size={24} color={colors.white} />
+              <Ionicons name="chevron-back" size={scale(24)} color={colors.white} />
             </TouchableOpacity>
           ) : null)}
         </View>
-        <View style={[styles.titleStack, titleOffsetX !== 0 && { transform: [{ translateX: titleOffsetX }] }]}>
-          {eyebrow ? <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text> : null}
-          <Text style={styles.title} numberOfLines={1}>
+        <View style={[styles.titleStack, { paddingHorizontal: scale(spacing.sm) }, titleOffsetX !== 0 && { transform: [{ translateX: scale(titleOffsetX) }] }]}>
+          <AppText style={[styles.title, { fontSize: font(18), lineHeight: lineHeight(18) }]} lines={1}>
             {title}
-          </Text>
+          </AppText>
         </View>
-        <View style={[styles.side, styles.rightSide]}>
-          {right ?? (navigation ? <HeaderMenu navigation={navigation} iconColor={colors.white} topOffset={52} rightOffset={18} /> : null)}
+        <View style={[styles.side, styles.rightSide, { width: touch(44) }]}>
+          {right ?? (navigation ? <HeaderMenu navigation={navigation} iconColor={colors.white} topOffset={verticalScale(52)} rightOffset={scale(18)} /> : null)}
         </View>
       </View>
-      <View style={[styles.curveOverlay, { backgroundColor: curveColor }]} />
+      <View
+        style={[
+          styles.curveOverlay,
+          {
+            height: verticalScale(18),
+            marginHorizontal: -scale(spacing.lg),
+            borderTopLeftRadius: radius(24),
+            borderTopRightRadius: radius(24),
+            backgroundColor: curveColor,
+          },
+        ]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    paddingHorizontal: spacing.lg,
     backgroundColor: colors.darkEmphasis,
   },
   row: {
-    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: spacing.xs,
   },
   curveOverlay: {
-    height: 18,
-    marginHorizontal: -spacing.lg,
     marginTop: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   side: {
-    width: 44,
     alignItems: 'flex-start',
   },
   rightSide: {
     alignItems: 'flex-end',
   },
   iconButton: {
-    width: 44,
-    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -91,15 +91,8 @@ const styles = StyleSheet.create({
   },
   titleStack: {
     flex: 1,
-    paddingHorizontal: spacing.sm,
+    minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: 1,
-    color: 'rgba(255,255,255,0.78)',
-    textAlign: 'center',
-    textTransform: 'uppercase',
   },
 });

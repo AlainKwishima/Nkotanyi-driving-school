@@ -1,7 +1,8 @@
+import { AppText } from '../components/AppText';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -203,7 +204,7 @@ export function HomeNativeScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('profile.title')}
           >
-            <Text style={styles.headerAvatarText}>{getInitials(name)}</Text>
+            <AppText style={styles.headerAvatarText}>{getInitials(name)}</AppText>
           </TouchableOpacity>
         }
       />
@@ -215,54 +216,54 @@ export function HomeNativeScreen({ navigation }: Props) {
         >
           <View style={styles.welcomeRow}>
             <View style={styles.welcomeCopy}>
-              <Text style={styles.welcome} numberOfLines={1}>
+              <AppText style={styles.welcome} lines={1}>
                 {welcome}
-              </Text>
-              <Text style={styles.subwelcome}>{t('home.subwelcome')}</Text>
+              </AppText>
+              <AppText style={styles.subwelcome} lines={null}>{t('home.subwelcome')}</AppText>
             </View>
             {streak > 0 ? (
               <View style={styles.streakBadge}>
                 <Ionicons name="calendar-outline" size={16} color={colors.brandStrong} />
-                <Text style={styles.streakText}>{streak}</Text>
+                <AppText style={styles.streakText}>{streak}</AppText>
               </View>
             ) : null}
           </View>
 
           <View style={styles.readinessCard}>
-            <Text style={styles.heroTitle}>
+            <AppText style={styles.heroTitle}>
               {totalExams ? t('home.keepMomentum') : t('home.startJourney')}
-            </Text>
-            <Text style={styles.heroBody}>
+            </AppText>
+            <AppText style={styles.heroBody}>
               {totalExams ? t('home.progressBody', { count: totalExams }) : t('home.startJourneyBody')}
-            </Text>
+            </AppText>
             <View style={styles.bannerStats}>
               <View style={styles.bannerPill}>
-                <Text style={styles.bannerPillText}>
+                <AppText style={styles.bannerPillText}>
                   {t('performance.totalExams')}: {loading ? '...' : totalExams}
-                </Text>
+                </AppText>
               </View>
               <View style={styles.bannerPill}>
-                <Text style={styles.bannerPillText}>
+                <AppText style={styles.bannerPillText}>
                   {t('performance.successRate')}: {loading ? '...' : `${successRate}%`}
-                </Text>
+                </AppText>
               </View>
             </View>
           </View>
 
           <View style={styles.metricStrip}>
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{totalExams}</Text>
-              <Text style={styles.metricLabel}>{t('performance.totalExams')}</Text>
+              <AppText style={styles.metricValue}>{totalExams}</AppText>
+              <AppText style={styles.metricLabel}>{t('performance.totalExams')}</AppText>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{average}%</Text>
-              <Text style={styles.metricLabel}>{t('performance.avgAccuracy')}</Text>
+              <AppText style={styles.metricValue}>{average}%</AppText>
+              <AppText style={styles.metricLabel}>{t('performance.avgAccuracy')}</AppText>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{successRate}%</Text>
-              <Text style={styles.metricLabel}>{t('performance.successRate')}</Text>
+              <AppText style={styles.metricValue}>{successRate}%</AppText>
+              <AppText style={styles.metricLabel}>{t('performance.successRate')}</AppText>
             </View>
           </View>
 
@@ -275,8 +276,8 @@ export function HomeNativeScreen({ navigation }: Props) {
               <MaterialCommunityIcons name="steering" size={25} color={colors.white} />
             </View>
             <View style={styles.primaryCopy}>
-              <Text style={styles.primaryEyebrow}>{t('home.primaryEyebrow')}</Text>
-              <Text style={styles.primaryTitle}>{t('home.action.exams')}</Text>
+              <AppText style={styles.primaryEyebrow}>{t('home.primaryEyebrow')}</AppText>
+              <AppText style={styles.primaryTitle}>{t('home.action.exams')}</AppText>
             </View>
             <View style={styles.primaryArrow}>
               <Ionicons name="arrow-forward" size={19} color={colors.brandStrong} />
@@ -312,12 +313,12 @@ export function HomeNativeScreen({ navigation }: Props) {
                   <MaterialCommunityIcons name={path.icon} size={25} color={path.color} />
                 </View>
                 <View style={styles.pathCopy}>
-                  <Text style={styles.pathTitle} numberOfLines={2}>
+                  <AppText style={styles.pathTitle} lines={2}>
                     {t(path.titleKey).replace('\n', ' ')}
-                  </Text>
-                  <Text style={styles.pathSubtitle} numberOfLines={1}>
+                  </AppText>
+                  <AppText style={styles.pathSubtitle} lines={1}>
                     {t(path.subtitleKey).replace('\n', ' ')}
-                  </Text>
+                  </AppText>
                 </View>
                 <Ionicons name="arrow-forward" size={21} color={path.color} />
               </TouchableOpacity>
@@ -340,10 +341,10 @@ export function HomeNativeScreen({ navigation }: Props) {
                   )}
                 </View>
                 <View style={styles.recommendationCopy}>
-                  <Text style={styles.recommendationLabel}>{t('home.newContent')}</Text>
-                  <Text style={styles.recommendationTitle} numberOfLines={1}>
+                  <AppText style={styles.recommendationLabel}>{t('home.newContent')}</AppText>
+                  <AppText style={styles.recommendationTitle} lines={1}>
                     {recommendationTitle}
-                  </Text>
+                  </AppText>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.inkSoft} />
               </TouchableOpacity>
@@ -368,27 +369,27 @@ export function HomeNativeScreen({ navigation }: Props) {
                     { backgroundColor: lastExam.status === 'PASSED' ? colors.greenSoft : colors.redSoft },
                   ]}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.scoreValue,
                       { color: lastExam.status === 'PASSED' ? colors.green : colors.red },
                     ]}
                   >
                     {lastExam.percent}%
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.insightCopy}>
-                  <Text style={styles.insightTitle}>
+                  <AppText style={styles.insightTitle}>
                     {lastExam.title.startsWith('performance.') ? t(lastExam.title) : lastExam.title}
-                  </Text>
-                  <Text style={styles.insightMeta}>{new Date(lastExam.date).toLocaleDateString()}</Text>
+                  </AppText>
+                  <AppText style={styles.insightMeta}>{new Date(lastExam.date).toLocaleDateString()}</AppText>
                 </View>
                 <Ionicons name="trending-up" size={20} color={colors.brand} />
               </TouchableOpacity>
             ) : (
               <View style={styles.emptyInsight}>
                 <Ionicons name="analytics-outline" size={23} color={colors.inkSoft} />
-                <Text style={styles.emptyInsightText}>{t('performance.empty')}</Text>
+                <AppText style={styles.emptyInsightText}>{t('performance.empty')}</AppText>
               </View>
             )}
           </View>
@@ -401,8 +402,8 @@ export function HomeNativeScreen({ navigation }: Props) {
             >
               <Ionicons name="sparkles-outline" size={21} color="#2563EB" />
               <View style={styles.planCopy}>
-                <Text style={styles.planTitle}>{t('gate.subscription.title')}</Text>
-                <Text style={styles.planBody}>{t('gate.subscription.exam')}</Text>
+                <AppText style={styles.planTitle} lines={2}>{t('gate.subscription.title')}</AppText>
+                <AppText style={styles.planBody}>{t('gate.subscription.exam')}</AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#2563EB" />
             </TouchableOpacity>

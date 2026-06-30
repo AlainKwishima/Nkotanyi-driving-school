@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -48,7 +49,7 @@ export function LanguageSettingsScreen({ navigation }: Props) {
         {!canChangeLanguage ? (
           <View style={styles.lockNotice}>
             <Ionicons name="lock-closed-outline" size={16} color="#374151" />
-            <Text style={styles.lockNoticeText}>{t('language.lockedBody')}</Text>
+            <AppText style={styles.lockNoticeText}>{t('language.lockedBody')}</AppText>
           </View>
         ) : null}
         <View style={styles.listCard}>
@@ -68,7 +69,7 @@ export function LanguageSettingsScreen({ navigation }: Props) {
                 <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
                   {selected ? <View style={styles.radioInner} /> : null}
                 </View>
-                <Text style={styles.rowLabel}>{option.label}</Text>
+                <AppText style={styles.rowLabel}>{option.label}</AppText>
                 {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.brand} /> : <View style={styles.checkSpacer} />}
               </Pressable>
             );

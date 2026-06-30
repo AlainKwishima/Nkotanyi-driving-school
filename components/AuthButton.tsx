@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
@@ -20,13 +21,13 @@ export function AuthButton({ label, onPress, withArrow = false, style }: AuthBut
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { height: m.verticalScale(56), borderRadius: m.scale(28) },
+        { height: m.touch(56), borderRadius: m.radius(28) },
         style,
         pressed && styles.buttonPressed,
       ]}
     >
-      <Text style={[styles.label, { fontSize: m.fontScale(15), lineHeight: m.fontScale(20) }]}>{label}</Text>
-      {withArrow ? <Feather name="arrow-right" size={m.scale(17)} color={colors.white} style={[styles.icon, { marginLeft: m.scale(8) }]} /> : null}
+      <AppText style={[styles.label, { fontSize: m.fontScale(15), lineHeight: m.fontScale(20) }]}>{label}</AppText>
+      {withArrow ? <Feather name="arrow-right" size={m.icon(17)} color={colors.white} style={[styles.icon, { marginLeft: m.scale(8) }]} /> : null}
     </Pressable>
   );
 }

@@ -471,7 +471,6 @@ export function ExamNativeScreen({ navigation, route }: Props) {
     <ScreenColumn backgroundColor={colors.brandStrong}>
       <AppHeader
         title={mode === 'signs' ? t('examType.signs.title') : t('exam.title')}
-        eyebrow={t('exam.liveExam')}
         onBack={() => navigation.goBack()}
         right={timer}
       />

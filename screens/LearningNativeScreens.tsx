@@ -1,17 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  Alert,
-  Image,
-  Linking,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Image, Linking, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -119,16 +109,16 @@ function DocumentCard({
         )}
       </View>
       <View style={styles.documentCopy}>
-        <Text style={styles.documentTitle} numberOfLines={2}>
+        <AppText style={styles.documentTitle} lines={2}>
           {pdfLabel(item, index, fallback)}
-        </Text>
+        </AppText>
         <View style={styles.documentMeta}>
           <View style={[styles.extensionPill, { backgroundColor: tone.background }]}>
-            <Text style={[styles.extensionText, { color: tone.color }]}>{extension}</Text>
+            <AppText style={[styles.extensionText, { color: tone.color }]}>{extension}</AppText>
           </View>
-          <Text style={[styles.openText, !hasLink && styles.unavailableText]}>
+          <AppText style={[styles.openText, !hasLink && styles.unavailableText]}>
             {hasLink ? t('reading.tapToOpen') : t('reading.noLinkAvailable')}
-          </Text>
+          </AppText>
         </View>
       </View>
       <View style={styles.cardArrow}>
@@ -168,15 +158,15 @@ function InlineRoadSignCard({
         )}
       </View>
       <View style={styles.inlineSignCopy}>
-        <Text style={styles.inlineSignTitle} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.inlineSignBody} numberOfLines={2}>{item.description}</Text>
+        <AppText style={styles.inlineSignTitle} lines={2}>{item.name}</AppText>
+        <AppText style={styles.inlineSignBody} lines={2}>{item.description}</AppText>
         <View style={styles.documentMeta}>
           <View style={[styles.extensionPill, item.viewed ? styles.signStatusViewed : styles.signStatusStudy]}>
-            <Text style={[styles.extensionText, item.viewed ? styles.signStatusViewedText : styles.signStatusStudyText]}>
+            <AppText style={[styles.extensionText, item.viewed ? styles.signStatusViewedText : styles.signStatusStudyText]}>
               {item.viewed ? t('roadsigns.viewed') : t('roadsigns.studyLabel')}
-            </Text>
+            </AppText>
           </View>
-          <Text style={styles.openText}>{t('roadsigns.viewDetails')}</Text>
+          <AppText style={styles.openText}>{t('roadsigns.viewDetails')}</AppText>
         </View>
       </View>
       <View style={styles.cardArrow}>
@@ -237,32 +227,32 @@ function RoadSignDetailModal({
             <TouchableOpacity style={styles.closeButton} onPress={onClose} accessibilityLabel={t('common.cancel')}>
               <Ionicons name="close" size={22} color={colors.inkMuted} />
             </TouchableOpacity>
-            <Text style={styles.detailCounter}>{t('roadsigns.positionShort', { current, total })}</Text>
+            <AppText style={styles.detailCounter}>{t('roadsigns.positionShort', { current, total })}</AppText>
             <View style={styles.closeButtonSpacer} />
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
             <View style={styles.detailBadgeRow}>
-              <Text style={styles.detailEyebrow}>{t('roadsigns.studyLabel')}</Text>
+              <AppText style={styles.detailEyebrow}>{t('roadsigns.studyLabel')}</AppText>
               <View style={[styles.detailViewedBadge, item.viewed ? styles.detailViewedBadgeDone : styles.detailViewedBadgeTodo]}>
                 <Ionicons
                   name={item.viewed ? 'checkmark-circle' : 'ellipse-outline'}
                   size={13}
                   color={item.viewed ? colors.success : colors.brand}
                 />
-                <Text style={[styles.detailViewedText, item.viewed ? styles.detailViewedTextDone : styles.detailViewedTextTodo]}>
+                <AppText style={[styles.detailViewedText, item.viewed ? styles.detailViewedTextDone : styles.detailViewedTextTodo]}>
                   {item.viewed ? t('roadsigns.viewed') : t('roadsigns.studyLabel')}
-                </Text>
+                </AppText>
               </View>
             </View>
 
-            <Text style={styles.detailTitle}>{item.name}</Text>
+            <AppText style={styles.detailTitle}>{item.name}</AppText>
 
             <View style={styles.detailImageFrame}>
               {imageFailed ? (
                 <View style={styles.detailImageError}>
                   <Ionicons name="image-outline" size={34} color={colors.inkSoft} />
-                  <Text style={styles.imageErrorText}>{t('roadsigns.imageError')}</Text>
+                  <AppText style={styles.imageErrorText}>{t('roadsigns.imageError')}</AppText>
                 </View>
               ) : (
                 <Image
@@ -276,8 +266,8 @@ function RoadSignDetailModal({
             </View>
 
             <View style={styles.descriptionCard}>
-              <Text style={styles.meaningLabel}>{t('roadsigns.meaning')}</Text>
-              <Text style={styles.description}>{item.description}</Text>
+              <AppText style={styles.meaningLabel}>{t('roadsigns.meaning')}</AppText>
+              <AppText style={styles.description} lines={null}>{item.description}</AppText>
             </View>
           </ScrollView>
 
@@ -463,7 +453,6 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     <ScreenColumn>
       <AppHeader
         title={t('reading.title')}
-        eyebrow={paidLanguageLabel}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />
@@ -473,6 +462,11 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
+          <View style={styles.libraryIntro}>
+            <AppText style={styles.libraryTitle}>{t('reading.libraryTitle')}</AppText>
+            <AppText style={styles.librarySubtitle} lines={null}>{t('reading.librarySubtitle')}</AppText>
+          </View>
+
           <View style={styles.tabsWrap}>
             <ReadSectionTabs
               active={activeTab}
@@ -510,14 +504,14 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
           </View>
 
           {paidContentLanguage && paidContentLanguage !== contentLanguage ? (
-            <Text style={styles.subscriptionLanguageNotice}>
+            <AppText style={styles.subscriptionLanguageNotice} lines={null}>
               {t('reading.subscriptionLanguageNotice', { lang: paidLanguageLabel })}
-            </Text>
+            </AppText>
           ) : null}
 
           <View style={styles.section}>
             <SectionHeading title={activeTab === 'documents' ? t('reading.pdfSection') : t('reading.roadSigns')} />
-            <Text style={styles.sectionSupport}>
+            <AppText style={styles.sectionSupport} lines={null}>
               {activeTab === 'documents'
                 ? t('reading.documentCount', {
                     count: error ? 0 : filteredDocuments.length,
@@ -530,14 +524,14 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
                     count: roadSignsError ? 0 : filteredRoadSigns.length,
                     label: filteredRoadSigns.length === 1 ? t('roadsigns.signSingular') : t('roadsigns.signPlural'),
                   })}
-            </Text>
+            </AppText>
             {activeTab === 'documents' && !loading && !error && usedPdfFallback ? (
-              <Text style={styles.fallbackNotice}>
+              <AppText style={styles.fallbackNotice}>
                 {t('reading.languageFallback', {
                   requested: languageLabel,
                   available: sourceLanguageLabel,
                 })}
-              </Text>
+              </AppText>
             ) : null}
           </View>
 
@@ -648,8 +642,8 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
         >
-          <Text style={styles.pageTitle}>{t('reading.helpContact')}</Text>
-          <Text style={styles.pageSubtitle}>{t('reading.helpIntro')}</Text>
+          <AppText style={styles.pageTitle}>{t('reading.helpContact')}</AppText>
+          <AppText style={styles.pageSubtitle}>{t('reading.helpIntro')}</AppText>
 
           <View style={styles.contactCard}>
             <View style={styles.contactRow}>
@@ -657,8 +651,8 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
                 <Ionicons name="mail-outline" size={20} color={colors.brand} />
               </View>
               <View style={styles.contactCopy}>
-                <Text style={styles.contactLabel}>{t('reading.supportEmailLabel')}</Text>
-                <Text style={styles.contactValue}>nkotanyidrivings@gmail.com</Text>
+                <AppText style={styles.contactLabel}>{t('reading.supportEmailLabel')}</AppText>
+                <AppText style={styles.contactValue}>nkotanyidrivings@gmail.com</AppText>
               </View>
             </View>
             <View style={styles.divider} />
@@ -667,13 +661,13 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
                 <Ionicons name="call-outline" size={20} color={colors.green} />
               </View>
               <View style={styles.contactCopy}>
-                <Text style={styles.contactLabel}>{t('reading.supportPhoneLabel')}</Text>
-                <Text style={styles.contactValue}>+250 780 211 466</Text>
+                <AppText style={styles.contactLabel}>{t('reading.supportPhoneLabel')}</AppText>
+                <AppText style={styles.contactValue}>+250 780 211 466</AppText>
               </View>
             </View>
             <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp} activeOpacity={0.85}>
               <Ionicons name="logo-whatsapp" size={21} color={colors.white} />
-              <Text style={styles.whatsappText}>{t('auth.whatsappUs')}</Text>
+              <AppText style={styles.whatsappText}>{t('auth.whatsappUs')}</AppText>
               <Ionicons name="arrow-forward" size={18} color={colors.white} />
             </TouchableOpacity>
           </View>
@@ -685,9 +679,9 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
             {faqs.map((question, index) => (
               <View key={question} style={styles.faqCard}>
                 <View style={styles.faqNumber}>
-                  <Text style={styles.faqNumberText}>{index + 1}</Text>
+                  <AppText style={styles.faqNumberText}>{index + 1}</AppText>
                 </View>
-                <Text style={styles.faqText}>{question}</Text>
+                <AppText style={styles.faqText}>{question}</AppText>
               </View>
             ))}
           </View>
@@ -715,6 +709,20 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginTop: spacing.xs,
     color: colors.inkMuted,
+  },
+  libraryIntro: {
+    marginBottom: spacing.lg,
+  },
+  libraryTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  librarySubtitle: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    color: colors.inkMuted,
+    textAlign: 'center',
   },
   tabsWrap: {
     marginTop: 0,

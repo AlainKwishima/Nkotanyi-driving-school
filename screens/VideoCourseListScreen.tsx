@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -177,7 +178,6 @@ export function VideoCourseListScreen({ navigation }: Props) {
     <ScreenColumn>
       <AppHeader
         title={t('video.listTitle')}
-        eyebrow={paidContentLanguage ? t(`profile.lang.${paidContentLanguage}`) : undefined}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />
@@ -194,14 +194,14 @@ export function VideoCourseListScreen({ navigation }: Props) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}
           >
-            <Text style={styles.pageTitle}>{t('video.libraryTitle')}</Text>
-            <Text style={styles.pageSubtitle}>
+            <AppText style={styles.pageTitle}>{t('video.libraryTitle')}</AppText>
+            <AppText style={styles.pageSubtitle}>
               {t('video.librarySubtitle', { count: items.length })}
-            </Text>
+            </AppText>
             {paidContentLanguage && paidContentLanguage !== contentLanguage ? (
-              <Text style={styles.subscriptionLanguageNotice}>
+              <AppText style={styles.subscriptionLanguageNotice} lines={null}>
                 {t('video.subscriptionLanguageNotice', { lang: paidLanguageLabel })}
-              </Text>
+              </AppText>
             ) : null}
 
             {featured ? (
@@ -209,16 +209,16 @@ export function VideoCourseListScreen({ navigation }: Props) {
                 <Thumbnail uri={thumbnailFromItem(featured)} large />
                 <View style={styles.featureCopy}>
                   <View style={styles.featureLabelRow}>
-                    <Text style={styles.featureLabel}>{t('video.featured')}</Text>
+                    <AppText style={styles.featureLabel}>{t('video.featured')}</AppText>
                     {durationFromItem(featured) ? (
-                      <Text style={styles.featureDuration}>{durationFromItem(featured)}</Text>
+                      <AppText style={styles.featureDuration}>{durationFromItem(featured)}</AppText>
                     ) : null}
                   </View>
-                  <Text style={styles.featureTitle} numberOfLines={2}>
+                  <AppText style={styles.featureTitle} lines={2}>
                     {titleFromItem(featured, 0, t)}
-                  </Text>
+                  </AppText>
                   <View style={styles.watchRow}>
-                    <Text style={styles.watchText}>{t('video.tapWatch')}</Text>
+                    <AppText style={styles.watchText}>{t('video.tapWatch')}</AppText>
                     <Ionicons name="arrow-forward" size={17} color={colors.amber} />
                   </View>
                 </View>
@@ -241,13 +241,13 @@ export function VideoCourseListScreen({ navigation }: Props) {
                   >
                     <Thumbnail uri={thumbnailFromItem(lesson)} />
                     <View style={styles.lessonCopy}>
-                      <Text style={styles.lessonNumber}>
+                      <AppText style={styles.lessonNumber}>
                         {t('video.lessonNumber', { number: index + 1 })}
-                      </Text>
-                      <Text style={styles.lessonTitle} numberOfLines={2}>
+                      </AppText>
+                      <AppText style={styles.lessonTitle} lines={2}>
                         {titleFromItem(lesson, index, t)}
-                      </Text>
-                      <Text style={styles.lessonMeta}>{duration ?? t('video.tapWatch')}</Text>
+                      </AppText>
+                      <AppText style={styles.lessonMeta}>{duration ?? t('video.tapWatch')}</AppText>
                     </View>
                     <Ionicons name="chevron-forward" size={19} color={colors.inkSoft} />
                   </TouchableOpacity>

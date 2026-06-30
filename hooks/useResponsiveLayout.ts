@@ -3,6 +3,7 @@ import { PixelRatio, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { computeContentMaxWidth, scrollBottomPaddingWithTabs } from '../utils/layoutMetrics';
+import { createResponsiveMetrics } from '../utils/responsive';
 
 /**
  * Window size, safe areas, column width, and font scaling for responsive layouts.
@@ -14,20 +15,17 @@ export function useResponsiveLayout() {
   const systemFontScale = PixelRatio.getFontScale();
 
   return useMemo(() => {
-    const shortSide = Math.min(width, height);
-    const longSide = Math.max(width, height);
+    const metrics = createResponsiveMetrics({ width, height, fontScale: systemFontScale });
     const portrait = height >= width;
     const contentMaxWidth = computeContentMaxWidth(width, height, insets);
-    const tabScrollBottomPad = scrollBottomPaddingWithTabs(insets.bottom);
+    const tabScrollBottomPad = scrollBottomPaddingWithTabs(insets.bottom, metrics.verticalScale(118), metrics.verticalScale(14));
 
     return {
+      ...metrics,
       width,
       height,
-      shortSide,
-      longSide,
       portrait,
       isLandscape: !portrait,
-      isTablet: shortSide >= 600,
       insets,
       contentMaxWidth,
       systemFontScale,
@@ -39,7 +37,9 @@ export function useResponsiveLayout() {
 /** Merge into root column styles instead of a fixed maxWidth. */
 export function useScreenColumnStyle(): {
   width: '100%';
-  alignSelf: 'stretch';
+  maxWidth: number;
+  alignSelf: 'center';
 } {
-  return useMemo(() => ({ width: '100%' as const, alignSelf: 'stretch' as const }), []);
+  const { contentMaxWidth } = useResponsiveLayout();
+  return useMemo(() => ({ width: '100%' as const, maxWidth: contentMaxWidth, alignSelf: 'center' as const }), [contentMaxWidth]);
 }

@@ -1,5 +1,6 @@
+import { AppText } from '../components/AppText';
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Animated, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Animated, Modal, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { MIN_TOUCH_TARGET } from '../constants/accessibility';
@@ -124,11 +125,11 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
                     <View style={styles.warningIcon}>
                       <Ionicons name="warning-outline" size={18} color={colors.warning} />
                     </View>
-                    <Text style={styles.subscriptionMessage}>{config.message}</Text>
+                    <AppText style={styles.subscriptionMessage}>{config.message}</AppText>
                   </View>
                   <View style={styles.subscriptionActionWrap}>
                     <TouchableOpacity style={styles.subscriptionButton} onPress={onConfirm} activeOpacity={0.88}>
-                      <Text style={styles.subscriptionButtonText}>{config.confirmLabel}</Text>
+                      <AppText style={styles.subscriptionButtonText}>{config.confirmLabel}</AppText>
                     </TouchableOpacity>
                   </View>
                 </Animated.View>
@@ -137,17 +138,17 @@ export function GateModalProvider({ children }: { children: React.ReactNode }) {
                   <View style={[styles.iconWrap, styles.iconWrapReady]}>
                     <Ionicons name="flag-outline" size={34} color={colors.brand} />
                   </View>
-                  <Text style={styles.eyebrow}>{t('exam.title')}</Text>
+                  <AppText style={styles.eyebrow}>{t('exam.title')}</AppText>
 
-                  <Text style={styles.title}>{config.title}</Text>
-                  <Text style={styles.message}>{config.message}</Text>
+                  <AppText style={styles.title}>{config.title}</AppText>
+                  <AppText style={styles.message} lines={null}>{config.message}</AppText>
 
                   <TouchableOpacity style={styles.primaryBtn} onPress={onConfirm}>
-                    <Text style={styles.primaryText}>{config.confirmLabel}</Text>
+                    <AppText style={styles.primaryText}>{config.confirmLabel}</AppText>
                   </TouchableOpacity>
 
                   <TouchableOpacity onPress={closeGateModal}>
-                    <Text style={styles.secondaryText}>{t('gate.notNow')}</Text>
+                    <AppText style={styles.secondaryText}>{t('gate.notNow')}</AppText>
                   </TouchableOpacity>
                 </Animated.View>
               )}

@@ -1,54 +1,32 @@
 import { useMemo } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { PixelRatio, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { computeContentMaxWidth } from '../utils/layoutMetrics';
-
-const BASE_WIDTH = 390;
-const BASE_HEIGHT = 844;
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+import { createResponsiveMetrics } from '../utils/responsive';
 
 export function useMobile() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const systemFontScale = PixelRatio.getFontScale();
 
   return useMemo(() => {
-    const shortSide = Math.min(width, height);
-    const longSide = Math.max(width, height);
-
-    const horizontalRatio = shortSide / BASE_WIDTH;
-    const verticalRatio = longSide / BASE_HEIGHT;
-
-    const scale = (size: number) => Math.round(size * clamp(horizontalRatio, 0.82, 1.22));
-    const verticalScale = (size: number) => Math.round(size * clamp(verticalRatio, 0.88, 1.2));
-    const moderateScale = (size: number, factor = 0.5) => {
-      const scaled = scale(size);
-      return Math.round(size + (scaled - size) * factor);
-    };
-    const fontScale = (size: number) => moderateScale(size, 0.4);
+    const metrics = createResponsiveMetrics({ width, height, fontScale: systemFontScale });
 
     const contentWidth = computeContentMaxWidth(width, height, insets);
     const sideGutter = Math.max(insets.left, insets.right, 0);
-    const isSmallDevice = shortSide <= 360;
-    const isLargeDevice = shortSide >= 412;
-    const isTablet = shortSide >= 600;
 
     return {
+      ...metrics,
       width,
       height,
-      shortSide,
-      longSide,
       contentWidth,
       sideGutter,
-      isSmallDevice,
-      isLargeDevice,
-      isTablet,
+      isSmallDevice: metrics.isSmallPhone,
+      isLargeDevice: metrics.isLargePhone,
       safeInsets: insets,
-      scale,
-      verticalScale,
-      moderateScale,
-      fontScale,
+      fontScale: metrics.font,
+      lineScale: metrics.lineHeight,
     };
-  }, [height, width, insets]);
+  }, [height, width, insets, systemFontScale]);
 }

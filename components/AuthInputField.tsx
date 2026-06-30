@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React, { useEffect, useState } from 'react';
-import { KeyboardTypeOptions, Pressable, StyleProp, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
+import { KeyboardTypeOptions, Pressable, StyleProp, StyleSheet, TextInput, TextStyle, View, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useMobile } from '../hooks/useMobile';
@@ -48,16 +49,16 @@ export function AuthInputField({
 
   return (
     <View style={style}>
-      {label ? <Text style={[styles.label, { marginBottom: m.verticalScale(8), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{label}</Text> : null}
+      {label ? <AppText style={[styles.label, { marginBottom: m.verticalScale(8), fontSize: m.fontScale(13), lineHeight: m.fontScale(20) }]}>{label}</AppText> : null}
       <View
         style={[
           styles.inputWrap,
-          { height: m.verticalScale(52), borderRadius: m.scale(radii.md), paddingHorizontal: m.scale(14) },
+          { height: m.touch(52), borderRadius: m.radius(radii.md), paddingHorizontal: m.scale(14) },
           outline ? styles.inputWrapOutline : styles.inputWrapFilled,
           hasError && styles.inputWrapError,
         ]}
       >
-        <Feather name={leftIcon} size={m.scale(18)} color={colors.textMuted} />
+        <Feather name={leftIcon} size={m.icon(18)} color={colors.textMuted} />
         <TextInput
           placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
@@ -78,14 +79,14 @@ export function AuthInputField({
           >
             <Feather
               name={secureTextEntry ? (isSecure ? rightIcon : 'eye-off') : rightIcon}
-              size={m.scale(17)}
+              size={m.icon(17)}
               color={colors.textMuted}
             />
           </Pressable>
         ) : null}
       </View>
       {error ? (
-        <Text style={[styles.errorText, { marginTop: m.verticalScale(6), fontSize: m.fontScale(12), lineHeight: m.fontScale(17) }]}>{error}</Text>
+        <AppText style={[styles.errorText, { marginTop: m.verticalScale(6), fontSize: m.fontScale(12), lineHeight: m.fontScale(17) }]} lines={null}>{error}</AppText>
       ) : null}
     </View>
   );

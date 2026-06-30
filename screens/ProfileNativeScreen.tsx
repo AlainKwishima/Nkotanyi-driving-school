@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -34,8 +35,8 @@ function AccountRow({
         <Ionicons name={icon} size={21} color={colors.brandStrong} />
       </View>
       <View style={styles.accountTextWrap}>
-        <Text style={styles.accountLabel}>{label}</Text>
-        <Text style={styles.accountValue}>{value}</Text>
+        <AppText style={styles.accountLabel}>{label}</AppText>
+        <AppText style={styles.accountValue}>{value}</AppText>
       </View>
       {onPress ? <Ionicons name="chevron-forward" size={19} color={colors.inkSoft} /> : null}
     </View>
@@ -73,17 +74,17 @@ export function ProfileNativeScreen({ navigation }: Props) {
         >
           <View style={styles.identityCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials || 'N'}</Text>
+              <AppText style={styles.avatarText}>{initials || 'N'}</AppText>
             </View>
             <View style={styles.identityCopy}>
-              <Text style={styles.identityName}>{name ?? t('profile.myAccount')}</Text>
-              <Text style={styles.identityPhone}>{phone ?? t('common.na')}</Text>
+              <AppText style={styles.identityName}>{name ?? t('profile.myAccount')}</AppText>
+              <AppText style={styles.identityPhone}>{phone ?? t('common.na')}</AppText>
             </View>
             <View style={[styles.planPill, hasSubscription ? styles.planPillActive : styles.planPillInactive]}>
               <View style={[styles.planDot, hasSubscription ? styles.planDotActive : styles.planDotInactive]} />
-              <Text style={[styles.planPillText, hasSubscription ? styles.planPillTextActive : styles.planPillTextInactive]}>
+              <AppText style={[styles.planPillText, hasSubscription ? styles.planPillTextActive : styles.planPillTextInactive]}>
                 {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
-              </Text>
+              </AppText>
             </View>
           </View>
 
@@ -117,28 +118,28 @@ export function ProfileNativeScreen({ navigation }: Props) {
               </View>
               <Ionicons name="arrow-forward" size={21} color={colors.inkSoft} />
             </View>
-            <Text style={styles.subscriptionEyebrow}>{t('profile.subscriptionPlan')}</Text>
-            <Text style={styles.subscriptionTitle}>
+            <AppText style={styles.subscriptionEyebrow}>{t('profile.subscriptionPlan')}</AppText>
+            <AppText style={styles.subscriptionTitle}>
               {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
-            </Text>
+            </AppText>
             <View style={styles.subscriptionMeta}>
-              <Text style={styles.subscriptionMetaLabel}>{t('profile.paymentStatus')}</Text>
+              <AppText style={styles.subscriptionMetaLabel}>{t('profile.paymentStatus')}</AppText>
               <View style={styles.statusRow}>
                 <Ionicons
                   name={hasSubscription ? 'checkmark-circle' : 'information-circle'}
                   size={17}
                   color={hasSubscription ? colors.success : colors.brand}
                 />
-                <Text style={styles.statusText}>
+                <AppText style={styles.statusText}>
                   {hasSubscription ? t('profile.paid') : t('profile.noPlan')}
-                </Text>
+                </AppText>
               </View>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowSignOutConfirm(true)} activeOpacity={0.82}>
             <MaterialCommunityIcons name="logout-variant" size={19} color={colors.danger} />
-            <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
+            <AppText style={styles.signOutText}>{t('profile.signOut')}</AppText>
           </TouchableOpacity>
         </ScrollView>
       </View>

@@ -1,6 +1,7 @@
+import { AppText } from '../components/AppText';
 import React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { REFERENCE_SCREENS, type ReferenceScreenKey } from '../assets/referenceScreens';
 import { RootStackParamList } from '../navigation/types';
@@ -150,7 +151,7 @@ export function ScreensHubScreen({ navigation }: Props) {
               navigation.navigate('ReferenceImage', { key: screen.key });
             }}
           >
-            <Text style={styles.cardTitle}>{t(hubScreenTitleKey(screen.key))}</Text>
+            <AppText style={styles.cardTitle}>{t(hubScreenTitleKey(screen.key))}</AppText>
           </Pressable>
         ))}
       </ScrollView>

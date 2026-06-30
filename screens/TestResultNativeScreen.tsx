@@ -120,7 +120,6 @@ function ResultTemplate({
     <ScreenColumn>
       <AppHeader
         title={t('test.results')}
-        eyebrow={passed ? t('performance.passed') : t('performance.failed')}
         onBack={returnToExamInstructions}
       />
 

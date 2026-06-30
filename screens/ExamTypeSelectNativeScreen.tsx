@@ -65,7 +65,6 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
     <ScreenColumn>
       <AppHeader
         title={t('examType.title')}
-        eyebrow={t('examType.subtitle')}
         onBack={() => navigation.goBack()}
         navigation={navigation}
       />

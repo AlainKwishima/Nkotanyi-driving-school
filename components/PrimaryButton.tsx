@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { Image, Pressable, StyleSheet } from 'react-native';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { useMobile } from '../hooks/useMobile';
@@ -18,12 +19,12 @@ export function PrimaryButton({ label, onPress }: PrimaryButtonProps) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { width: '100%', height: m.verticalScale(56), borderRadius: m.scale(28) },
+        { width: '100%', height: m.touch(56), borderRadius: m.radius(28) },
         pressed && styles.buttonPressed,
       ]}
     >
-      <Text style={[styles.label, { fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>{label}</Text>
-      <Image source={FIGMA_ASSETS.arrowRight} style={[styles.icon, { width: m.scale(12), height: m.scale(12) }]} resizeMode="contain" />
+      <AppText style={[styles.label, { fontSize: m.fontScale(14), lineHeight: m.fontScale(20) }]}>{label}</AppText>
+      <Image source={FIGMA_ASSETS.arrowRight} style={[styles.icon, { marginLeft: m.scale(8), width: m.icon(12), height: m.icon(12) }]} resizeMode="contain" />
     </Pressable>
   );
 }
@@ -49,9 +50,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   icon: {
-    marginLeft: 8,
-    width: 14,
-    height: 14,
     tintColor: colors.white,
   },
 });

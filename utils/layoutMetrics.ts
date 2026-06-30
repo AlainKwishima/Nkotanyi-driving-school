@@ -1,6 +1,6 @@
 import type { EdgeInsets } from 'react-native-safe-area-context';
 
-/** Phone-sized column cap (design reference ~390pt wide). */
+/** Phone-sized column cap (design reference starts at 375pt wide). */
 export const PHONE_COLUMN_MAX = 430;
 
 /** Readable max width on tablets / large windows (centered column). */

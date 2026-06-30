@@ -1,7 +1,8 @@
+import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -150,20 +151,22 @@ function HistoryCard({ item, onPress, index }: { item: PerformanceHistoryRow; on
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <TouchableOpacity style={styles.historyRow} onPress={onPress} activeOpacity={0.78}>
-        <Text style={styles.historyIndex}>{index + 1}</Text>
+        <AppText style={styles.historyIndex}>{index + 1}</AppText>
         <View style={styles.historyMeta}>
           <View>
-            <Text style={styles.historyTitle}>{displayTitle}</Text>
-            <Text style={styles.historyDate}>{displayDate}</Text>
+            <AppText style={styles.historyTitle} lines={2}>{displayTitle}</AppText>
+            <AppText style={styles.historyDate}>{displayDate}</AppText>
           </View>
         </View>
         <View style={styles.historyScoreColumn}>
           <View style={[styles.scoreChip, { backgroundColor: tone.backgroundColor }]}>
-            <Text style={[styles.scoreChipText, { color: tone.color }]}>{clampPercent(item.percent)}%</Text>
+            <AppText style={[styles.scoreChipText, { color: tone.color }]}>{clampPercent(item.percent)}%</AppText>
           </View>
-          <Text style={[styles.historyStatus, passed ? styles.historyStatusPass : styles.historyStatusFail]}>
+        </View>
+        <View style={styles.historyResultColumn}>
+          <AppText style={[styles.historyStatus, passed ? styles.historyStatusPass : styles.historyStatusFail]}>
             {statusText}
-          </Text>
+          </AppText>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -190,8 +193,8 @@ function StatTile({
 
   return (
     <View style={styles.statTile}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <AppText style={styles.statLabel}>{label}</AppText>
+      <AppText style={[styles.statValue, { color }]}>{value}</AppText>
     </View>
   );
 }
@@ -201,7 +204,7 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
   const total = rows.length;
   const avgAccuracy = total > 0 ? Math.round(rows.reduce((s, r) => s + r.percent, 0) / total) : 0;
   const passedCount = rows.filter((r) => r.status === 'PASSED').length;
-  const totalQuestions = rows.reduce((sum, row) => sum + row.total, 0);
+  const successRate = total > 0 ? Math.round((passedCount / total) * 100) : 0;
   const recentDelta = total > 1 ? clampPercent(rows[0].percent) - clampPercent(rows[1].percent) : 0;
   const lowestScore = total > 0 ? Math.min(...rows.map((row) => clampPercent(row.percent))) : 0;
   const highestScore = total > 0 ? Math.max(...rows.map((row) => clampPercent(row.percent))) : 0;
@@ -211,20 +214,18 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
   return (
     <View style={styles.summaryContainer}>
       <View style={styles.performanceBanner}>
-        <Text style={styles.performanceBannerTitle}>{t('performance.yourScore')}</Text>
-        <Text style={styles.performanceBannerBody}>
-          {t('performance.avgAccuracy')}: {avgAccuracy}%
-        </Text>
+        <AppText style={styles.performanceBannerTitle}>{t('performance.bannerTitle')}</AppText>
+        <AppText style={styles.performanceBannerBody}>{t('performance.bannerSubtitle')}</AppText>
         <View style={styles.performanceBannerStats}>
           <View style={styles.performanceBannerPill}>
-            <Text style={styles.performanceBannerPillText}>
+            <AppText style={styles.performanceBannerPillText}>
               {t('performance.totalExams')}: {total}
-            </Text>
+            </AppText>
           </View>
           <View style={styles.performanceBannerPill}>
-            <Text style={styles.performanceBannerPillText}>
-              {t('performance.passedExams')}: {passedCount}
-            </Text>
+            <AppText style={styles.performanceBannerPillText}>
+              {t('performance.successRate')}: {successRate}%
+            </AppText>
           </View>
         </View>
       </View>
@@ -232,7 +233,7 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
       <View style={styles.summaryGrid}>
         <StatTile label={t('performance.avgAccuracy')} value={`${avgAccuracy}%`} tone={avgAccuracy >= 60 ? 'positive' : 'negative'} />
         <StatTile label={t('performance.passedExams')} value={`${passedCount}`} tone="brand" />
-        <StatTile label={t('performance.totalQuestions')} value={`${totalQuestions}`} />
+        <StatTile label={t('performance.totalExams')} value={`${total}`} />
         <StatTile
           label={t('performance.scoreTrend')}
           value={deltaLabel}
@@ -241,23 +242,23 @@ function PerformanceSummary({ rows }: { rows: PerformanceHistoryRow[] }) {
       </View>
 
       <View style={styles.scoreBand}>
-        <Text style={styles.scoreBandTitle}>{t('performance.yourScore')}</Text>
+        <AppText style={styles.scoreBandTitle}>{t('performance.yourScore')}</AppText>
         <View style={styles.scoreBandValues}>
           <View>
-            <Text style={styles.scoreBandMin}>{lowestScore}%</Text>
-            <Text style={styles.scoreBandLabel}>{t('performance.lowestScore')}</Text>
+            <AppText style={styles.scoreBandMin}>{lowestScore}%</AppText>
+            <AppText style={styles.scoreBandLabel}>{t('performance.lowestScore')}</AppText>
           </View>
           <View style={styles.scoreBandCenter}>
             <View style={styles.scoreTrack}>
               <View style={[styles.scoreFill, { width: averageWidth }]} />
             </View>
-            <Text style={styles.scoreAverage}>
-              {t('performance.avgAccuracy')} <Text style={styles.scoreAverageValue}>{avgAccuracy}%</Text>
-            </Text>
+            <AppText style={styles.scoreAverage}>
+              {t('performance.avgAccuracy')} <AppText style={styles.scoreAverageValue}>{avgAccuracy}%</AppText>
+            </AppText>
           </View>
           <View style={styles.scoreBandRight}>
-            <Text style={styles.scoreBandMax}>{highestScore}%</Text>
-            <Text style={styles.scoreBandLabel}>{t('performance.highestScore')}</Text>
+            <AppText style={styles.scoreBandMax}>{highestScore}%</AppText>
+            <AppText style={styles.scoreBandLabel}>{t('performance.highestScore')}</AppText>
           </View>
         </View>
       </View>
@@ -288,28 +289,29 @@ function HistoryBackground({
           <PerformanceSummary rows={rows} />
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('performance.examList')}</Text>
+            <AppText style={styles.sectionTitle}>{t('performance.examList')}</AppText>
             <TouchableOpacity onPress={onRetry} disabled={loading} style={styles.refreshBtn}>
               <Ionicons name="refresh" size={14} color={colors.brand} />
-              <Text style={styles.refreshText}>{loading ? t('common.loading') : t('performance.refresh')}</Text>
+              <AppText style={styles.refreshText}>{loading ? t('common.loading') : t('performance.refresh')}</AppText>
             </TouchableOpacity>
           </View>
-          {loadError ? <View style={styles.errorBox}><Text style={styles.inlineError}>{loadError}</Text></View> : null}
+          {loadError ? <View style={styles.errorBox}><AppText style={styles.inlineError}>{loadError}</AppText></View> : null}
           {rows.length === 0 && !loading ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
                 <Ionicons name="document-text-outline" size={32} color="#6B7280" />
               </View>
-              <Text style={styles.emptyTitle}>{t('performance.emptyTitle')}</Text>
-              <Text style={styles.emptyText}>{t('performance.empty')}</Text>
+              <AppText style={styles.emptyTitle}>{t('performance.emptyTitle')}</AppText>
+              <AppText style={styles.emptyText}>{t('performance.empty')}</AppText>
             </View>
           ) : null}
           {rows.length > 0 ? (
             <View style={styles.historyTable}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.tableIndex]}>#</Text>
-                <Text style={[styles.tableHeaderText, styles.tableExam]}>{t('performance.examColumn')}</Text>
-                <Text style={[styles.tableHeaderText, styles.tableScore]}>{t('performance.scoreColumn')}</Text>
+                <AppText style={[styles.tableHeaderText, styles.tableIndex]}>#</AppText>
+                <AppText style={[styles.tableHeaderText, styles.tableExam]}>{t('performance.examColumn')}</AppText>
+                <AppText style={[styles.tableHeaderText, styles.tableScore]}>{t('performance.scoreColumn')}</AppText>
+                <AppText style={[styles.tableHeaderText, styles.tableResult]}>{t('performance.resultColumn')}</AppText>
               </View>
               {rows.map((item, idx) => (
                 <HistoryCard
@@ -346,8 +348,8 @@ function ProgressRow({ title, value }: { title: string; value: number }) {
   return (
     <View style={styles.progressRow}>
       <View style={styles.progressHeader}>
-        <Text style={styles.progressTitle}>{title}</Text>
-        <Text style={styles.progressValue}>{value}%</Text>
+        <AppText style={styles.progressTitle}>{title}</AppText>
+        <AppText style={styles.progressValue}>{value}%</AppText>
       </View>
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${value}%` }]} />
@@ -425,50 +427,50 @@ function PerformanceDetailNativeScreen({ navigation, route }: DetailProps) {
           <View style={styles.detailCardHeader}>
             <View>
               <View style={[styles.statusTag, passed ? styles.statusTagPass : styles.statusTagFail]}>
-                <Text style={[styles.statusTagText, passed ? styles.statusTagTextPass : styles.statusTagTextFail]}>
+                <AppText style={[styles.statusTagText, passed ? styles.statusTagTextPass : styles.statusTagTextFail]}>
                   {(passed ? t('performance.passed') : t('performance.failed')).toUpperCase()}
-                </Text>
+                </AppText>
               </View>
-              <Text style={styles.detailExamTitle}>{title}</Text>
-              <Text style={styles.detailDate}>{dateLabel}</Text>
+              <AppText style={styles.detailExamTitle}>{title}</AppText>
+              <AppText style={styles.detailDate}>{dateLabel}</AppText>
             </View>
           </View>
 
           <View style={styles.detailStatsGrid}>
             <View style={styles.detailStatItem}>
               <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
-              <Text style={styles.detailStatVal}>{correct}/{total}</Text>
-              <Text style={styles.detailStatLab}>{t('performance.score')}</Text>
+              <AppText style={styles.detailStatVal}>{correct}/{total}</AppText>
+              <AppText style={styles.detailStatLab}>{t('performance.score')}</AppText>
             </View>
             <View style={styles.detailStatItem}>
               <Ionicons name="time-outline" size={20} color={colors.brand} />
-              <Text style={styles.detailStatVal}>{durationLabel}</Text>
-              <Text style={styles.detailStatLab}>{t('performance.time')}</Text>
+              <AppText style={styles.detailStatVal}>{durationLabel}</AppText>
+              <AppText style={styles.detailStatLab}>{t('performance.time')}</AppText>
             </View>
             <View style={styles.detailStatItem}>
               <Ionicons name="trending-up" size={20} color="#F59E0B" />
-              <Text style={styles.detailStatVal}>{percent}%</Text>
-              <Text style={styles.detailStatLab}>{t('performance.accuracy')}</Text>
+              <AppText style={styles.detailStatVal}>{percent}%</AppText>
+              <AppText style={styles.detailStatLab}>{t('performance.accuracy')}</AppText>
             </View>
           </View>
 
           <View style={styles.detailInfoBox}>
             <View style={styles.detailInfoRow}>
-              <Text style={styles.detailInfoLabel}>{t('performance.startedAt')}</Text>
-              <Text style={styles.detailInfoValue}>{formatHistoryDateForLanguage(startedAt, lang, t('common.na'))}</Text>
+              <AppText style={styles.detailInfoLabel}>{t('performance.startedAt')}</AppText>
+              <AppText style={styles.detailInfoValue}>{formatHistoryDateForLanguage(startedAt, lang, t('common.na'))}</AppText>
             </View>
             <View style={styles.detailInfoRow}>
-              <Text style={styles.detailInfoLabel}>{t('performance.finishedAt')}</Text>
-              <Text style={styles.detailInfoValue}>{formatHistoryDateForLanguage(finishedAt, lang, t('common.na'))}</Text>
+              <AppText style={styles.detailInfoLabel}>{t('performance.finishedAt')}</AppText>
+              <AppText style={styles.detailInfoValue}>{formatHistoryDateForLanguage(finishedAt, lang, t('common.na'))}</AppText>
             </View>
             <View style={styles.detailInfoRow}>
-              <Text style={styles.detailInfoLabel}>{t('performance.answered')}</Text>
-              <Text style={styles.detailInfoValue}>{answeredCount}/{total}</Text>
+              <AppText style={styles.detailInfoLabel}>{t('performance.answered')}</AppText>
+              <AppText style={styles.detailInfoValue}>{answeredCount}/{total}</AppText>
             </View>
           </View>
 
           <View style={styles.detailDivider} />
-          <Text style={styles.breakdownTitle}>{t('test.results').toUpperCase()}</Text>
+          <AppText style={styles.breakdownTitle}>{t('test.results').toUpperCase()}</AppText>
           <ProgressRow title={t('performance.overall')} value={percent} />
 
           <View style={styles.detailActions}>
@@ -492,14 +494,14 @@ function PerformanceDetailNativeScreen({ navigation, route }: DetailProps) {
               }
             >
               <Ionicons name="eye-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.detailPrimaryBtnText}>{t('performance.review')}</Text>
+              <AppText style={styles.detailPrimaryBtnText}>{t('performance.review')}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.detailSecondaryBtn}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.detailSecondaryBtnText}>{t('performance.close')}</Text>
+              <AppText style={styles.detailSecondaryBtnText}>{t('performance.close')}</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -586,10 +588,10 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
           <>
             <View style={styles.reviewExamProgressHeader}>
               <View>
-                <Text style={styles.reviewExamQuestionPosition}>{currentLabel}</Text>
-                <Text style={styles.reviewExamAnsweredLabel}>
+                <AppText style={styles.reviewExamQuestionPosition}>{currentLabel}</AppText>
+                <AppText style={styles.reviewExamAnsweredLabel}>
                   {t('exam.answeredCount', { answered: attempt?.answeredCount ?? answerDetails.length, total: totalQuestions })}
-                </Text>
+                </AppText>
               </View>
               <View style={[styles.currentStatusChip, selectedIsCorrect ? styles.currentStatusCorrect : styles.currentStatusWrong]}>
                 <Ionicons
@@ -597,9 +599,9 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                   size={14}
                   color={selectedIsCorrect ? colors.success : colors.danger}
                 />
-                <Text style={[styles.currentStatusText, selectedIsCorrect ? styles.currentStatusTextCorrect : styles.currentStatusTextWrong]}>
+                <AppText style={[styles.currentStatusText, selectedIsCorrect ? styles.currentStatusTextCorrect : styles.currentStatusTextWrong]}>
                   {selectedIsCorrect ? t('performance.correct') : t('performance.incorrect')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <View style={styles.reviewExamProgressTrack}>
@@ -626,7 +628,7 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                     onPress={() => setCurrentIndex(index)}
                     activeOpacity={0.78}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.reviewQuestionChipText,
                         correct ? styles.reviewQuestionChipTextCorrect : styles.reviewQuestionChipTextWrong,
@@ -634,7 +636,7 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                       ]}
                     >
                       {index + 1}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 );
               })}
@@ -651,10 +653,10 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                     <Image source={{ uri: currentQuestion.questionImageUrls[0] }} style={styles.reviewQuestionImage} resizeMode="contain" />
                   </View>
                 ) : null}
-                <Text style={styles.reviewQuestionText}>{currentQuestion.questionText}</Text>
+                <AppText style={styles.reviewQuestionText}>{currentQuestion.questionText}</AppText>
               </View>
 
-              <Text style={styles.reviewChooseLabel}>{t('exam.chooseAnswer')}</Text>
+              <AppText style={styles.reviewChooseLabel}>{t('exam.chooseAnswer')}</AppText>
               <View style={styles.reviewOptionList}>
                 {reviewOptions.map((option, index) => {
                   const isSelected = option.id === currentQuestion.selectedOptionId || option.text === currentQuestion.selectedOptionText;
@@ -680,15 +682,15 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                             color="#FFFFFF"
                           />
                         ) : (
-                          <Text style={styles.reviewOptionMarkerText}>{REVIEW_OPTION_LABELS[index] ?? index + 1}</Text>
+                          <AppText style={styles.reviewOptionMarkerText}>{REVIEW_OPTION_LABELS[index] ?? index + 1}</AppText>
                         )}
                       </View>
                       <View style={styles.reviewAnswerStack}>
                         <View style={styles.reviewAnswerLabelRow}>
-                          {isSelected ? <Text style={styles.reviewAnswerLabel}>{t('performance.yourAnswer')}</Text> : null}
-                          {isCorrect ? <Text style={styles.reviewCorrectLabel}>{t('performance.correctAnswer')}</Text> : null}
+                          {isSelected ? <AppText style={styles.reviewAnswerLabel}>{t('performance.yourAnswer')}</AppText> : null}
+                          {isCorrect ? <AppText style={styles.reviewCorrectLabel}>{t('performance.correctAnswer')}</AppText> : null}
                         </View>
-                        <Text style={styles.reviewAnswerText}>{option.text}</Text>
+                        <AppText style={styles.reviewAnswerText}>{option.text}</AppText>
                         {option.imageUrl ? (
                           <Image source={{ uri: option.imageUrl }} style={styles.reviewOptionImage} resizeMode="contain" />
                         ) : null}
@@ -701,11 +703,11 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
               <View style={styles.explanationBox}>
                 <View style={styles.explainHeader}>
                   <Ionicons name="bulb-outline" size={16} color={colors.brand} />
-                  <Text style={styles.explainTitle}>{t('performance.feedback')}</Text>
+                  <AppText style={styles.explainTitle}>{t('performance.feedback')}</AppText>
                 </View>
-                <Text style={styles.explainText}>
+                <AppText style={styles.explainText}>
                   {currentQuestion.explanation ?? t('performance.reviewExplanation')}
-                </Text>
+                </AppText>
               </View>
             </ScrollView>
 
@@ -716,7 +718,7 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                 disabled={currentIndex === 0}
               >
                 <Ionicons name="arrow-back" size={19} color={currentIndex === 0 ? colors.inkSoft : colors.ink} />
-                <Text style={[styles.reviewExamNavText, currentIndex === 0 && styles.navTextDisabled]}>{t('exam.previous')}</Text>
+                <AppText style={[styles.reviewExamNavText, currentIndex === 0 && styles.navTextDisabled]}>{t('exam.previous')}</AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -729,17 +731,17 @@ export function PerformanceReviewNativeScreen({ navigation, route }: ReviewProps
                   navigation.navigate('PerformanceNative');
                 }}
               >
-                <Text style={[styles.reviewExamNavText, styles.reviewExamNavTextPrimary]}>
+                <AppText style={[styles.reviewExamNavText, styles.reviewExamNavTextPrimary]}>
                   {currentIndex >= answerDetails.length - 1 ? t('performance.finishReview') : t('exam.next')}
-                </Text>
+                </AppText>
                 <Ionicons name="arrow-forward" size={19} color={colors.white} />
               </TouchableOpacity>
             </View>
           </>
         ) : (
           <View style={styles.emptyReviewBox}>
-            <Text style={styles.emptyReviewTitle}>{t('performance.reviewUnavailableTitle')}</Text>
-            <Text style={styles.emptyReviewText}>{t('performance.reviewUnavailableBody')}</Text>
+            <AppText style={styles.emptyReviewTitle}>{t('performance.reviewUnavailableTitle')}</AppText>
+            <AppText style={styles.emptyReviewText}>{t('performance.reviewUnavailableBody')}</AppText>
           </View>
         )}
       </View>
@@ -931,6 +933,7 @@ const styles = StyleSheet.create({
   tableIndex: { width: 34 },
   tableExam: { flex: 1 },
   tableScore: { width: 74, textAlign: 'center' },
+  tableResult: { width: 88, textAlign: 'right' },
   historyRow: {
     minHeight: 72,
     paddingHorizontal: spacing.md,
@@ -949,7 +952,8 @@ const styles = StyleSheet.create({
   historyMeta: { flex: 1, paddingRight: spacing.md },
   historyTitle: { fontFamily: 'Poppins-ExtraBold', fontSize: 13, lineHeight: 18, color: colors.ink },
   historyDate: { marginTop: 2, fontFamily: 'Poppins-Medium', fontSize: 11, lineHeight: 16, color: colors.inkMuted },
-  historyScoreColumn: { width: 86, alignItems: 'flex-end' },
+  historyScoreColumn: { width: 74, alignItems: 'center' },
+  historyResultColumn: { width: 88, alignItems: 'flex-end', justifyContent: 'center' },
   scoreChip: {
     minWidth: 54,
     minHeight: 30,
