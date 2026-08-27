@@ -53,6 +53,7 @@ export function ExamInstructionsNativeScreen({ navigation }: Props) {
         title={t('examInstructions.title')}
         onBack={() => navigation.goBack()}
         navigation={navigation}
+        truncateTitle={false}
       />
 
       <View style={styles.body}>

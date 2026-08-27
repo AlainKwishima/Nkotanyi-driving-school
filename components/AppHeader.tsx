@@ -1,6 +1,6 @@
 import { AppText } from './AppText';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NavigationProp } from '@react-navigation/native';
 
@@ -17,13 +17,24 @@ type AppHeaderProps = {
   right?: React.ReactNode;
   curveColor?: string;
   titleOffsetX?: number;
+  /** When false, the title wraps naturally (used on exam flows). Defaults to true. */
+  truncateTitle?: boolean;
 };
 
-export function AppHeader({ title, navigation, onBack, left, right, curveColor = colors.canvas, titleOffsetX = 0 }: AppHeaderProps) {
+export function AppHeader({
+  title,
+  navigation,
+  onBack,
+  left,
+  right,
+  curveColor = colors.canvas,
+  titleOffsetX = 0,
+  truncateTitle = true,
+}: AppHeaderProps) {
   const { insets, scale, verticalScale, radius, touch, font, lineHeight } = useResponsiveLayout();
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top, paddingHorizontal: scale(spacing.lg) }]}>
+    <View style={[styles.root, { paddingHorizontal: scale(spacing.lg) }]}>
       <View style={[styles.row, { minHeight: verticalScale(54), paddingBottom: verticalScale(spacing.xs) }]}>
         <View style={[styles.side, { width: touch(44) }]}>
           {left ?? (onBack ? (
@@ -39,9 +50,13 @@ export function AppHeader({ title, navigation, onBack, left, right, curveColor =
           ) : null)}
         </View>
         <View style={[styles.titleStack, { paddingHorizontal: scale(spacing.sm) }, titleOffsetX !== 0 && { transform: [{ translateX: scale(titleOffsetX) }] }]}>
-          <AppText style={[styles.title, { fontSize: font(18), lineHeight: lineHeight(18) }]} lines={1}>
-            {title}
-          </AppText>
+          {truncateTitle ? (
+            <AppText style={[styles.title, { fontSize: font(18), lineHeight: lineHeight(18) }]} lines={1}>
+              {title}
+            </AppText>
+          ) : (
+            <Text style={[styles.title, { fontSize: font(18), lineHeight: lineHeight(18) }]}>{title}</Text>
+          )}
         </View>
         <View style={[styles.side, styles.rightSide, { width: touch(44) }]}>
           {right ?? (navigation ? <HeaderMenu navigation={navigation} iconColor={colors.white} topOffset={verticalScale(52)} rightOffset={scale(18)} /> : null)}

@@ -1,5 +1,6 @@
 import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alert, Image, Linking, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +11,7 @@ import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { ReadSectionTabs } from '../components/ReadSectionTabs';
 import { SectionHeading } from '../components/SectionHeading';
-import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
+import { EmptyState, InlineErrorState, DocumentCardSkeleton, SignGroupCardSkeleton } from '../components/RequestStates';
 import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +23,7 @@ import { ApiError } from '../services/api/types';
 import { useI18n } from '../i18n/useI18n';
 import { hasLanguageAccess, resolvePaidContentLanguage } from '../utils/subscriptionAccess';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
+import { SUPPORT_CONTACT } from '../constants/support';
 
 type ReadProps = NativeStackScreenProps<RootStackParamList, 'ReadingNative'>;
 type HelpProps = NativeStackScreenProps<RootStackParamList, 'HelpCenterNative'>;
@@ -306,17 +308,9 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
   } = useAppFlow();
   const { openGateModal } = useGateModal();
   const [activeTab, setActiveTab] = useState<ReadTab>(route.params?.initialTab ?? 'documents');
-  const [pdfs, setPdfs] = useState<PdfItem[]>([]);
-  const [pdfSourceLanguage, setPdfSourceLanguage] = useState<typeof contentLanguage | null>(null);
-  const [usedPdfFallback, setUsedPdfFallback] = useState(false);
-  const [roadSigns, setRoadSigns] = useState<RoadSignStudyItem[]>([]);
-  const [roadSignsLoading, setRoadSignsLoading] = useState(false);
-  const [roadSignsError, setRoadSignsError] = useState<string | null>(null);
   const [failedRoadSignImages, setFailedRoadSignImages] = useState<Record<string, boolean>>({});
   const [selectedRoadSignIndex, setSelectedRoadSignIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
@@ -331,59 +325,39 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
     contentLanguage,
   });
 
-  const loadPdfs = useCallback(async () => {
-    if (!accessToken || !paidContentLanguage) return;
-    setLoading(true);
-    setError(null);
-    setPdfs([]);
-    setPdfSourceLanguage(null);
-    setUsedPdfFallback(false);
-    try {
-      const result = await getPdfsWithFallback(
-        accessToken,
-        paidContentLanguage,
-      );
-      setPdfs(result.items);
-      setPdfSourceLanguage(result.resolvedLanguage);
-      setUsedPdfFallback(result.usedFallback);
-    } catch (loadError) {
-      if (__DEV__) console.warn('[Reading] PDF load failed', loadError);
-      setError(
-        loadError instanceof ApiError && loadError.code === 'PDF_LANGUAGE_MISMATCH'
-          ? t('reading.languageMismatch', { lang: t(`profile.lang.${paidContentLanguage}`) })
-          : t('reading.loadError'),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, paidContentLanguage, t]);
+  const { data: pdfData, isPending: loading, error: pdfQueryError, refetch: refetchPdfs } = useQuery({
+    queryKey: ['pdfs', accessToken, paidContentLanguage],
+    queryFn: async () => {
+      if (!accessToken || !paidContentLanguage || !languageAccessGranted) return null;
+      return await getPdfsWithFallback(accessToken, paidContentLanguage);
+    },
+    enabled: !!accessToken && !!paidContentLanguage && languageAccessGranted,
+  });
 
-  const loadRoadSigns = useCallback(async () => {
-    if (!accessToken || !paidContentLanguage) return;
-    setRoadSignsLoading(true);
-    setRoadSignsError(null);
-    try {
-      const result = await getRoadSigns(
-        accessToken,
-        paidContentLanguage,
-      );
-      setRoadSigns(result.items);
-      setSelectedRoadSignIndex(null);
-      setFailedRoadSignImages({});
-    } catch (loadError) {
-      if (__DEV__) console.warn('[Reading] road signs load failed', loadError);
-      setRoadSignsError(t('roadsigns.loadError'));
-    } finally {
-      setRoadSignsLoading(false);
-    }
-  }, [accessToken, paidContentLanguage, t]);
+  const pdfs = pdfData?.items ?? [];
+  const pdfSourceLanguage = pdfData?.resolvedLanguage ?? null;
+  const usedPdfFallback = pdfData?.usedFallback ?? false;
+  
+  const error = pdfQueryError
+    ? (pdfQueryError instanceof ApiError && pdfQueryError.code === 'PDF_LANGUAGE_MISMATCH'
+        ? t('reading.languageMismatch', { lang: t(`profile.lang.${paidContentLanguage}`) })
+        : t('reading.loadError'))
+    : null;
 
-  useEffect(() => {
-    if (languageAccessGranted && accessToken && paidContentLanguage) {
-      void loadPdfs();
-      void loadRoadSigns();
-    }
-  }, [accessToken, languageAccessGranted, loadPdfs, loadRoadSigns, paidContentLanguage]);
+  const { data: roadSignsData, isPending: roadSignsLoading, error: roadSignsQueryError, refetch: refetchRoadSigns } = useQuery({
+    queryKey: ['roadSigns', accessToken, paidContentLanguage],
+    queryFn: async () => {
+      if (!accessToken || !paidContentLanguage || !languageAccessGranted) return null;
+      return await getRoadSigns(accessToken, paidContentLanguage);
+    },
+    enabled: !!accessToken && !!paidContentLanguage && languageAccessGranted,
+  });
+
+  const roadSigns = roadSignsData?.items ?? [];
+  const roadSignsError = roadSignsQueryError ? t('roadsigns.loadError') : null;
+
+  const loadPdfs = () => { void refetchPdfs(); };
+  const loadRoadSigns = () => { void refetchRoadSigns(); };
 
   useEffect(() => {
     if (!languageAccessGranted && !isSigningOut) {
@@ -464,7 +438,7 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
         >
           <View style={styles.libraryIntro}>
             <AppText style={styles.libraryTitle}>{t('reading.libraryTitle')}</AppText>
-            <AppText style={styles.librarySubtitle} lines={null}>{t('reading.librarySubtitle')}</AppText>
+            <AppText style={styles.librarySubtitle} lines={null} shrink>{t('reading.librarySubtitle')}</AppText>
           </View>
 
           <View style={styles.tabsWrap}>
@@ -536,7 +510,11 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
           </View>
 
           {activeTab === 'documents' && loading ? (
-            <LoadingState message={t('reading.loadingDocuments')} />
+            <View style={{ gap: spacing.md }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <DocumentCardSkeleton key={i} />
+              ))}
+            </View>
           ) : activeTab === 'documents' && error ? (
             <InlineErrorState
               title={t('reading.languageUnavailableTitle')}
@@ -576,7 +554,11 @@ export function ReadingNativeScreen({ navigation, route }: ReadProps) {
               ))}
             </View>
           ) : roadSignsLoading ? (
-            <LoadingState message={t('roadsigns.loading')} />
+            <View style={{ gap: spacing.md }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SignGroupCardSkeleton key={i} />
+              ))}
+            </View>
           ) : roadSignsError ? (
             <InlineErrorState
               title={t('roadsigns.errorTitle')}
@@ -629,7 +611,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
   const faqs = [t('reading.faq1'), t('reading.faq2'), t('reading.faq3'), t('reading.faq4')];
 
   const handleWhatsApp = () => {
-    Linking.openURL('https://wa.me/250780211466').catch(() => {
+    Linking.openURL(SUPPORT_CONTACT.whatsappUrl).catch(() => {
       Alert.alert(t('common.error'), t('reading.whatsappError'));
     });
   };
@@ -652,7 +634,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
               </View>
               <View style={styles.contactCopy}>
                 <AppText style={styles.contactLabel}>{t('reading.supportEmailLabel')}</AppText>
-                <AppText style={styles.contactValue}>nkotanyidrivings@gmail.com</AppText>
+                <AppText style={styles.contactValue}>{SUPPORT_CONTACT.email}</AppText>
               </View>
             </View>
             <View style={styles.divider} />
@@ -662,7 +644,7 @@ export function HelpCenterNativeScreen({ navigation }: HelpProps) {
               </View>
               <View style={styles.contactCopy}>
                 <AppText style={styles.contactLabel}>{t('reading.supportPhoneLabel')}</AppText>
-                <AppText style={styles.contactValue}>+250 780 211 466</AppText>
+                <AppText style={styles.contactValue}>{SUPPORT_CONTACT.phoneDisplay}</AppText>
               </View>
             </View>
             <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp} activeOpacity={0.85}>

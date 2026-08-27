@@ -13,36 +13,50 @@ import {
   profileHasHighestSubscription,
   profileHasTimeBasedSubscription,
   profileIndicatesActiveSubscription,
+  profileSubscriptionSummary,
+  type SubscriptionSummary,
 } from '../services/userApi';
 import { phoneForSignupApi } from '../utils/phone';
-import { navigationRef } from '../App';
+import { navigationRef } from '../navigation/navigationRef';
+import { clearLegacyAsyncStorageKeys, deleteSecureValue, getSecureJson, setSecureJson } from '../services/secureStorage';
+import { clearRememberedCredentials } from '../services/rememberedCredentials';
 
 const AUTH_KEY = 'nkotanyi.auth.v1';
+const AUTH_SECURE_KEY = 'ibyapa.auth.secure.v1';
 
 export type AuthState = {
   accessToken: string | null;
   userId: string | null;
   name: string | null;
   phone: string | null;
+  subscriptionSummary: SubscriptionSummary | null;
 };
+
+export type ProfileRefreshResult =
+  | { status: 'active'; hasSubscription: true }
+  | { status: 'inactive'; hasSubscription: false }
+  | { status: 'unknown'; hasSubscription: null; error?: string };
 
 type AuthContextValue = AuthState & {
   authReady: boolean;
   login: (account: string, password: string) => Promise<void>;
   signup: (name: string, phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  /** Refreshes profile from the server. Returns whether an active subscription was detected in payment records. */
-  refreshProfile: () => Promise<boolean>;
+  /** Refreshes profile from the server without downgrading entitlements on transient failures. */
+  refreshProfile: () => Promise<ProfileRefreshResult>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function persistAuth(state: AuthState) {
   if (!state.accessToken || !state.userId) {
-    await AsyncStorage.removeItem(AUTH_KEY);
+    await deleteSecureValue(AUTH_SECURE_KEY);
+    await clearLegacyAsyncStorageKeys(AUTH_KEY);
+    await clearRememberedCredentials();
     return;
   }
-  await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(state));
+  await setSecureJson(AUTH_SECURE_KEY, state);
+  await clearLegacyAsyncStorageKeys(AUTH_KEY);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -60,13 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
+  const [subscriptionSummary, setSubscriptionSummary] = useState<SubscriptionSummary | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenExpiryMsRef = useRef<number | null>(null);
   const logoutRef = useRef<((reason?: string) => Promise<void>) | null>(null);
 
   const applyProfile = useCallback(
-    async (token: string, uid: string): Promise<boolean> => {
+    async (token: string, uid: string): Promise<ProfileRefreshResult> => {
       logAuthEvent('apply_profile_start', { userId: uid, tokenExpiry: formatTokenExpiry(token) });
       const profile = await getUserAndPayment(uid, token);
       const u = profile.user;
@@ -88,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sub = profileIndicatesActiveSubscription(profile);
       const timeBased = profileHasTimeBasedSubscription(profile);
       const highestSub = profileHasHighestSubscription(profile);
+      const summary = profileSubscriptionSummary(profile);
       const paidLanguage = sub ? latestActiveSubscriptionLanguage(profile) : null;
       if (__DEV__) {
         console.log('[AuthContext] hasSubscription resolved to →', sub);
@@ -99,8 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setHasTimeBasedSubscription(timeBased);
       await setCanChangeLanguage(highestSub);
       await setSubscriptionLanguage(paidLanguage);
+      setSubscriptionSummary(summary);
+      await persistAuth({ accessToken: token, userId: uid, name: u.name, phone: u.phone, subscriptionSummary: summary });
       logAuthEvent('apply_profile_ok', { userId: uid, hasSubscription: sub, timeBased });
-      return sub;
+      return sub ? { status: 'active', hasSubscription: true } : { status: 'inactive', hasSubscription: false };
     },
     [setCanChangeLanguage, setHasSubscription, setHasTimeBasedSubscription, setHasUsedFreeTrial, setSubscriptionLanguage],
   );
@@ -113,11 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expiryTimerRef.current = null;
       }
       tokenExpiryMsRef.current = null;
-      await AsyncStorage.removeItem(AUTH_KEY);
+      await deleteSecureValue(AUTH_SECURE_KEY);
+      await clearLegacyAsyncStorageKeys(AUTH_KEY);
+      await clearRememberedCredentials();
       setAccessToken(null);
       setUserId(null);
       setName(null);
       setPhone(null);
+      setSubscriptionSummary(null);
       await setSignedIn(false);
       await setHasSubscription(false);
       await setHasTimeBasedSubscription(false);
@@ -163,17 +184,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const load = async () => {
       if (authReady) return;
       try {
-        const raw = await AsyncStorage.getItem(AUTH_KEY);
-        if (!raw) {
+        let parsed = await getSecureJson<Partial<AuthState>>(AUTH_SECURE_KEY);
+        if (!parsed) {
+          const legacyRaw = await AsyncStorage.getItem(AUTH_KEY);
+          if (legacyRaw) {
+            parsed = JSON.parse(legacyRaw) as Partial<AuthState>;
+            if (parsed.accessToken && parsed.userId) {
+              await setSecureJson(AUTH_SECURE_KEY, parsed);
+            }
+            await clearLegacyAsyncStorageKeys(AUTH_KEY);
+          }
+        } else {
+          await clearLegacyAsyncStorageKeys(AUTH_KEY);
+        }
+
+        if (!parsed) {
           setAuthReady(true);
           return;
         }
-        const parsed = JSON.parse(raw) as Partial<AuthState>;
         if (parsed.accessToken && parsed.userId) {
           setAccessToken(parsed.accessToken);
           setUserId(parsed.userId);
           setName(parsed.name ?? null);
           setPhone(parsed.phone ?? null);
+          setSubscriptionSummary(parsed.subscriptionSummary ?? null);
           setSigningOut(false);
           await setSignedIn(true);
           scheduleTokenExpiryCheck(parsed.accessToken, 'bootstrap');
@@ -186,13 +220,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (forceLogout) {
                 await clearStoredSession('bootstrap_profile_invalid_session');
               } else {
-                await setHasSubscription(false);
-                await setHasTimeBasedSubscription(false);
-                await setCanChangeLanguage(false);
-                await setSubscriptionLanguage(null);
                 logAuthEvent('bootstrap_profile_failed_kept_session', {
                   error: getMessageFromUnknownError(e),
                   status: e instanceof ApiError ? e.status : undefined,
+                  entitlementState: 'preserved',
                 });
               }
             }
@@ -229,33 +260,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserId(uid);
       setName(data.name);
       setPhone(data.phone);
+      setSubscriptionSummary(null);
       setSigningOut(false);
-      await persistAuth({ accessToken: token, userId: uid, name: data.name, phone: data.phone });
+      await persistAuth({ accessToken: token, userId: uid, name: data.name, phone: data.phone, subscriptionSummary: null });
       await setSignedIn(true);
       logAuthEvent('login_ok', { userId: uid, tokenExpiry: formatTokenExpiry(token) });
       scheduleTokenExpiryCheck(token, 'login');
       try {
         await applyProfile(token, uid);
       } catch (e) {
-        await setHasSubscription(false);
-        await setHasTimeBasedSubscription(false);
-        await setCanChangeLanguage(false);
-        await setSubscriptionLanguage(null);
+        const forceLogout = e instanceof ApiError && shouldForceLogout(e.status, e.payload, token);
+        if (forceLogout) {
+          await clearStoredSession('login_profile_invalid_session');
+          throw e;
+        }
         logAuthEvent('login_profile_failed_kept_session', {
           error: getMessageFromUnknownError(e),
           status: e instanceof ApiError ? e.status : undefined,
+          entitlementState: 'preserved',
         });
       }
     },
     [
       applyProfile,
+      clearStoredSession,
       scheduleTokenExpiryCheck,
-      setCanChangeLanguage,
-      setHasSubscription,
-      setHasTimeBasedSubscription,
       setSignedIn,
       setSigningOut,
-      setSubscriptionLanguage,
     ],
   );
 
@@ -276,7 +307,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserId(null);
     setName(null);
     setPhone(null);
-    await AsyncStorage.removeItem(AUTH_KEY);
+    setSubscriptionSummary(null);
+    await deleteSecureValue(AUTH_SECURE_KEY);
+    await clearLegacyAsyncStorageKeys(AUTH_KEY);
+    await clearRememberedCredentials();
     await setSignedIn(false);
     await setHasSubscription(false);
     await setCanChangeLanguage(false);
@@ -327,10 +361,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, [accessToken, logout]);
 
-  const refreshProfile = useCallback(async (): Promise<boolean> => {
-    if (!accessToken || !userId) return false;
-    return applyProfile(accessToken, userId);
-  }, [accessToken, userId, applyProfile]);
+  const refreshProfile = useCallback(async (): Promise<ProfileRefreshResult> => {
+    if (!accessToken || !userId) {
+      return { status: 'unknown', hasSubscription: null, error: 'No active session' };
+    }
+    try {
+      return await applyProfile(accessToken, userId);
+    } catch (e) {
+      const forceLogout = e instanceof ApiError && shouldForceLogout(e.status, e.payload, accessToken);
+      if (forceLogout) {
+        await clearStoredSession('refresh_profile_invalid_session');
+        throw e;
+      }
+      logAuthEvent('refresh_profile_failed_kept_entitlements', {
+        error: getMessageFromUnknownError(e),
+        status: e instanceof ApiError ? e.status : undefined,
+        entitlementState: 'preserved',
+      });
+      return { status: 'unknown', hasSubscription: null, error: getMessageFromUnknownError(e) };
+    }
+  }, [accessToken, userId, applyProfile, clearStoredSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -338,13 +388,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       name,
       phone,
+      subscriptionSummary,
       authReady,
       login,
       signup,
       logout,
       refreshProfile,
     }),
-    [accessToken, userId, name, phone, authReady, login, signup, logout, refreshProfile],
+    [accessToken, userId, name, phone, subscriptionSummary, authReady, login, signup, logout, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

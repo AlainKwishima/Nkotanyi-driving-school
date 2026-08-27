@@ -67,6 +67,7 @@ export function ExamTypeSelectNativeScreen({ navigation }: Props) {
         title={t('examType.title')}
         onBack={() => navigation.goBack()}
         navigation={navigation}
+        truncateTitle={false}
       />
 
       <View style={styles.body}>

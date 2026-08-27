@@ -1,14 +1,15 @@
 import { AppText } from '../components/AppText';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { RootStackParamList } from '../navigation/types';
 import { AuthButton } from '../components/AuthButton';
 import { AuthInputField } from '../components/AuthInputField';
+import { SkeletonBlock } from '../components/RequestStates';
 import { useMobile } from '../hooks/useMobile';
 import { useAuth, getMessageFromUnknownError } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
@@ -25,25 +26,21 @@ import {
   validatePasswordsMatch,
 } from '../utils/validation';
 import { colors, radii, shadows } from '../constants/theme';
+import { SUPPORT_CONTACT } from '../constants/support';
 
 type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type CreateAccountProps = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
 type ForgotPasswordProps = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 type ResetPasswordProps = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
-type AuthNavigation = {
-  navigate: (screen: 'LanguageSelection', params?: { changeOnly?: boolean }) => void;
-};
-
-function AuthBackButton({ navigation }: { navigation: AuthNavigation }) {
+function AuthBackButton({ onPress }: { onPress: () => void }) {
   const m = useMobile();
-  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.authBackRow, { paddingTop: Math.max(insets.top, m.verticalScale(10)) }]}>
+    <View style={[styles.authBackRow, { paddingTop: m.verticalScale(10) }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Back to language selection"
-        onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })}
+        accessibilityLabel="Go back"
+        onPress={onPress}
         style={({ pressed }) => [styles.authBackBtn, pressed && styles.authBackBtnPressed]}
         hitSlop={10}
       >
@@ -106,7 +103,6 @@ export function LoginScreen({ navigation, route }: LoginProps) {
       if (!active) return;
       if (remembered) {
         setPhone(remembered.phone);
-        setPassword(remembered.password);
         setRememberMe(true);
       }
     })();
@@ -120,8 +116,6 @@ export function LoginScreen({ navigation, route }: LoginProps) {
     if (!prefill) return;
 
     if (typeof prefill.phone === 'string') setPhone(prefill.phone);
-    if (typeof prefill.password === 'string') setPassword(prefill.password);
-
     if (!signupBannerShown.current && route.params?.showSignupSuccess && (prefill.name || prefill.phone)) {
       signupBannerShown.current = true;
       const displayName = prefill.name?.trim() || t('auth.welcomeBack');
@@ -135,13 +129,13 @@ export function LoginScreen({ navigation, route }: LoginProps) {
   }, [navigation, route.params, t]);
 
   return (
-    <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
+    <SafeAreaView style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
         contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
-        <AuthBackButton navigation={navigation} />
+        <AuthBackButton onPress={() => navigation.navigate('LanguageSelection', { changeOnly: true })} />
         <LogoHeader showTitle={false} />
 
         <AppText style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.welcomeBack')}</AppText>
@@ -193,7 +187,7 @@ export function LoginScreen({ navigation, route }: LoginProps) {
             try {
               await login(phone.trim(), password);
               if (rememberMe) {
-                await saveRememberedCredentials({ phone: phone.trim(), password });
+                await saveRememberedCredentials({ phone: phone.trim() });
               } else {
                 await clearRememberedCredentials();
               }
@@ -205,7 +199,7 @@ export function LoginScreen({ navigation, route }: LoginProps) {
             }
           }}
         />
-        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
+        {busy ? <SkeletonBlock style={styles.authBusySkeleton} /> : null}
 
         <Pressable style={styles.forgotLinkWrap} onPress={() => navigation.navigate('ForgotPassword')}>
           <AppText style={styles.forgotLink}>{t('auth.forgot')}</AppText>
@@ -222,7 +216,7 @@ export function LoginScreen({ navigation, route }: LoginProps) {
           <AppText style={styles.bottomLinkAction}>{t('auth.createAccountLink')}</AppText>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -240,13 +234,13 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   return (
-    <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
+    <SafeAreaView style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
         contentContainerStyle={[styles.authScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(22) }]}
         showsVerticalScrollIndicator={false}
       >
-        <AuthBackButton navigation={navigation} />
+        <AuthBackButton onPress={() => navigation.navigate('Login')} />
         <LogoHeader showTitle />
 
         <AppText style={[styles.authTitle, { marginTop: m.verticalScale(8), fontSize: m.fontScale(23), lineHeight: m.fontScale(31) }]}>{t('auth.createTitle')}</AppText>
@@ -310,12 +304,12 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
             try {
               await signup(name.trim(), phone.trim(), password);
               if (rememberMe) {
-                await saveRememberedCredentials({ phone: phone.trim(), password, name: name.trim() });
+                await saveRememberedCredentials({ phone: phone.trim(), name: name.trim() });
               } else {
                 await clearRememberedCredentials();
               }
               navigation.replace('Login', {
-                prefill: { name: name.trim(), phone: phone.trim(), password },
+                prefill: { name: name.trim(), phone: phone.trim() },
                 showSignupSuccess: true,
               });
             } catch (e) {
@@ -325,14 +319,14 @@ export function CreateAccountScreen({ navigation }: CreateAccountProps) {
             }
           }}
         />
-        {busy ? <ActivityIndicator style={{ marginTop: 12 }} color="#2563EB" /> : null}
+        {busy ? <SkeletonBlock style={styles.authBusySkeleton} /> : null}
 
         <Pressable style={styles.bottomLinkRowCreate} onPress={() => navigation.navigate('Login')}>
           <AppText style={styles.bottomLinkHint}>{t('auth.haveAccount')} </AppText>
           <AppText style={styles.bottomLinkAction}>{t('auth.signInLink')}</AppText>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -341,31 +335,31 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
   const { t } = useI18n();
 
   const handleEmail = () => {
-    Linking.openURL(`mailto:${t('auth.schoolEmail')}`).catch(() => {
+    Linking.openURL(`mailto:${SUPPORT_CONTACT.email}`).catch(() => {
       Alert.alert(t('common.error'), 'Could not open your email app.');
     });
   };
 
   const handlePhone = () => {
-    Linking.openURL(`tel:${t('auth.schoolPhone')}`).catch(() => {
+    Linking.openURL(`tel:${SUPPORT_CONTACT.phoneTel}`).catch(() => {
       Alert.alert(t('common.error'), 'Could not open the phone app.');
     });
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL('https://wa.me/0780211466').catch(() => {
+    Linking.openURL(SUPPORT_CONTACT.whatsappUrl).catch(() => {
       Alert.alert(t('common.error'), 'Could not open WhatsApp. Please make sure it is installed.');
     });
   };
 
   return (
-    <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
+    <SafeAreaView style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
         contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
-        <AuthBackButton navigation={navigation} />
+        <AuthBackButton onPress={() => navigation.navigate('Login')} />
         <LogoHeader showTitle={false} />
 
         <View style={styles.recoveryIntro}>
@@ -387,7 +381,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
             </View>
             <View style={styles.contactTextContent}>
               <AppText style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>EMAIL ADDRESS</AppText>
-              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolEmail')}</AppText>
+              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{SUPPORT_CONTACT.email}</AppText>
             </View>
             <Feather name="chevron-right" size={18} color={colors.inkSoft} />
           </Pressable>
@@ -400,7 +394,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
             </View>
             <View style={styles.contactTextContent}>
               <AppText style={[styles.contactLabel, { fontSize: m.fontScale(10) }]}>PHONE NUMBER</AppText>
-              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{t('auth.schoolPhone')}</AppText>
+              <AppText style={[styles.contactValue, { fontSize: m.fontScale(14) }]}>{SUPPORT_CONTACT.phoneDisplay}</AppText>
             </View>
             <Feather name="chevron-right" size={18} color={colors.inkSoft} />
           </Pressable>
@@ -424,7 +418,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordProps) {
           <AppText style={styles.backSignInText}>{t('auth.backSignIn')}</AppText>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -437,13 +431,13 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   return (
-    <View style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]}>
+    <SafeAreaView style={[styles.root, { paddingHorizontal: m.sideGutter, alignItems: 'center' }]} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
         contentContainerStyle={[styles.secondaryScroll, { width: '100%', paddingTop: m.verticalScale(8), paddingBottom: m.verticalScale(16), paddingHorizontal: m.scale(20) }]}
         showsVerticalScrollIndicator={false}
       >
-        <AuthBackButton navigation={navigation} />
+        <AuthBackButton onPress={() => navigation.navigate('Login')} />
         <View style={styles.lockBadge}>
           <MaterialCommunityIcons name="lock-reset" size={24} color="#EFF6FF" />
         </View>
@@ -519,7 +513,7 @@ export function ResetPasswordScreen({ navigation }: ResetPasswordProps) {
           {t('auth.supportNeed')} <AppText style={styles.supportAction}>{t('auth.supportContact')}</AppText>
         </AppText>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -919,5 +913,12 @@ const styles = StyleSheet.create({
   supportAction: {
     color: colors.brand,
     fontFamily: 'Poppins-SemiBold',
+  },
+  authBusySkeleton: {
+    alignSelf: 'center',
+    width: 118,
+    height: 10,
+    marginTop: 12,
+    borderRadius: radii.pill,
   },
 });

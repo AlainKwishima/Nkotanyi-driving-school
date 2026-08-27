@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/types';
 import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
+import { EmptyState, InlineErrorState } from '../components/RequestStates';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/useI18n';
 import { colors, radii, spacing, typography } from '../constants/theme';
@@ -169,17 +170,17 @@ function buildSecurePreviewHtml(fileUrl: string, title: string, accessToken: str
         text-align: right;
       }
       .spinner {
-        width: 44px;
-        height: 44px;
-        border-radius: 22px;
-        border: 4px solid rgba(74, 120, 208, 0.18);
-        border-top-color: #2563EB;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #E5E7EB;
+        border-top: 4px solid #3B82F6;
+        border-radius: 50%;
         animation: spin 1s linear infinite;
+        margin-bottom: 24px;
       }
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     </style>
   </head>
@@ -614,7 +615,7 @@ export function PdfViewerScreen({ navigation, route }: Props) {
             <View style={styles.pdfLoadingIcon}>
               <PdfDocumentIcon size={68} />
             </View>
-            <ActivityIndicator size="small" color={colors.brand} />
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 16 }} />
             <AppText style={styles.overlayTitle}>{t('pdf.opening')}</AppText>
             <AppText style={styles.overlayBody}>{progressLabel}</AppText>
           </View>
@@ -674,6 +675,23 @@ const styles = StyleSheet.create({
   },
   pdfLoadingIcon: {
     marginBottom: spacing.lg,
+  },
+  pdfSkeletonTitle: {
+    width: 180,
+    height: 14,
+    borderRadius: radii.pill,
+  },
+  pdfSkeletonLine: {
+    width: 230,
+    height: 10,
+    marginTop: spacing.md,
+    borderRadius: radii.pill,
+  },
+  pdfSkeletonLineShort: {
+    width: 154,
+    height: 10,
+    marginTop: spacing.sm,
+    borderRadius: radii.pill,
   },
   overlayTitle: {
     marginTop: 12,

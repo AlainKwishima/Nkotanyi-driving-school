@@ -1,5 +1,6 @@
 import { AppText } from '../components/AppText';
 import React, { useCallback, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -11,6 +12,7 @@ import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { SectionHeading } from '../components/SectionHeading';
 import { PdfDocumentIcon } from '../components/PdfDocumentIcon';
+import { SkeletonBlock } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
@@ -102,12 +104,6 @@ export function HomeNativeScreen({ navigation }: Props) {
     isSigningOut,
   } = useAppFlow();
 
-  const [rows, setRows] = useState<PerformanceHistoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [recommendation, setRecommendation] = useState<{ type: 'pdf' | 'video'; item: PdfItem | VideoItem } | null>(
-    null,
-  );
-
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -121,41 +117,39 @@ export function HomeNativeScreen({ navigation }: Props) {
     contentLanguage,
   });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const local = await readLocalExamRecords();
-      if (!accessToken) {
-        setRows(mergePerformanceHistory([], local));
-        setRecommendation(null);
-        return;
+  const { data, isPending: loading } = useQuery({
+    queryKey: ['homeData', accessToken, paidContentLanguage],
+    queryFn: async () => {
+      let fetchedRows: PerformanceHistoryRow[] = [];
+      let fetchedRecommendation: { type: 'pdf' | 'video'; item: PdfItem | VideoItem } | null = null;
+      try {
+        const local = await readLocalExamRecords();
+        if (!accessToken) {
+          fetchedRows = mergePerformanceHistory([], local);
+          return { rows: fetchedRows, recommendation: null };
+        }
+
+        const [remote, pdfs, videos] = await Promise.all([
+          getPerformanceHistory(accessToken).catch(() => []),
+          paidContentLanguage ? getPdfs(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
+          paidContentLanguage ? getVideos(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
+        ]);
+        fetchedRows = mergePerformanceHistory(remote, local);
+
+        const newPdf = pdfs.find((item) => (item as PdfItem & { isNew?: boolean }).isNew === true);
+        const newVideo = videos.find((item) => (item as VideoItem & { isNew?: boolean }).isNew === true);
+        fetchedRecommendation = newPdf ? { type: 'pdf', item: newPdf } : newVideo ? { type: 'video', item: newVideo } : null;
+      } catch (error) {
+        if (__DEV__) console.warn('[Home] failed to load dashboard', error);
+        const local = await readLocalExamRecords();
+        fetchedRows = mergePerformanceHistory([], local);
       }
+      return { rows: fetchedRows, recommendation: fetchedRecommendation };
+    },
+  });
 
-      const [remote, pdfs, videos] = await Promise.all([
-        getPerformanceHistory(accessToken).catch(() => []),
-        paidContentLanguage ? getPdfs(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
-        paidContentLanguage ? getVideos(accessToken, paidContentLanguage).catch(() => []) : Promise.resolve([]),
-      ]);
-      setRows(mergePerformanceHistory(remote, local));
-
-      const newPdf = pdfs.find((item) => (item as PdfItem & { isNew?: boolean }).isNew === true);
-      const newVideo = videos.find((item) => (item as VideoItem & { isNew?: boolean }).isNew === true);
-      setRecommendation(newPdf ? { type: 'pdf', item: newPdf } : newVideo ? { type: 'video', item: newVideo } : null);
-    } catch (error) {
-      if (__DEV__) console.warn('[Home] failed to load dashboard', error);
-      const local = await readLocalExamRecords();
-      setRows(mergePerformanceHistory([], local));
-      setRecommendation(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, paidContentLanguage]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  const rows = data?.rows ?? [];
+  const recommendation = data?.recommendation ?? null;
 
   const handleLearningRoute = (route: LearningRoute) => {
     if (route === 'ExamInstructionsNative') {
@@ -238,31 +232,29 @@ export function HomeNativeScreen({ navigation }: Props) {
             </AppText>
             <View style={styles.bannerStats}>
               <View style={styles.bannerPill}>
-                <AppText style={styles.bannerPillText}>
-                  {t('performance.totalExams')}: {loading ? '...' : totalExams}
-                </AppText>
+                <AppText style={styles.bannerPillText}>{t('performance.totalExams')}: </AppText>
+                {loading ? <SkeletonBlock style={{ width: 16, height: 12, borderRadius: 2, marginLeft: 4, backgroundColor: 'rgba(255,255,255,0.4)' }} /> : <AppText style={styles.bannerPillText}>{totalExams}</AppText>}
               </View>
               <View style={styles.bannerPill}>
-                <AppText style={styles.bannerPillText}>
-                  {t('performance.successRate')}: {loading ? '...' : `${successRate}%`}
-                </AppText>
+                <AppText style={styles.bannerPillText}>{t('performance.successRate')}: </AppText>
+                {loading ? <SkeletonBlock style={{ width: 20, height: 12, borderRadius: 2, marginLeft: 4, backgroundColor: 'rgba(255,255,255,0.4)' }} /> : <AppText style={styles.bannerPillText}>{`${successRate}%`}</AppText>}
               </View>
             </View>
           </View>
 
           <View style={styles.metricStrip}>
             <View style={styles.metric}>
-              <AppText style={styles.metricValue}>{totalExams}</AppText>
+              {loading ? <SkeletonBlock style={{ width: 32, height: 28, borderRadius: 4, marginBottom: 2 }} /> : <AppText style={styles.metricValue}>{totalExams}</AppText>}
               <AppText style={styles.metricLabel}>{t('performance.totalExams')}</AppText>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <AppText style={styles.metricValue}>{average}%</AppText>
+              {loading ? <SkeletonBlock style={{ width: 44, height: 28, borderRadius: 4, marginBottom: 2 }} /> : <AppText style={styles.metricValue}>{average}%</AppText>}
               <AppText style={styles.metricLabel}>{t('performance.avgAccuracy')}</AppText>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <AppText style={styles.metricValue}>{successRate}%</AppText>
+              {loading ? <SkeletonBlock style={{ width: 44, height: 28, borderRadius: 4, marginBottom: 2 }} /> : <AppText style={styles.metricValue}>{successRate}%</AppText>}
               <AppText style={styles.metricLabel}>{t('performance.successRate')}</AppText>
             </View>
           </View>
@@ -506,6 +498,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.16)',

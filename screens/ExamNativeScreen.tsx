@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, type ExamAnswerDetail, type ExamMode, type ExamResultParams } from '../navigation/types';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { AppHeader } from '../components/AppHeader';
+import { SkeletonBlock } from '../components/RequestStates';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
 import { useGateModal } from '../context/GateModalContext';
@@ -433,11 +434,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   if (loading) {
     return (
       <ScreenColumn backgroundColor={colors.brandStrong}>
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={colors.amber} />
-          <Text style={styles.loadingTitle}>{t('exam.loading')}</Text>
-          <Text style={styles.loadingBody}>{t('exam.loadingHint')}</Text>
-        </View>
+        <View />
       </ScreenColumn>
     );
   }
@@ -445,7 +442,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
   if (loadError || !current) {
     return (
       <ScreenColumn backgroundColor={colors.brandStrong}>
-        <AppHeader title={t('exam.title')} onBack={() => navigation.goBack()} />
+        <AppHeader title={t('exam.title')} onBack={() => navigation.goBack()} truncateTitle={false} />
         <View style={[styles.body, styles.errorBody]}>
           <View style={styles.errorIcon}>
             <Ionicons name="alert-circle-outline" size={32} color={colors.red} />
@@ -473,6 +470,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
         title={mode === 'signs' ? t('examType.signs.title') : t('exam.title')}
         onBack={() => navigation.goBack()}
         right={timer}
+        truncateTitle={false}
       />
 
       <View style={styles.body}>
@@ -536,7 +534,7 @@ export function ExamNativeScreen({ navigation, route }: Props) {
         >
           {submitting ? (
             <View style={styles.submittingBanner}>
-              <ActivityIndicator size="small" color={colors.brand} />
+              <SkeletonBlock style={styles.submittingSkeleton} />
               <Text style={styles.submittingText}>{t('common.loading')}</Text>
             </View>
           ) : null}
@@ -907,6 +905,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.brandSoft,
   },
+  submittingSkeleton: {
+    width: 42,
+    height: 10,
+    borderRadius: radii.pill,
+    backgroundColor: colors.brand,
+  },
   submittingText: {
     ...typography.bodyStrong,
     color: colors.brandStrong,
@@ -965,7 +969,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.surface,
@@ -981,6 +985,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F3F4F6',
+    marginTop: 2,
   },
   optionMarkerSelected: {
     backgroundColor: colors.brand,

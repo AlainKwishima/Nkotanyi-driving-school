@@ -1,22 +1,19 @@
-import { AppText } from '../components/AppText';
 import React, { useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FIGMA_ASSETS } from '../assets/figmaAssets';
 import { RootStackParamList } from '../navigation/types';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useAuth } from '../context/AuthContext';
-import { useI18n } from '../i18n/useI18n';
-import { colors, radii, spacing, typography } from '../constants/theme';
+import { colors, radii } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export function SplashScreen({ navigation }: Props) {
   const { hydrated, hasChosenLanguage, isSignedIn } = useAppFlow();
   const { authReady, accessToken } = useAuth();
-  const { t } = useI18n();
 
   useEffect(() => {
     if (!hydrated || !authReady) {
@@ -40,14 +37,6 @@ export function SplashScreen({ navigation }: Props) {
         <View style={styles.logoCard}>
           <Image source={FIGMA_ASSETS.brandingLogo} style={styles.logo} resizeMode="contain" />
         </View>
-        <AppText style={styles.brandName}>{t('splash.brandName')}</AppText>
-        <AppText style={styles.brandDescriptor}>{t('splash.brandDescriptor')}</AppText>
-        <ActivityIndicator size="small" color={colors.brand} style={styles.spinner} />
-        <AppText style={styles.waitText}>{t('splash.wait')}</AppText>
-      </View>
-
-      <View style={styles.cityWrap}>
-        <Image source={require('../assets/Group 5201.png')} style={styles.cityImage} resizeMode="contain" />
       </View>
     </SafeAreaView>
   );
@@ -63,7 +52,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 108,
   },
   logoCard: {
     width: 132,
@@ -78,33 +66,5 @@ const styles = StyleSheet.create({
   logo: {
     width: 112,
     height: 112,
-  },
-  brandName: {
-    ...typography.heading,
-    marginTop: spacing.xl,
-    color: colors.ink,
-    letterSpacing: 2,
-  },
-  brandDescriptor: {
-    ...typography.eyebrow,
-    marginTop: spacing.xs,
-    color: colors.brand,
-  },
-  spinner: {
-    marginTop: 42,
-  },
-  waitText: {
-    ...typography.body,
-    marginTop: spacing.md,
-    color: colors.inkMuted,
-  },
-  cityWrap: {
-    width: '100%',
-    height: 214,
-    justifyContent: 'flex-end',
-  },
-  cityImage: {
-    width: '100%',
-    height: 214,
   },
 });

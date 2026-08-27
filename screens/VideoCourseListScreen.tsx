@@ -1,7 +1,8 @@
 import { AppText } from '../components/AppText';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../navigation/types';
@@ -9,7 +10,7 @@ import { AppHeader } from '../components/AppHeader';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { ScreenColumn } from '../components/ScreenColumn';
 import { SectionHeading } from '../components/SectionHeading';
-import { EmptyState, InlineErrorState, LoadingState } from '../components/RequestStates';
+import { EmptyState, InlineErrorState, VideoCardSkeleton, FeaturedVideoCardSkeleton } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAuth } from '../context/AuthContext';
 import { useAppFlow } from '../context/AppFlowContext';
@@ -97,10 +98,6 @@ export function VideoCourseListScreen({ navigation }: Props) {
     isSigningOut,
   } = useAppFlow();
   const { openGateModal } = useGateModal();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<VideoItem[]>([]);
-
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -120,30 +117,20 @@ export function VideoCourseListScreen({ navigation }: Props) {
     }
   }, [isSigningOut, languageAccessGranted, navigation, openGateModal]);
 
-  const loadVideos = useCallback(async () => {
-    if (!languageAccessGranted || !paidContentLanguage || isSigningOut) {
-      setLoading(false);
-      return;
-    }
-    if (!accessToken) {
-      setError(t('video.needSignIn'));
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setItems(await getVideos(accessToken, paidContentLanguage));
-    } catch (loadError) {
-      setError(getMessageFromUnknownError(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, isSigningOut, languageAccessGranted, paidContentLanguage, t]);
+  const { data: items = [], isPending, error: queryError, refetch } = useQuery({
+    queryKey: ['videos', accessToken, paidContentLanguage],
+    queryFn: async () => {
+      if (!accessToken || !languageAccessGranted || !paidContentLanguage || isSigningOut) {
+        return [];
+      }
+      return await getVideos(accessToken, paidContentLanguage);
+    },
+    enabled: !!accessToken && languageAccessGranted && !!paidContentLanguage && !isSigningOut,
+  });
 
-  useEffect(() => {
-    void loadVideos();
-  }, [loadVideos]);
+  const loading = isPending && !!accessToken && languageAccessGranted && !!paidContentLanguage && !isSigningOut;
+  const error = !accessToken ? t('video.needSignIn') : queryError ? getMessageFromUnknownError(queryError) : null;
+  const loadVideos = () => { void refetch(); };
 
   const allVideos = items.map((video, index) => ({
     _id: video._id,
@@ -166,7 +153,14 @@ export function VideoCourseListScreen({ navigation }: Props) {
   if (!languageAccessGranted) {
     return (
       <ScreenColumn>
-        <LoadingState message={t('video.loading')} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}>
+          <FeaturedVideoCardSkeleton />
+          <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <VideoCardSkeleton key={i} />
+            ))}
+          </View>
+        </ScrollView>
       </ScreenColumn>
     );
   }
@@ -184,7 +178,14 @@ export function VideoCourseListScreen({ navigation }: Props) {
 
       <View style={styles.body}>
         {loading ? (
-          <LoadingState message={t('video.loading')} />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: tabScrollBottomPad + spacing.xl }]}>
+            <FeaturedVideoCardSkeleton />
+            <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <VideoCardSkeleton key={i} />
+              ))}
+            </View>
+          </ScrollView>
         ) : error ? (
           <InlineErrorState title={t('video.unavailableTitle')} message={error} onRetry={() => void loadVideos()} />
         ) : items.length === 0 ? (

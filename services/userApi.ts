@@ -27,6 +27,14 @@ export type UserAndPayment = {
   payment: unknown[];
 };
 
+export type SubscriptionSummary = {
+  active: boolean;
+  planName: string | null;
+  expiresAt: string | number | null;
+  language: ContentLanguageCode | null;
+  source: 'role' | 'user' | 'payment' | 'none';
+};
+
 export const PRIVILEGED_ROLES = new Set([
   'admin',
   'administrator',
@@ -86,6 +94,40 @@ function paymentLanguage(payment: unknown): ContentLanguageCode | null {
       o.subscription_language ??
       o.contentLanguage ??
       o.content_language,
+  );
+}
+
+function firstNonEmptyString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function planNameFromRaw(raw: unknown): string | null {
+  if (raw == null || raw === false) return null;
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    const value = String(raw).trim();
+    return value && value.toLowerCase() !== 'none' ? value : null;
+  }
+  if (typeof raw === 'object') {
+    const o = raw as Record<string, unknown>;
+    return firstNonEmptyString(o.name, o.title, o.label, o.planName, o.subscription_type, o.subscriptionType, o.type);
+  }
+  return null;
+}
+
+function paymentExpiry(payment: Record<string, unknown>): string | number | null {
+  return (
+    (payment.subscriptionEnd as string | number | null | undefined) ??
+    (payment.subscriptionExpiry as string | number | null | undefined) ??
+    (payment.subscriptionExpiresAt as string | number | null | undefined) ??
+    (payment.expiresAt as string | number | null | undefined) ??
+    (payment.expiry as string | number | null | undefined) ??
+    (payment.validUntil as string | number | null | undefined) ??
+    (payment.endDate as string | number | null | undefined) ??
+    (payment.end_date as string | number | null | undefined) ??
+    null
   );
 }
 
@@ -294,6 +336,56 @@ export function profileHasHighestSubscription(profile: UserAndPayment): boolean 
     const planName = String(o.planName ?? o.plan ?? '').toLowerCase();
     return planName.includes('monthly') || planName.includes('one month') || planName.includes('month');
   });
+}
+
+export function profileSubscriptionSummary(profile: UserAndPayment): SubscriptionSummary {
+  if (profileHasPrivilegedAccess(profile)) {
+    return {
+      active: true,
+      planName: profile.user.planName ?? planNameFromRaw(profile.user.plan) ?? 'Full access',
+      expiresAt: profile.user.subscriptionExpiry ?? profile.user.subscriptionExpiresAt ?? profile.user.expiresAt ?? null,
+      language: normalizeLanguageCode(profile.user.language),
+      source: 'role',
+    };
+  }
+
+  const userExpiry = profile.user.subscriptionExpiry ?? profile.user.subscriptionExpiresAt ?? profile.user.expiresAt ?? null;
+  const userPlan = profile.user.planName ?? planNameFromRaw(profile.user.plan);
+  const userActive = profileIndicatesActiveSubscription({ ...profile, payment: [] });
+  if (userActive || userPlan || userExpiry != null) {
+    return {
+      active: userActive,
+      planName: userPlan,
+      expiresAt: userExpiry,
+      language: normalizeLanguageCode(profile.user.language),
+      source: 'user',
+    };
+  }
+
+  if (Array.isArray(profile.payment)) {
+    const activePayments = profile.payment
+      .filter((payment) => payment && typeof payment === 'object' && paymentsIndicateActiveSubscription([payment]))
+      .sort((a, b) => paymentSortKey(b) - paymentSortKey(a));
+    const selected = activePayments[0] ?? [...profile.payment].filter((payment) => payment && typeof payment === 'object').sort((a, b) => paymentSortKey(b) - paymentSortKey(a))[0];
+    if (selected && typeof selected === 'object') {
+      const o = selected as Record<string, unknown>;
+      return {
+        active: paymentsIndicateActiveSubscription([o]),
+        planName: firstNonEmptyString(o.planName, o.plan, o.subscription_type, o.subscriptionType, o.planType, o.type),
+        expiresAt: paymentExpiry(o),
+        language: paymentLanguage(o) ?? normalizeLanguageCode(profile.user.language),
+        source: 'payment',
+      };
+    }
+  }
+
+  return {
+    active: false,
+    planName: null,
+    expiresAt: null,
+    language: normalizeLanguageCode(profile.user.language),
+    source: 'none',
+  };
 }
 
 /**

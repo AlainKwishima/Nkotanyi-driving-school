@@ -121,6 +121,7 @@ function ResultTemplate({
       <AppHeader
         title={t('test.results')}
         onBack={returnToExamInstructions}
+        truncateTitle={false}
       />
 
       <View style={styles.body}>

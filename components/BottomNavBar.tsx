@@ -1,6 +1,6 @@
 import { AppText } from './AppText';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View, Keyboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 
@@ -44,6 +44,21 @@ function resolveActive(routeName: string): TabKey | null {
 }
 
 export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarProps) {
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const route = useRoute();
   const { insets, shortSide, scale, verticalScale, radius, touch, font } = useResponsiveLayout();
   const { t } = useI18n();
@@ -55,8 +70,8 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   const iconSize = scale(isCompact ? 20 : 22);
   const labelSize = font(isCompact ? 9 : isWidePhone ? 11 : 10, 0.25);
   const horizontalInset = scale(isCompact ? 8 : 14);
-  const bottomInset = Math.max(insets.bottom - 28, 0);
-  const navLayerHeight = bottomInset + verticalScale(68);
+  const bottomPadding = insets.bottom;
+  const navLayerHeight = bottomPadding + verticalScale(68);
   const languageAccessGranted = hasLanguageAccess({
     hasSubscription,
     canChangeLanguage,
@@ -97,18 +112,19 @@ export function BottomNavBar({ navigation, active, onPressTab }: BottomNavBarPro
   };
 
   return (
-    <View pointerEvents="box-none" style={[styles.navLayer, { height: navLayerHeight }]}>
+    <View pointerEvents="box-none" style={[styles.navLayer, { height: navLayerHeight, transform: [{ translateY: Platform.OS === 'android' ? keyboardHeight : 0 }] }]} >
       <View
         style={[
           styles.tabs,
           {
-            left: horizontalInset,
-            right: horizontalInset,
-            bottom: bottomInset,
-            minHeight: verticalScale(68),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            minHeight: navLayerHeight,
+            paddingBottom: bottomPadding + verticalScale(7),
             paddingHorizontal: scale(8),
-            paddingVertical: verticalScale(7),
-            borderRadius: radius(24),
+            paddingTop: verticalScale(7),
+            borderRadius: 0,
           },
         ]}
       >
@@ -146,13 +162,12 @@ const styles = StyleSheet.create({
   },
   tabs: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderWidth: 1,
-    borderColor: colors.line,
-    ...shadows.floating,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
   },
   tab: {
     alignItems: 'center',

@@ -61,7 +61,7 @@ export function LanguageSelectionScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={[styles.root, { paddingHorizontal: m.sideGutter }]}>
+    <View style={[styles.root, { paddingHorizontal: m.sideGutter, paddingTop: Math.max(insets.top, m.verticalScale(12)) }]}>
       <ScrollView
         style={{ width: '100%', maxWidth: m.contentWidth, alignSelf: 'center' }}
         contentContainerStyle={[

@@ -18,6 +18,13 @@ import { colors, radii, spacing, typography } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileNative'>;
 
+function formatSubscriptionDate(raw: string | number | null | undefined, fallback: string): string {
+  if (raw == null) return fallback;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+}
+
 function AccountRow({
   icon,
   label,
@@ -53,9 +60,17 @@ export function ProfileNativeScreen({ navigation }: Props) {
   const { hasSubscription, contentLanguage } = useAppFlow();
   const { tabScrollBottomPad } = useResponsiveLayout();
   const { t } = useI18n();
-  const { name, phone, logout } = useAuth();
+  const { name, phone, logout, subscriptionSummary } = useAuth();
   const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
   const langLabel = t(`profile.lang.${contentLanguage}`);
+  const subscriptionActive = hasSubscription || subscriptionSummary?.active === true;
+  const subscriptionLanguageLabel = subscriptionSummary?.language ? t(`profile.lang.${subscriptionSummary.language}`) : t('common.na');
+  const planName =
+    subscriptionSummary?.planName ??
+    (subscriptionActive ? t('profile.planActiveFallback') : t('profile.noPlan'));
+  const expiryLabel = subscriptionActive
+    ? formatSubscriptionDate(subscriptionSummary?.expiresAt, t('profile.expiryUnavailable'))
+    : t('profile.noPlan');
   const initials = (name ?? 'N')
     .split(/\s+/)
     .filter(Boolean)
@@ -80,10 +95,10 @@ export function ProfileNativeScreen({ navigation }: Props) {
               <AppText style={styles.identityName}>{name ?? t('profile.myAccount')}</AppText>
               <AppText style={styles.identityPhone}>{phone ?? t('common.na')}</AppText>
             </View>
-            <View style={[styles.planPill, hasSubscription ? styles.planPillActive : styles.planPillInactive]}>
-              <View style={[styles.planDot, hasSubscription ? styles.planDotActive : styles.planDotInactive]} />
-              <AppText style={[styles.planPillText, hasSubscription ? styles.planPillTextActive : styles.planPillTextInactive]}>
-                {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
+            <View style={[styles.planPill, subscriptionActive ? styles.planPillActive : styles.planPillInactive]}>
+              <View style={[styles.planDot, subscriptionActive ? styles.planDotActive : styles.planDotInactive]} />
+              <AppText style={[styles.planPillText, subscriptionActive ? styles.planPillTextActive : styles.planPillTextInactive]}>
+                {subscriptionActive ? t('profile.planActive') : t('profile.noPlan')}
               </AppText>
             </View>
           </View>
@@ -114,24 +129,34 @@ export function ProfileNativeScreen({ navigation }: Props) {
           >
             <View style={styles.subscriptionTop}>
               <View style={styles.subscriptionIcon}>
-                <Ionicons name={hasSubscription ? 'shield-checkmark' : 'shield-outline'} size={22} color={colors.brandStrong} />
+                <Ionicons name={subscriptionActive ? 'shield-checkmark' : 'shield-outline'} size={22} color={colors.brandStrong} />
               </View>
               <Ionicons name="arrow-forward" size={21} color={colors.inkSoft} />
             </View>
             <AppText style={styles.subscriptionEyebrow}>{t('profile.subscriptionPlan')}</AppText>
             <AppText style={styles.subscriptionTitle}>
-              {hasSubscription ? t('profile.planActive') : t('profile.noPlan')}
+              {planName}
             </AppText>
+            <View style={styles.subscriptionDetails}>
+              <View style={styles.subscriptionDetailRow}>
+                <AppText style={styles.subscriptionMetaLabel}>{t('profile.endDate')}</AppText>
+                <AppText style={styles.subscriptionDetailValue}>{expiryLabel}</AppText>
+              </View>
+              <View style={styles.subscriptionDetailRow}>
+                <AppText style={styles.subscriptionMetaLabel}>{t('profile.subscriptionLanguage')}</AppText>
+                <AppText style={styles.subscriptionDetailValue}>{subscriptionLanguageLabel}</AppText>
+              </View>
+            </View>
             <View style={styles.subscriptionMeta}>
               <AppText style={styles.subscriptionMetaLabel}>{t('profile.paymentStatus')}</AppText>
               <View style={styles.statusRow}>
                 <Ionicons
-                  name={hasSubscription ? 'checkmark-circle' : 'information-circle'}
+                  name={subscriptionActive ? 'checkmark-circle' : 'information-circle'}
                   size={17}
-                  color={hasSubscription ? colors.success : colors.brand}
+                  color={subscriptionActive ? colors.success : colors.brand}
                 />
                 <AppText style={styles.statusText}>
-                  {hasSubscription ? t('profile.paid') : t('profile.noPlan')}
+                  {subscriptionActive ? t('profile.paid') : t('profile.noPlan')}
                 </AppText>
               </View>
             </View>
@@ -316,6 +341,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  subscriptionDetails: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  subscriptionDetailRow: {
+    minHeight: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  subscriptionDetailValue: {
+    ...typography.bodyStrong,
+    flexShrink: 1,
+    color: colors.ink,
+    textAlign: 'right',
   },
   subscriptionMetaLabel: {
     ...typography.caption,

@@ -39,13 +39,14 @@ export type RootStackParamList = {
   Splash: undefined;
   LanguageSelection: { changeOnly?: boolean } | undefined;
   LanguageSettings: undefined;
-  Login: { prefill?: { phone?: string; password?: string; name?: string }; showSignupSuccess?: boolean } | undefined;
+  Login: { prefill?: { phone?: string; name?: string }; showSignupSuccess?: boolean } | undefined;
   CreateAccount: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
   HomeNative: undefined;
   ExamNative: { mode?: ExamMode } | undefined;
   ExamInstructionsNative: undefined;
+
   ExamTypeSelectNative: undefined;
   StartExamNative: { gateFor?: 'exam' | 'read' | 'watch' } | undefined;
   PracticeNoSelectedNative: undefined;
@@ -53,6 +54,7 @@ export type RootStackParamList = {
   TestFailedNative: ExamResultParams | undefined;
   TestPassedNative: ExamResultParams | undefined;
   PerformanceNative: undefined;
+
   PerformanceReviewNative:
     | {
         title?: string;

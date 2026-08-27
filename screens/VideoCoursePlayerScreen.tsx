@@ -13,6 +13,7 @@ import { useI18n } from '../i18n/useI18n';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { AppHeader } from '../components/AppHeader';
 import { ScreenColumn } from '../components/ScreenColumn';
+import { LoadingState } from '../components/RequestStates';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { useAppFlow } from '../context/AppFlowContext';
 import { useGateModal } from '../context/GateModalContext';
@@ -129,6 +130,8 @@ function SmartVideoPlayer({ url, thumbUri, active, onError }: SmartPlayerProps) 
     <View style={styles.player}>
       {loading ? (
         <View style={styles.playerLoader}>
+          {thumbUri ? <Image source={{ uri: thumbUri }} style={styles.playerMedia} resizeMode="cover" /> : <MediaPlaceholder />}
+          <View style={styles.playerShade} />
           <ActivityIndicator size="large" color={colors.white} />
         </View>
       ) : null}
@@ -206,8 +209,7 @@ export function VideoCoursePlayerScreen({ navigation, route }: Props) {
       <ScreenColumn>
         <AppHeader title={t('video.playerTitle')} navigation={navigation} onBack={() => navigation.goBack()} />
         <View style={styles.centeredGate}>
-          <ActivityIndicator size="large" color={colors.brand} />
-          <AppText style={styles.gateText}>{t('video.loading')}</AppText>
+          <LoadingState message={t('video.loading')} />
         </View>
       </ScreenColumn>
     );
@@ -391,6 +393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.ink,
   },
+
   unavailableMark: {
     position: 'absolute',
     top: '50%',

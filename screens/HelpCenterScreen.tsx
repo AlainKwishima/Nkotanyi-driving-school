@@ -12,6 +12,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useI18n } from '../i18n/useI18n';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { colors, radii, shadows, spacing, typography } from '../constants/theme';
+import { SUPPORT_CONTACT } from '../constants/support';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HelpCenter'>;
 
@@ -42,7 +43,7 @@ export function HelpCenterScreen({ navigation }: Props) {
           <View style={styles.contactCard}>
             <TouchableOpacity
               style={styles.contactRow}
-              onPress={() => void Linking.openURL('mailto:support@nkotanyi.rw')}
+              onPress={() => void Linking.openURL(`mailto:${SUPPORT_CONTACT.email}`)}
               activeOpacity={0.78}
             >
               <View style={styles.contactIcon}>
@@ -50,14 +51,14 @@ export function HelpCenterScreen({ navigation }: Props) {
               </View>
               <View style={styles.contactCopy}>
                 <AppText style={styles.contactLabel}>{t('help.emailSupport')}</AppText>
-                <AppText style={styles.contactValue}>support@nkotanyi.rw</AppText>
+                <AppText style={styles.contactValue}>{SUPPORT_CONTACT.email}</AppText>
               </View>
               <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
             </TouchableOpacity>
             <View style={styles.divider} />
             <TouchableOpacity
               style={styles.contactRow}
-              onPress={() => void Linking.openURL('tel:+250788123456')}
+              onPress={() => void Linking.openURL(`tel:${SUPPORT_CONTACT.phoneTel}`)}
               activeOpacity={0.78}
             >
               <View style={[styles.contactIcon, styles.contactIconAmber]}>
@@ -65,7 +66,7 @@ export function HelpCenterScreen({ navigation }: Props) {
               </View>
               <View style={styles.contactCopy}>
                 <AppText style={styles.contactLabel}>{t('help.phoneNumber')}</AppText>
-                <AppText style={styles.contactValue}>+250 788 123 456</AppText>
+                <AppText style={styles.contactValue}>{SUPPORT_CONTACT.phoneDisplay}</AppText>
               </View>
               <Ionicons name="arrow-forward" size={19} color={colors.inkSoft} />
             </TouchableOpacity>

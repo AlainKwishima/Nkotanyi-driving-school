@@ -16,7 +16,7 @@ type ScreenColumnProps = ViewProps & {
 export function ScreenColumn({ backgroundColor, style, children, ...rest }: ScreenColumnProps) {
   const column = useScreenColumnStyle();
   return (
-    <SafeAreaView style={[styles.base, backgroundColor != null && { backgroundColor }, style]} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.base, backgroundColor != null && { backgroundColor }, style]} edges={['top', 'left', 'right', 'bottom']}>
       <View style={[styles.fill, column]} {...rest}>
         {children}
       </View>

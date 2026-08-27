@@ -32,7 +32,7 @@ function PracticeLayout({
 
   return (
     <ScreenColumn>
-      <AppHeader title={t('exam.title')} navigation={navigation} onBack={onBack} />
+      <AppHeader title={t('exam.title')} navigation={navigation} onBack={onBack} truncateTitle={false} />
 
       <View style={styles.body}>
         <View style={styles.qCard}>

@@ -1,5 +1,7 @@
 import { AppText } from '../components/AppText';
+import { SkeletonBlock } from '../components/RequestStates';
 import React, { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -540,6 +542,7 @@ function PlanCard({
   actionLabel,
   isActive,
   onPress,
+  onCardPress,
 }: {
   plan: Plan;
   title: string;
@@ -547,11 +550,12 @@ function PlanCard({
   actionLabel: string;
   isActive?: boolean;
   onPress: () => void;
+  onCardPress: () => void;
 }) {
   const { t } = useI18n();
 
   return (
-    <View style={[styles.planCard, isActive && styles.planCardActive]}>
+    <Pressable style={[styles.planCard, isActive && styles.planCardActive]} onPress={onCardPress}>
       <View style={styles.planCardHeader}>
         <View style={{ flex: 1 }}>
           {isActive ? <AppText style={styles.bestValue}>{t('payment.bestValue').toUpperCase()}</AppText> : null}
@@ -580,6 +584,36 @@ function PlanCard({
       >
         <AppText style={[styles.startNowText, isActive && styles.startNowTextActive]}>{actionLabel}</AppText>
       </TouchableOpacity>
+    </Pressable>
+  );
+}
+
+function PlanCardSkeleton({ isActive }: { isActive?: boolean }) {
+  return (
+    <View style={[styles.planCard, isActive && styles.planCardActive]}>
+      <View style={styles.planCardHeader}>
+        <View style={{ flex: 1, gap: 8 }}>
+          {isActive ? <SkeletonBlock style={{ width: 80, height: 18, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)' }} /> : null}
+          <SkeletonBlock style={{ width: 120, height: 24, borderRadius: 4, backgroundColor: isActive ? 'rgba(255,255,255,0.4)' : undefined }} />
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <SkeletonBlock style={{ width: 90, height: 36, borderRadius: 4, backgroundColor: isActive ? 'rgba(255,255,255,0.4)' : undefined }} />
+          <SkeletonBlock style={{ width: 40, height: 16, borderRadius: 4, backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : undefined }} />
+        </View>
+      </View>
+
+      {isActive ? (
+        <View style={styles.planFeatures}>
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={styles.featureRow}>
+              <SkeletonBlock style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.4)' }} />
+              <SkeletonBlock style={{ width: 150, height: 14, borderRadius: 4, marginLeft: 10, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <SkeletonBlock style={[styles.startNowBtn, { width: '100%', backgroundColor: isActive ? 'rgba(255,255,255,0.4)' : undefined }]} />
     </View>
   );
 }
@@ -589,54 +623,20 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
   const { tabScrollBottomPad } = useResponsiveLayout();
   const { accessToken } = useAuth();
   const { hasSubscription, contentLanguage } = useAppFlow();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [pricingLoading, setPricingLoading] = useState(true);
-  const [pricingError, setPricingError] = useState<string | null>(null);
-  const [activePlanIndex, setActivePlanIndex] = useState(0);
-
-  const planActionLabel = hasSubscription ? t('payment.renewOrChangePlan') : t('payment.startNow');
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setPricingLoading(true);
-      setPricingError(null);
-      try {
-        const livePlans = await fetchLiveSubscriptionPlans(contentLanguage);
-        if (!cancelled) {
-          const locale = localeTagForContentLanguage(contentLanguage);
-          // Sort plans by price (ascending) as requested
-          const sorted = [...livePlans]
-            .sort((a, b) => a.amountRwf - b.amountRwf)
-            .map((plan) => toPlanCard(plan, locale));
-          setPlans(sorted);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setPricingError(getMessageFromUnknownError(e));
-          setPlans([]);
-        }
-      } finally {
-        if (!cancelled) setPricingLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, contentLanguage]);
-
-  const onScroll = (event: any) => {
-    const y = event.nativeEvent.contentOffset.y;
-    // Estimate card height: card height (approx 100-200) + margin (12)
-    // We'll use a rough estimation to determine which card is in focus.
-    // In a production app, we'd use onLayout to get exact heights.
-    const cardHeight = 130;
-    const index = Math.round(y / cardHeight);
-    if (index !== activePlanIndex && index >= 0 && index < plans.length) {
-      setActivePlanIndex(index);
+  const { data: plans = [], isPending: pricingLoading, error: queryError, refetch } = useQuery({
+    queryKey: ['subscriptionPlans', contentLanguage],
+    queryFn: async () => {
+      const livePlans = await fetchLiveSubscriptionPlans(contentLanguage);
+      const locale = localeTagForContentLanguage(contentLanguage);
+      return [...livePlans]
+        .sort((a, b) => a.amountRwf - b.amountRwf)
+        .map((plan) => toPlanCard(plan, locale));
     }
-  };
+  });
+
+  const pricingError = queryError ? getMessageFromUnknownError(queryError) : null;
+  const [activePlanIndex, setActivePlanIndex] = useState(0);
+  const planActionLabel = hasSubscription ? t('payment.renewOrChangePlan') : t('payment.startNow');
 
   return (
     <ScreenColumn>
@@ -645,8 +645,6 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
         <ScrollView
           contentContainerStyle={[styles.scrollPad, { paddingBottom: tabScrollBottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
         >
           <AppText style={styles.subHeading}>{t('payment.investTitle')}</AppText>
           <AppText style={styles.subLead}>{t('payment.investBody')}</AppText>
@@ -659,9 +657,11 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
           ) : null}
 
           {pricingLoading ? (
-            <View style={styles.pricingStatusCard}>
-              <ActivityIndicator color={colors.brand} />
-              <AppText style={styles.pricingStatusText}>{t('payment.loadingPlans')}</AppText>
+            <View style={{ marginTop: 8 }}>
+              <AppText style={styles.amountSectionTitle}>{t('payment.selectAmountTitle')}</AppText>
+              <PlanCardSkeleton isActive={true} />
+              <PlanCardSkeleton isActive={false} />
+              <PlanCardSkeleton isActive={false} />
             </View>
           ) : pricingError ? (
             <View style={styles.pricingStatusCard}>
@@ -686,6 +686,7 @@ export function SubscriptionNativeScreen({ navigation }: SubscriptionProps) {
                     paymentLanguage: contentLanguage,
                   })
                 }
+                onCardPress={() => setActivePlanIndex(index)}
               />
             ))}
             </>
@@ -928,7 +929,8 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
   ) => {
     let confirmedByProfile = false;
     for (let i = 0; i < 3; i += 1) {
-      confirmedByProfile = await refreshProfile();
+      const result = await refreshProfile();
+      confirmedByProfile = result.hasSubscription === true;
       if (confirmedByProfile) break;
       await sleep(1500);
     }
@@ -1106,9 +1108,12 @@ export function PaymentNativeScreen({ navigation, route }: PaymentProps) {
         setPendingPayment(record);
         setCheckoutUrl(nextCheckoutUrl ?? null);
       }
-    } catch (e) {
+    } catch (e: any) {
       if (__DEV__) {
-        console.warn('[Payment] recent payment recovery failed', getMessageFromUnknownError(e));
+        // Suppress 404 warning if the backend doesn't implement this endpoint
+        if (e && e.status !== 404 && e.statusCode !== 404 && !e.message?.includes('<!DOCTYPE html>')) {
+          console.warn('[Payment] recent payment recovery failed', getMessageFromUnknownError(e));
+        }
       }
     } finally {
       setCheckingPending(false);
